@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Linking, Modal } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal } from 'react-native';
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
@@ -7,6 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router } from 'expo-router';
+import * as Updates from 'expo-updates';
+import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 
 const { width } = Dimensions.get('window');
 
@@ -165,6 +168,36 @@ export default function DashboardScreen() {
   })();
 
   const [showMessages, setShowMessages] = React.useState(false);
+  const [updateAvailable, setUpdateAvailable] = React.useState(false);
+  const version = Constants.expoConfig?.version || '1.0.0';
+
+  React.useEffect(() => {
+    async function checkUpdates() {
+      if (__DEV__) return;
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          setUpdateAvailable(true);
+        }
+      } catch (e) {
+        console.log('Update check failed:', e);
+      }
+    }
+    checkUpdates();
+  }, []);
+
+  const handleUpdate = async () => {
+    try {
+      await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+    } catch (e) {
+      alert('Update failed. Please try again later.');
+    }
+  };
+
+  const openGitHub = () => {
+    Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases');
+  };
 
   const handleExamsPress = () => {
     router.push('/exams' as any);
@@ -397,7 +430,33 @@ export default function DashboardScreen() {
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No new announcements.</Text>
             </View>
           )}
+          {/* Update Manager */}
+        <View style={[styles.updateCard, { backgroundColor: isDark ? 'rgba(10,132,255,0.05)' : '#F0F7FF', borderColor: colors.primary + '30' }]}>
+          <View style={styles.updateInfo}>
+            <View style={[styles.versionBadge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.versionText}>v{version}</Text>
+            </View>
+            <View>
+              <Text style={[styles.updateTitle, { color: colors.text }]}>
+                {updateAvailable ? 'New Update Ready! 🚀' : 'App is up to date'}
+              </Text>
+              <Text style={[styles.updateSub, { color: colors.textSecondary }]}>
+                {updateAvailable ? 'Restart to apply latest fixes' : 'Check GitHub for native releases'}
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            onPress={updateAvailable ? handleUpdate : openGitHub}
+            style={[styles.updateBtn, { backgroundColor: colors.primary }]}
+          >
+            <Text style={styles.updateBtnText}>
+              {updateAvailable ? 'Update Now' : 'Check Update'}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+      </View>
 
       </View>
     </ScrollView>
@@ -982,5 +1041,48 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginTop: 10,
     fontSize: 16,
+  },
+  updateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 20,
+    marginBottom: 10,
+    marginHorizontal: 0,
+  },
+  updateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  versionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  versionText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  updateTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  updateSub: {
+    fontSize: 11,
+  },
+  updateBtn: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  updateBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
