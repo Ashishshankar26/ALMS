@@ -7,6 +7,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { AuthProvider } from '../context/AuthContext';
+import { ScraperProvider } from '../context/ScraperContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -42,7 +44,13 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <ScraperProvider>
+        <RootLayoutNav />
+      </ScraperProvider>
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {

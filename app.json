@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "lpu-app",
+    "name": "ALMS",
     "slug": "lpu-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "lpuapp",
+    "icon": "./assets/icon.png",
+    "scheme": "alms",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,8 +17,11 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.ashish.alms",
+      "usesCleartextTraffic": true,
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -34,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d4673d8c-1de3-450a-bc76-184ac8280f88"
+      }
     }
   }
 }
