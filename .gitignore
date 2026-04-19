@@ -44,3 +44,4 @@ test-*.js
 npx
 analyze.ps1
 .vscode/
+scratch/
