@@ -28,7 +28,7 @@ export default function ExamsScreen() {
       </View>
 
       {/* Native Exam List */}
-      {!showWebView && exams.length > 0 ? (
+      {exams.length > 0 && !showWebView ? (
         <ScrollView style={styles.examList} contentContainerStyle={{ padding: 20 }}>
           {exams.map((exam: any, index: number) => (
             <View key={index} style={[styles.examCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -68,58 +68,54 @@ export default function ExamsScreen() {
             <Text style={{ color: colors.textSecondary }}>View Original Date Sheet</Text>
           </TouchableOpacity>
         </ScrollView>
-      ) : (!showWebView && !loading && exams.length === 0) ? (
-        <View style={styles.emptyContainer}>
-          <Calendar size={60} color={colors.border} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Exams Found</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>Your date sheet might not be available yet.</Text>
-          <TouchableOpacity 
-            style={[styles.webFallbackBtn, { marginTop: 20, borderColor: colors.primary }]} 
-            onPress={() => setShowWebView(true)}
-          >
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>Open Web Seating Plan</Text>
-          </TouchableOpacity>
-        </View>
       ) : (
-        <WebView
-          source={{ uri: currentExamsUrl }}
-          userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
-          style={[styles.webview, loading && { opacity: 0 }]}
-          onLoadEnd={() => setLoading(false)}
-          sharedCookiesEnabled={true}
-          thirdPartyCookiesEnabled={true}
-          injectedJavaScript={`
-            (function() {
-              var s = document.createElement('style');
-              s.innerHTML = \`
-                #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, #id_header, .footer-wrapper { 
-                  display: none !important; 
+        <>
+          {loading && (
+            <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loaderText, { color: colors.textSecondary }]}>Loading seating plan...</Text>
+            </View>
+          )}
+          <WebView
+            source={{ uri: currentExamsUrl }}
+            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            style={[styles.webview, loading && { opacity: 0 }]}
+            onLoadEnd={() => setLoading(false)}
+            sharedCookiesEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            injectedJavaScript={`
+              (function() {
+                var s = document.createElement('style');
+                s.innerHTML = \`
+                  #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, #id_header, .footer-wrapper { 
+                    display: none !important; 
+                  }
+                  .form-info, .page-content, .container-fluid, body, html { 
+                    width: 100% !important; 
+                    padding: 0 !important; 
+                    margin: 0 !important;
+                    background: white !important;
+                  }
+                  table { width: 100% !important; zoom: 0.9; }
+                  .card { border: none !important; box-shadow: none !important; }
+                \`;
+                document.head.appendChild(s);
+                
+                if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
                 }
-                .form-info, .page-content, .container-fluid, body, html { 
-                  width: 100% !important; 
-                  padding: 0 !important; 
-                  margin: 0 !important;
-                  background: white !important;
+              })(); true;
+            `}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'SESSION_EXPIRED') {
+                  router.replace('/login');
                 }
-                table { width: 100% !important; zoom: 0.9; }
-                .card { border: none !important; box-shadow: none !important; }
-              \`;
-              document.head.appendChild(s);
-              
-              if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
-              }
-            })(); true;
-          `}
-          onMessage={(event) => {
-            try {
-              const msg = JSON.parse(event.nativeEvent.data);
-              if (msg.type === 'SESSION_EXPIRED') {
-                router.replace('/login');
-              }
-            } catch(e) {}
-          }}
-        />
+              } catch(e) {}
+            }}
+          />
+        </>
       )}
     </View>
   );
