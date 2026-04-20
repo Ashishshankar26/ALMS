@@ -79,28 +79,34 @@ export default function ExamsScreen() {
           <WebView
             source={{ uri: currentExamsUrl }}
             userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
-            style={[styles.webview, loading && { opacity: 0 }]}
+            style={styles.webview}
             onLoadEnd={() => setLoading(false)}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}
+            domStorageEnabled={true}
+            javaScriptEnabled={true}
             injectedJavaScript={`
               (function() {
-                var s = document.createElement('style');
-                s.innerHTML = \`
-                  #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, #id_header, .footer-wrapper, .navbar, .sidebar, .header-nav, .main-header { 
-                    display: none !important; 
-                  }
-                  .form-info, .page-content, .container-fluid, body, html, .main-content, .wrapper { 
-                    width: 100% !important; 
-                    padding: 0 !important; 
-                    margin: 0 !important;
-                    background: white !important;
-                  }
-                  table { width: 100% !important; zoom: 0.9; }
-                  .card { border: none !important; box-shadow: none !important; }
-                \`;
-                document.head.appendChild(s);
+                var style = document.createElement('style');
+                style.innerHTML = ' \
+                  #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, .navbar, .sidebar, .header-nav, .main-header, .topbar, #header, #footer { \
+                    display: none !important; \
+                    height: 0 !important; \
+                    visibility: hidden !important; \
+                  } \
+                  .main-content, .wrapper, .page-content, .container-fluid, body, html { \
+                    margin: 0 !important; \
+                    padding: 0 !important; \
+                    width: 100% !important; \
+                    left: 0 !important; \
+                    top: 0 !important; \
+                    position: relative !important; \
+                  } \
+                  .card { border: none !important; box-shadow: none !important; } \
+                ';
+                document.head.appendChild(style);
                 
+                // Monitor for session expiry
                 if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
                   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
                 }
