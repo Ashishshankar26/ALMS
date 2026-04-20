@@ -743,7 +743,7 @@ const RESULTS_SCRIPT = `
 `;
 
 export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authData } = useAuth();
   const [data, setData] = useState<ScrapedData>(MOCK_DATA);
   const [isScraping, setIsScraping] = useState(false);
   const webViewRef = useRef<WebView>(null);
@@ -821,6 +821,22 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
+    // Recovery Logic: If redirected to login while we should be authenticated
+    if (url.includes('LoginNew.aspx') && isAuthenticated) {
+      console.warn('SCRAPER: Redirected to Login! Pre-filling credentials...');
+      if (authData?.username && authData?.password) {
+        const fillScript = `
+          (function() {
+            var u = document.getElementById('txtUserName');
+            var p = document.getElementById('txtPassword');
+            if (u) u.value = '${authData.username}';
+            if (p) p.value = '${authData.password}';
+          })(); true;
+        `;
+        webViewRef.current?.injectJavaScript(fillScript);
+      }
+    }
+
     if (url.includes('seatingplan') || url.includes('conduct') || url.includes('datesheet')) {
       console.log('AUTO-CAPTURED EXAM URL:', url);
       setData(prev => {
@@ -1048,6 +1064,21 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Failed to parse message from WebView:', e);
     }
   };
+
+  // Session Keep-Alive Heartbeat
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const heartbeat = setInterval(() => {
+      if (!isScraping) {
+        console.log('SESSION HEARTBEAT: Touching dashboard...');
+        // Just reload the dashboard to reset server-side timeout
+        webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'; true;`);
+      }
+    }, 4 * 60 * 1000); // Every 4 minutes
+
+    return () => clearInterval(heartbeat);
+  }, [isAuthenticated, isScraping]);
 
   return (
     <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml }}>
