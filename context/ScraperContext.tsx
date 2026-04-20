@@ -389,9 +389,12 @@ const DASHBOARD_SCRIPT = `
             log("SCRAPER DEBUG: Found " + messages.length + " personal messages");
 
             var mkLink = "";
+            var exLink = "";
             var links = document.querySelectorAll("a");
             for(var i=0; i<links.length; i++) {
-              if(links[i].href.includes("Student-MakeupAdjustment")) mkLink = links[i].href;
+              var href = links[i].href;
+              if(href.includes("Student-MakeupAdjustment")) mkLink = href;
+              if(href.includes("seatingplan") || href.includes("conduct") || href.includes("datesheet")) exLink = href;
             }
 
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -400,7 +403,7 @@ const DASHBOARD_SCRIPT = `
                 profile: prof, overallAttendance: qA, cgpa: qC, fee: fV, 
                 attendance: att, assignments: assignments, announcements: announc,
                 messages: messages,
-                makeupUrl: mkLink, results: resList || []
+                makeupUrl: mkLink, examUrl: exLink, results: resList || []
               }
             }));
           } catch(e) { log("Finalize Error: " + e.toString()); }

@@ -14,7 +14,7 @@ export default function ExamsScreen() {
   const [loading, setLoading] = useState(true);
   const [showWebView, setShowWebView] = useState(false);
   const exams = data.exams || [];
-  const currentExamsUrl = EXAMS_URL;
+  const currentExamsUrl = data.examUrl || EXAMS_URL;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
