@@ -87,26 +87,21 @@ export default function ExamsScreen() {
             javaScriptEnabled={true}
             injectedJavaScript={`
               (function() {
-                var style = document.createElement('style');
-                style.innerHTML = ' \
-                  #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, .navbar, .sidebar, .header-nav, .main-header, .topbar, #header, #footer { \
-                    display: none !important; \
-                    height: 0 !important; \
-                    visibility: hidden !important; \
-                  } \
-                  .main-content, .wrapper, .page-content, .container-fluid, body, html { \
-                    margin: 0 !important; \
-                    padding: 0 !important; \
-                    width: 100% !important; \
-                    left: 0 !important; \
-                    top: 0 !important; \
-                    position: relative !important; \
-                  } \
-                  .card { border: none !important; box-shadow: none !important; } \
-                ';
-                document.head.appendChild(style);
+                // Delayed injection to prevent interference with page load
+                setTimeout(function() {
+                  var style = document.createElement('style');
+                  style.innerHTML = ' \
+                    #Happeningleft, .lpu-naac, .header-wrapper, footer, .top-nav, .side-nav, .navbar, .sidebar, .header-nav, .main-header, .topbar, #header, #footer { \
+                      display: none !important; \
+                    } \
+                    .main-content, .wrapper { \
+                      margin-left: 0 !important; \
+                      padding-top: 0 !important; \
+                    } \
+                  ';
+                  document.head.appendChild(style);
+                }, 1000);
                 
-                // Monitor for session expiry
                 if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
                   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
                 }
