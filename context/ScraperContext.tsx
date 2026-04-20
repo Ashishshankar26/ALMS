@@ -335,24 +335,57 @@ const DASHBOARD_SCRIPT = `
             }
 
             var messages = [];
-            var msgContainer = document.getElementById("PersonalMessages") || document.getElementById("MyMessages") || document.querySelector(".PersonalMessages") || document.querySelector(".MyMessages");
+            // Try original explicit IDs from Git history first
+            var msgContainer = document.getElementById("MyMessage") || document.getElementById("PersonalMessages") || document.getElementById("MyMessages") || document.querySelector(".PersonalMessages") || document.querySelector(".MyMessages");
+            
+            // Smart discovery if IDs fail
+            if (!msgContainer) {
+              var headers = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,span,b,p'));
+              var msgHeader = headers.find(function(el) { 
+                var txt = el.innerText.trim();
+                return txt === "My Messages" || txt === "Personal Messages" || (txt.includes("My Messages") && el.children.length === 0);
+              });
+              if (msgHeader) {
+                msgContainer = msgHeader.closest('.card, .box, .panel, div[class*="container"]') || msgHeader.parentElement;
+                log("SCRAPER DEBUG: Smart Discovery found message header, using container: " + msgContainer.tagName);
+              }
+            }
+
             if (msgContainer) {
-              var msgRows = msgContainer.querySelectorAll(".row, .mycoursesdiv, li");
+              // Extract from list items or rows (Original used .mycoursesdiv)
+              var msgRows = msgContainer.querySelectorAll(".mycoursesdiv, li, .row, div[class*='item']");
               for (var i = 0; i < msgRows.length; i++) {
                 var row = msgRows[i];
-                var subjEl = row.querySelector(".announcement-subject") || row.querySelector("b") || row.querySelector("strong");
-                var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date");
-                var contEl = row.querySelector(".announcement-content") || row.querySelector("p") || row.querySelector(".message-body");
-                if (subjEl) {
+                // Ignore the header itself
+                if (row.innerText.includes("My Messages") && row.querySelectorAll('li, .row').length > 0) continue;
+                
+                var subjEl = row.querySelector(".right-arrow") || row.querySelector(".font-weight-medium") || row.querySelector("b") || row.querySelector("strong") || row.querySelector(".announcement-subject");
+                var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date") || row.querySelector("small");
+                
+                if (subjEl && subjEl.innerText.trim().length > 2) {
+                  var fullText = row.innerText.trim();
                   messages.push({ 
                     id: Math.random().toString(), 
-                    title: subjEl.innerText.trim(), 
-                    content: contEl ? contEl.innerText.trim() : subjEl.innerText.trim(), 
-                    date: dateEl ? dateEl.innerText.trim() : "Today" 
+                    title: subjEl.innerText.trim().substring(0, 100).split('-')[0].trim(), 
+                    content: fullText, 
+                    date: dateEl ? dateEl.innerText.trim() : "Recently" 
+                  });
+                } else if (row.innerText.trim().length > 5) {
+                  // Fallback for simple rows
+                  var t = row.innerText.trim();
+                  messages.push({
+                    id: Math.random().toString(),
+                    title: t.substring(0, 60),
+                    content: t,
+                    date: "Recently"
                   });
                 }
               }
             }
+            // Filter out duplicates and empty entries
+            messages = messages.filter(function(m, index, self) {
+              return m.title.length > 1 && self.findIndex(function(t) { return t.title === m.title; }) === index;
+            });
             log("SCRAPER DEBUG: Found " + messages.length + " personal messages");
 
             var mkLink = "";
