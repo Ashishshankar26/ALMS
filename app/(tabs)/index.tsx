@@ -432,16 +432,16 @@ export default function DashboardScreen() {
           )}
           {/* Update Manager */}
         <View style={[styles.updateCard, { backgroundColor: isDark ? 'rgba(10,132,255,0.05)' : '#F0F7FF', borderColor: colors.primary + '30' }]}>
-          <View style={styles.updateInfo}>
+          <View style={[styles.updateInfo, { flex: 1, marginRight: 10 }]}>
             <View style={[styles.versionBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.versionText}>v{version}</Text>
             </View>
-            <View>
-              <Text style={[styles.updateTitle, { color: colors.text }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.updateTitle, { color: colors.text }]} numberOfLines={1}>
                 {updateAvailable ? 'New Update Ready! 🚀' : 'App is up to date'}
               </Text>
-              <Text style={[styles.updateSub, { color: colors.textSecondary }]}>
-                {updateAvailable ? 'Restart to apply latest fixes' : 'Check GitHub for native releases'}
+              <Text style={[styles.updateSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                {updateAvailable ? 'Restart to apply fixes' : 'Check GitHub for releases'}
               </Text>
             </View>
           </View>
@@ -1076,9 +1076,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   updateBtn: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
+    minWidth: 100,
+    alignItems: 'center',
   },
   updateBtnText: {
     color: '#fff',
