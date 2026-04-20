@@ -14,12 +14,13 @@ ALMS is a premium, native mobile application designed by a student, for students
 - Access your weekly schedule instantly.
 - **Makeup Classes & Adjustments**: Stay ahead with clearly marked makeup classes, including the specific dates they are assigned to.
 
-### 📊 **Attendance Tracker**
+### 📊 **Attendance & Results**
 - View your overall and subject-wise attendance with portal-consistent accuracy.
-- See your attended vs. total lectures and duty leaves at a glance.
+- **Detailed Results**: Access your CGPA and semester-wise results in a native breakdown.
 
-### 🏆 **Academic Overview**
-- Check your current CGPA and SGPA in a clean, readable format.
+### 📝 **Exams & Fees**
+- **Upcoming Exams**: Quick access to your exam seating plans and datesheets.
+- **Fee Dashboard**: View your pending and paid fees directly in the app.
 
 ### 💬 **Restored Messages**
 - Access your university notifications and personal messages in a native chat-like interface.
