@@ -467,19 +467,30 @@ export default function DashboardScreen() {
             </View>
           </View>
           
-          <TouchableOpacity 
-            onPress={updateAvailable ? handleUpdate : forceUpdate}
-            style={[styles.updateBtn, { backgroundColor: colors.primary, alignSelf: 'center', opacity: isUpdating ? 0.7 : 1 }]}
-            disabled={isUpdating}
-          >
-            {isUpdating ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.updateBtnText}>
-                {updateAvailable ? 'Update Now' : 'Check for Updates'}
+          <View style={{ flexDirection: 'row', gap: 10, width: '100%', paddingHorizontal: 10 }}>
+            <TouchableOpacity 
+              onPress={updateAvailable ? handleUpdate : forceUpdate}
+              style={[styles.updateBtn, { backgroundColor: colors.primary, flex: 1, opacity: isUpdating ? 0.7 : 1 }]}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.updateBtnText}>
+                  {updateAvailable ? 'Update Now' : 'Check Updates'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases')}
+              style={[styles.updateBtn, { backgroundColor: 'transparent', borderColor: colors.primary, borderWidth: 1, flex: 1 }]}
+            >
+              <Text style={[styles.updateBtnText, { color: colors.primary }]}>
+                Download APK
               </Text>
-            )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
 
       </View>
