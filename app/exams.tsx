@@ -6,7 +6,7 @@ import { ArrowLeft, Calendar, Clock, MapPin, User } from 'lucide-react-native';
 import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 
-const EXAMS_URL = 'https://ums.lpu.in/lpuums/frmStudentDateSheetConduction.aspx';
+const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
 
 export default function ExamsScreen() {
   const { data } = useScraper();
