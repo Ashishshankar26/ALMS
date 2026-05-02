@@ -26,20 +26,42 @@ export default function UmsFormScreen() {
       </View>
 
       <View style={{ flex: 1 }}>
-        <WebView
-          source={{ uri: fullUrl }}
-          style={{ flex: 1, backgroundColor: colors.background }}
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => setLoading(false)}
-          // Ensure session is shared if possible (standard WebView behavior)
-          incognito={false}
-          domStorageEnabled={true}
-          javaScriptEnabled={true}
-        />
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={colors.primary} />
+        {Platform.OS === 'web' ? (
+          <View style={styles.webFallbackContainer}>
+            <View style={[styles.webFallbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.iconBg, { backgroundColor: colors.primary + '15' }]}>
+                <Text style={{ fontSize: 32 }}>🔐</Text>
+              </View>
+              <Text style={[styles.fallbackTitle, { color: colors.text }]}>Secure Access Required</Text>
+              <Text style={[styles.fallbackDesc, { color: colors.textSecondary }]}>
+                For your security, university forms like "{title || 'this portal'}" must be opened in a dedicated secure window.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.webButton, { backgroundColor: colors.primary }]}
+                onPress={() => window.open(fullUrl, '_blank')}
+              >
+                <Text style={styles.webButtonText}>Open Secure Form</Text>
+              </TouchableOpacity>
+              <Text style={styles.webFooterText}>Return here once you're finished.</Text>
+            </View>
           </View>
+        ) : (
+          <>
+            <WebView
+              source={{ uri: fullUrl }}
+              style={{ flex: 1, backgroundColor: colors.background }}
+              onLoadStart={() => setLoading(true)}
+              onLoadEnd={() => setLoading(false)}
+              incognito={false}
+              domStorageEnabled={true}
+              javaScriptEnabled={true}
+            />
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            )}
+          </>
         )}
       </View>
     </View>
@@ -73,4 +95,54 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  webFallbackContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webFallbackCard: {
+    width: '100%',
+    maxWidth: 400,
+    padding: 30,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  iconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  fallbackTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  fallbackDesc: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 25,
+    opacity: 0.8,
+  },
+  webButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  webButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  webFooterText: {
+    fontSize: 12,
+    color: '#8E8E93',
+  }
 });

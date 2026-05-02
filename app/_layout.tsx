@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import * as Updates from 'expo-updates';
-import { Alert } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -102,12 +102,25 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="fees" options={{ title: 'Fees', headerShown: false }} />
-        <Stack.Screen name="exams" options={{ title: 'Exams', headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <View style={{ 
+        flex: 1, 
+        backgroundColor: colors.background,
+        alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+        width: '100%',
+        maxWidth: Platform.OS === 'web' ? 500 : 'none',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: Platform.OS === 'web' ? 0.1 : 0,
+        shadowRadius: 10,
+      }}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="fees" options={{ title: 'Fees', headerShown: false }} />
+          <Stack.Screen name="exams" options={{ title: 'Exams', headerShown: false }} />
+          <Stack.Screen name="ums_form" options={{ title: 'University Form', headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </View>
     </ThemeProvider>
   );
 }

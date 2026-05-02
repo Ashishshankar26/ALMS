@@ -29,7 +29,23 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "themeColor": "#4C0099",
+      "backgroundColor": "#4C0099",
+      "display": "standalone",
+      "config": {
+        "pwa": {
+          "manifest": {
+            "name": "ALMS - Student Portal",
+            "short_name": "ALMS",
+            "description": "Your premium university companion.",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#4C0099",
+            "theme_color": "#4C0099"
+          }
+        }
+      }
     },
     "plugins": [
       "expo-router",

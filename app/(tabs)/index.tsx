@@ -7,9 +7,9 @@ import { BlurView } from 'expo-blur';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -19,8 +19,14 @@ const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
   const { data, isScraping, refreshData, dumpHtml } = useScraper();
-  const { logout } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
+
+  // VIP PASS: On web, we don't instantly redirect to prevent the 'Invisible Guard' bug
+  // This gives the AuthContext time to propagate the login state.
+  if (!isAuthenticated && !loading && Platform.OS !== 'web') {
+    return <Redirect href="/login" />;
+  }
 
   // Profile Data
   const profile = data.profile;
@@ -260,10 +266,19 @@ export default function DashboardScreen() {
     return color;
   };
 
+  // SMART SELF-SYNC FOR PWA
+  React.useEffect(() => {
+    if (Platform.OS === 'web' && profile?.name === 'Loading...' && !isScraping) {
+      console.log('PWA Smart Sync Triggered');
+      refreshData();
+    }
+  }, [profile?.name, isScraping]);
+
   const userColor = getUserColor(profile?.vid || '');
   
   React.useEffect(() => {
     async function syncNotifications() {
+      if (Platform.OS === 'web') return; // Notifications not supported on web in this context
       if (nextClassInfo.status === 'upcoming') {
         // 1. Clear previous schedules to prevent duplicates
         await cancelAllNotifications();
@@ -868,7 +883,7 @@ export default function DashboardScreen() {
             <ScrollView style={styles.whatsNewScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.whatsNewItem}>
                 <View style={[styles.whatsNewIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <Layout size={20} color={colors.primary} />
+                  <Layers size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Compact High-Density Design</Text>

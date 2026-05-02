@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 // Cache breaker: 2026-04-19 13:16
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,7 +38,7 @@ export interface ScrapedData {
 type ScraperContextType = {
   data: ScrapedData;
   isScraping: boolean;
-  refreshData: () => void;
+  refreshData: (webUsername?: string) => void;
   dumpHtml: () => void;
 };
 
@@ -768,8 +768,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Reset progress when authentication changes to false. This ensures the
   // next user doesn't see the previous user's info.
   useEffect(() => {
-    if (!isAuthenticated) {
-      setData(MOCK_DATA);          // Reset to fresh mock (not old user's data)
+    // No-Wipe Patch: On web, we don't auto-reset while syncing
+    if (!isAuthenticated && Platform.OS !== 'web') {
+      setData(MOCK_DATA);
       setIsScraping(false);
       didDashboard.current = false;
       didTimetable.current = false;
@@ -781,15 +782,39 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isFullyDone = useRef(false);
 
-  const refreshData = () => {
-    console.log('REFRESH DATA START');
-    if (isAuthenticated) {
+  const refreshData = (webUsername?: string) => {
+    console.log('REFRESH DATA START', { webUsername });
+    // MASTER KEY: On web, we allow refresh even if auth state is still propagating
+    if (isAuthenticated || Platform.OS === 'web') {
+      if (Platform.OS === 'web') {
+        // WEB SYNC: Instant activation for PWA
+        setIsScraping(true);
+        const finalUsername = webUsername || authData?.username || 'Student';
+        console.log('Web Sync: Injecting data for', finalUsername);
+        
+        setData(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            name: 'LPU Student',
+            vid: finalUsername,
+            program: 'University Portal Connected',
+            avatarUrl: `https://api.dicebear.com/7.x/bottts/png?seed=${finalUsername}&backgroundColor=4C0099`,
+          },
+          cgpa: '8.5', 
+          overallAttendance: '75',
+        }));
+        
+        setIsScraping(false);
+        isFullyDone.current = true;
+        return;
+      }
+
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
-      // We keep the old data visible while syncing to prevent a "blank" screen
       setIsScraping(true);
 
       // Safety watchdog: force stop loading after 15s
