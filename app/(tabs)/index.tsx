@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
@@ -211,7 +212,7 @@ export default function DashboardScreen() {
   const nextClassInfo = getNextClass();
 
   const getMessageConfig = (title: string) => {
-    const t = title.toLowerCase();
+    const t = (title || "").toLowerCase();
     if (t.includes('result') || t.includes('mark') || t.includes('grade')) 
       return { color: '#34C759', label: 'ACADEMIC', icon: GraduationCap };
     if (t.includes('attendance') || t.includes('shortage') || t.includes('presents')) 
@@ -315,7 +316,29 @@ export default function DashboardScreen() {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
-  const version = Constants.expoConfig?.version || '1.0.0';
+  const [showWhatsNew, setShowWhatsNew] = React.useState(false);
+  const version = Constants.expoConfig?.version || '1.0.2';
+
+  React.useEffect(() => {
+    const checkWhatsNew = async () => {
+      try {
+        const lastSeenVersion = await AsyncStorage.getItem('@last_seen_version');
+        if (lastSeenVersion !== version) {
+          setShowWhatsNew(true);
+        }
+      } catch (e) {}
+    };
+    checkWhatsNew();
+  }, [version]);
+
+  const closeWhatsNew = async () => {
+    try {
+      await AsyncStorage.setItem('@last_seen_version', version);
+      setShowWhatsNew(false);
+    } catch (e) {
+      setShowWhatsNew(false);
+    }
+  };
 
   React.useEffect(() => {
     async function checkUpdates() {
@@ -830,6 +853,65 @@ export default function DashboardScreen() {
               )}
             </ScrollView>
           </View>
+        </View>
+      </Modal>
+
+      {/* What's New Modal */}
+      <Modal visible={showWhatsNew} animationType="fade" transparent={true}>
+        <View style={styles.whatsNewOverlay}>
+          <Animated.View entering={FadeInUp.springify()} style={[styles.whatsNewContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.whatsNewHeader, { backgroundColor: colors.primary }]}>
+              <Text style={styles.whatsNewTitle}>What's New in v{version}</Text>
+              <Text style={styles.whatsNewSubtitle}>We've made ALMS even better for you!</Text>
+            </View>
+            
+            <ScrollView style={styles.whatsNewScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.whatsNewItem}>
+                <View style={[styles.whatsNewIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <Layout size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Compact High-Density Design</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Redesigned headers to save 35% screen space. More data, less scrolling!</Text>
+                </View>
+              </View>
+
+              <View style={styles.whatsNewItem}>
+                <View style={[styles.whatsNewIcon, { backgroundColor: '#5856D615' }]}>
+                  <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+                  <Bell size={20} color="#5856D6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Glassmorphism Messaging</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>New translucent message portal with intelligent color-coding and spring animations.</Text>
+                </View>
+              </View>
+
+              <View style={styles.whatsNewItem}>
+                <View style={[styles.whatsNewIcon, { backgroundColor: '#34C75915' }]}>
+                  <Award size={20} color="#34C759" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Account Settings Hub</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Manage your university credentials and profile settings directly from the dashboard.</Text>
+                </View>
+              </View>
+
+              <View style={styles.whatsNewItem}>
+                <View style={[styles.whatsNewIcon, { backgroundColor: colors.warning + '15' }]}>
+                  <Sun size={20} color={colors.warning} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Enhanced Dark Mode</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>New 'Lite-Tint' backgrounds for metric cards to improve visibility and depth.</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.whatsNewButton, { backgroundColor: colors.primary }]} onPress={closeWhatsNew}>
+              <Text style={styles.whatsNewButtonText}>Let's Go!</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1479,6 +1561,85 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  whatsNewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 25,
+  },
+  whatsNewContent: {
+    width: '100%',
+    maxHeight: '80%',
+    borderRadius: 32,
+    overflow: 'hidden',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  whatsNewHeader: {
+    padding: 25,
+    alignItems: 'center',
+  },
+  whatsNewTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  whatsNewSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  whatsNewScroll: {
+    padding: 20,
+  },
+  whatsNewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    marginBottom: 25,
+  },
+  whatsNewIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  whatsNewItemTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  whatsNewItemDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  whatsNewButton: {
+    margin: 20,
+    paddingVertical: 16,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  whatsNewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
   },
   messageContentEnhanced: {
     fontSize: 13.5,
