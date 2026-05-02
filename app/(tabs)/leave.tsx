@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, SafeAreaView, ActivityIndicator, Dimensions } from 'react-native';
+import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { RefreshCcw, CalendarCheck, FileText, Send } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../../context/ThemeContext';
@@ -35,8 +36,11 @@ export default function LeaveScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Hero Header */}
-      <View style={[styles.heroHeader, { backgroundColor: colors.card }]}>
+      {/* Hero Header - ANIMATED */}
+      <Animated.View 
+        entering={FadeInUp.delay(100).duration(800).springify()}
+        style={[styles.heroHeader, { backgroundColor: colors.card }]}
+      >
         <View style={styles.heroContent}>
           <View>
             <Text style={[styles.heroLabel, { color: colors.textSecondary }]}>Leave Management</Text>
@@ -68,7 +72,7 @@ export default function LeaveScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       <View style={styles.webviewContainer}>
         {/* ── Apply Leave WebView ── */}

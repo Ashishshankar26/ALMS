@@ -1,0 +1,32 @@
+🚀 ALMS v1.0.2 - RELEASE NOTES
+================================
+
+📐 HIGH-DENSITY HEADERS
+- Redesigned Attendance, Results, and Timetable headers.
+- Optimized vertical footprint by ~35% for maximum data density.
+- Compact key metrics (CGPA, Attendance %) now in a sleek horizontal layout.
+
+🎨 DASHBOARD CHROMA-DEPTH
+- Introduced intelligent 'Lite-Tint' backgrounds for all metric cards.
+- Colors: Azure Blue (Classes), Indigo (Fees), Ruby Red (Exams), Slate (Announcements).
+- Enhanced visibility and visual separation in both Light and Dark modes.
+
+💎 NEXT-GEN MESSAGING (MY MESSAGES)
+- Complete visual overhaul with Glassmorphism (BlurView).
+- Dynamic spring physics and entry animations (Layout.springify).
+- Content-aware color coding: Emerald (Academic), Orange (Attendance), Red (Exams).
+- Sophisticated status indicators and interactive category badges.
+
+🏷️ INFORMATION HIERARCHY
+- Added section labels (ACADEMIC ANALYTICS, PREDICTOR SETTINGS).
+- Optimized utility card spacing and refined divider layouts.
+- Fixed button overflow and clipping issues in metric widgets.
+
+🛠️ STABILITY & PERFORMANCE
+- Resolved critical bundling errors (Unexpected token).
+- Fixed ReferenceErrors in message categorization logic.
+- Optimized render cycles for the premium dashboard.
+
+================================
+Committed on 2026-05-02
+Ready for deployment! 🚀

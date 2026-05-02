@@ -1,15 +1,18 @@
 import React from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator } from 'react-native';
+import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
+import { updateStickyClassNotification } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -55,29 +58,73 @@ export default function DashboardScreen() {
       return hours.toString().padStart(2, '0') + ':' + minutes;
     };
 
+    const isClassMakeup = (cls: any) => {
+      const type = (cls.type || "").toLowerCase();
+      const subject = (cls.subject || "").toLowerCase();
+      
+      const hasMakeupKeyword = 
+        cls.isMakeup || 
+        cls.date || 
+        type.includes('makeup') || 
+        type.includes('adjustment') ||
+        type.includes('special') ||
+        subject.includes('(makeup)') ||
+        subject.includes('(adjustment)');
+
+      if (hasMakeupKeyword) return true;
+
+      // Cross-reference with the dedicated makeup classes list
+      const isMatchedInMakeupList = data.makeupClasses?.some((m: any) => 
+        m.subjectCode === cls.subjectCode && 
+        (m.time === cls.time || m.time?.includes(cls.time?.split(' ')[0]))
+      );
+
+      return !!isMatchedInMakeupList;
+    };
+
     // 1. Combine regular classes for today and makeup classes for today
-    const candidates: any[] = [];
+    let candidates: any[] = [];
     
     // Regular classes
     if (timetable[currentDay]) {
-      timetable[currentDay].forEach((c: any) => candidates.push({ ...c, isMakeup: false }));
+      timetable[currentDay].forEach((c: any) => candidates.push({ ...c, isMakeup: isClassMakeup(c) }));
     }
     
-    // Makeup classes
+    // Saturday Filtering Logic
+    if (currentDay === 'Saturday') {
+      candidates = candidates.filter((cls: any) => {
+        const subject = (cls.subject || "").toLowerCase();
+        const isProjectWork = subject.includes('project work');
+        // On Saturday, only show if NOT project work AND it's a makeup class
+        return !isProjectWork && cls.isMakeup;
+      });
+    }
+
+    // Makeup classes from dedicated list
     makeupClasses.forEach((c: any) => {
       // Check if makeup class is today
       if (c.date) {
-        const d = new Date(c.date);
-        if (d.toDateString() === now.toDateString()) {
-           candidates.push({ 
-             time: c.time, 
-             subject: c.subject, 
-             subjectCode: c.subjectCode,
-             room: c.room,
-             type: c.type || 'Makeup',
-             isMakeup: true 
-           });
-        }
+        try {
+          const dateParts = c.date.split('-');
+          if (dateParts.length === 3) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const classDate = new Date(
+              parseInt(dateParts[2]), 
+              months.indexOf(dateParts[1]), 
+              parseInt(dateParts[0])
+            );
+            if (classDate.toDateString() === now.toDateString()) {
+              candidates.push({ 
+                time: c.time, 
+                subject: c.subject, 
+                subjectCode: c.subjectCode,
+                room: c.room,
+                type: c.type || 'Makeup',
+                isMakeup: true 
+              });
+            }
+          }
+        } catch(e) {}
       }
     });
 
@@ -95,8 +142,18 @@ export default function DashboardScreen() {
         return tA.localeCompare(tB);
       });
       
+      // If requested all candidates (for notification pre-scheduling)
+      if (arguments[0] === true) {
+        return upcoming.map(c => {
+          const startTime = parseTimeTo24h(c.time);
+          const [h, m] = (startTime || '00:00').split(':').map(Number);
+          const triggerDate = new Date();
+          triggerDate.setHours(h, m, 0, 0);
+          return { ...c, startTimeDate: triggerDate };
+        });
+      }
+
       const next = upcoming[0];
-      console.log('NEXT CLASS FOUND:', JSON.stringify(next));
       
       // Prioritize structured data if available (from new Scraper logic)
       if (next.subjectCode || next.subject) {
@@ -153,6 +210,92 @@ export default function DashboardScreen() {
 
   const nextClassInfo = getNextClass();
 
+  const getMessageConfig = (title: string) => {
+    const t = title.toLowerCase();
+    if (t.includes('result') || t.includes('mark') || t.includes('grade')) 
+      return { color: '#34C759', label: 'ACADEMIC', icon: GraduationCap };
+    if (t.includes('attendance') || t.includes('shortage') || t.includes('presents')) 
+      return { color: '#FF9500', label: 'ATTENDANCE', icon: UserCheck };
+    if (t.includes('exam') || t.includes('date sheet') || t.includes('ca ') || t.includes('ete')) 
+      return { color: '#FF3B30', label: 'EXAMINATIONS', icon: FileText };
+    if (t.includes('fee') || t.includes('payment') || t.includes('due') || t.includes('fines')) 
+      return { color: '#5856D6', label: 'FINANCIAL', icon: Tag };
+    if (t.includes('placement') || t.includes('job') || t.includes('interview') || t.includes('drive')) 
+      return { color: '#007AFF', label: 'PLACEMENT', icon: Award };
+    if (t.includes('leave') || t.includes('duty') || t.includes('od')) 
+      return { color: '#AF52DE', label: 'LEAVE/OD', icon: MapPin };
+    return { color: colors.primary, label: 'ANNOUNCEMENT', icon: Bell };
+  };
+
+  // Dynamic User Color based on VID - Curated Eye-Catchy Palette
+  const getUserColor = (vid: string) => {
+    if (!vid) return colors.primary;
+    
+    // Curated list of 'Positive & Eye-Catchy' premium colors
+    const vibrant_palette = [
+      '#5856D6', // Royal Purple
+      '#FF2D55', // Vivid Pink
+      '#FF9500', // Sunset Orange
+      '#007AFF', // Electric Blue
+      '#AF52DE', // Deep Violet
+      '#5AC8FA', // Sky Blue
+      '#FF3B30', // Vibrant Red
+      '#E91E63', // Magenta Pink
+    ];
+
+    let hash = 0;
+    for (let i = 0; i < vid.length; i++) {
+      hash = vid.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Map hash to the curated palette
+    let color = vibrant_palette[Math.abs(hash) % vibrant_palette.length];
+    
+    // User Exception: For VID 12405540, pick a specifically positive non-pink color
+    if (vid === '12405540') {
+      color = '#007AFF'; // Electric Blue
+    }
+    
+    return color;
+  };
+
+  const userColor = getUserColor(profile?.vid || '');
+  
+  React.useEffect(() => {
+    async function syncNotifications() {
+      if (nextClassInfo.status === 'upcoming') {
+        // 1. Clear previous schedules to prevent duplicates
+        await cancelAllNotifications();
+
+        // 2. Get all candidates for the next 24 hours
+        const candidates = getNextClass(true); // Call with flag to get ALL upcoming
+        
+        if (Array.isArray(candidates)) {
+          // 3. Schedule each one with the same ID but different triggers
+          for (const item of candidates) {
+            await updateStickyClassNotification(
+              item.subjectCode || item.subject,
+              item.time,
+              item.room || 'TBA',
+              item.startTimeDate // Pass the actual Date object for triggering
+            );
+          }
+        } else {
+          // Fallback for single immediate update
+          updateStickyClassNotification(
+            nextClassInfo.subjectCode || nextClassInfo.subject,
+            nextClassInfo.time,
+            nextClassInfo.room
+          );
+        }
+      } else {
+        updateStickyClassNotification('', '', '');
+      }
+    }
+    
+    syncNotifications();
+  }, [nextClassInfo.status, nextClassInfo.time, nextClassInfo.subjectCode, nextClassInfo.room]);
+
   const nextExam = (() => {
     if (!data.exams || data.exams.length === 0) return null;
     const now = new Date();
@@ -168,6 +311,8 @@ export default function DashboardScreen() {
   })();
 
   const [showMessages, setShowMessages] = React.useState(false);
+  const [expandedMessageIdx, setExpandedMessageIdx] = React.useState<number | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
   const version = Constants.expoConfig?.version || '1.0.0';
@@ -224,6 +369,14 @@ export default function DashboardScreen() {
     router.push('/exams' as any);
   };
 
+  const openUmsForm = (url: string, title: string) => {
+    setShowProfileMenu(false);
+    router.push({
+      pathname: '/ums_form',
+      params: { url, title }
+    } as any);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <ScrollView 
@@ -242,26 +395,37 @@ export default function DashboardScreen() {
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       {/* Enhanced Header Section with Profile */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: 'transparent' }]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={[styles.welcomeText, { color: isDark ? colors.textSecondary : '#8E8E93' }]}>Welcome back,</Text>
+            <Text style={[styles.welcomeText, { color: isDark ? colors.textSecondary : '#8E8E93', letterSpacing: 1.2 }]}>WELCOME BACK,</Text>
             <Text style={[styles.nameLarge, { color: colors.text }]}>{profile?.name?.split(' ')[0] || 'Student'}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TouchableOpacity style={[styles.notificationBtn, { backgroundColor: colors.surface }]} onPress={toggleTheme}>
-              {isDark ? <Sun size={20} color={colors.warning} /> : <Moon size={20} color={colors.primary} />}
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <TouchableOpacity 
+              style={[styles.headerIconBtn]} 
+              onPress={toggleTheme}
+            >
+              {isDark ? <Sun size={22} color={colors.warning} /> : <Moon size={22} color={colors.primary} />}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.notificationBtn, { backgroundColor: colors.surface }]} onPress={() => setShowMessages(true)}>
-              <Bell size={20} color={colors.primary} />
+
+            <TouchableOpacity 
+              style={[styles.headerIconBtn]} 
+              onPress={() => setShowMessages(true)}
+            >
+              <Bell size={22} color={colors.primary} />
               {data.messages && data.messages.length > 0 && (
-                <View style={styles.notifBadge}>
+                <View style={[styles.notifBadge, { backgroundColor: colors.error }]}>
                   <Text style={styles.notifText}>{data.messages.length}</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={logout} style={[styles.logoutBtn, { backgroundColor: isDark ? 'rgba(255,59,48,0.2)' : '#FFF2F2' }]}>
-              <LogOut size={18} color={colors.error} />
+
+            <TouchableOpacity 
+              onPress={logout} 
+              style={[styles.headerIconBtn]}
+            >
+              <LogOut size={22} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -269,7 +433,12 @@ export default function DashboardScreen() {
         {profile && (
           <View style={[styles.premiumProfileCard, { backgroundColor: isDark ? '#2C2C2E' : '#FAFAFA', borderColor: colors.border }]}>
             <View style={styles.profileRow}>
-              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
+              <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
+                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
+                <View style={[styles.editBadge, { backgroundColor: userColor }]}>
+                  <User size={10} color="#fff" />
+                </View>
+              </TouchableOpacity>
               <View style={styles.profileDetails}>
                 <Text style={[styles.fullName, { color: colors.text }]}>{profile.name}</Text>
                 <View style={styles.badgeRow}>
@@ -299,97 +468,202 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.content}>
-        {/* Simplified Fee Section */}
-        <TouchableOpacity 
-          style={[styles.feeCard, { backgroundColor: colors.card, borderColor: colors.border }]} 
-          onPress={() => router.push('/fees' as any)}
-          activeOpacity={0.8}
+        {/* CGPA & Attendance Grid - ANIMATED */}
+        <Animated.View 
+          entering={FadeInDown.delay(200).duration(600).springify()}
+          style={styles.gridContainer}
         >
-          <View style={styles.feeInfo}>
-            <View style={[styles.feeIconBg, { backgroundColor: isDark ? colors.surface : '#F2F2F7' }]}>
-              <FileText size={24} color={colors.secondary} />
-            </View>
-            <View>
-              <Text style={[styles.feeLabel, { color: colors.textSecondary }]}>Outstanding Fee</Text>
-              <Text style={[styles.feeValue, { color: colors.text }]}>₹ {data.fee || '0'}/-</Text>
-            </View>
-          </View>
-          <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(88,86,214,0.1)' : '#F2F2F7' }]}>
-            <Text style={[styles.payButtonText, { color: colors.secondary }]}>View Details</Text>
-            <ChevronRight size={16} color={colors.secondary} />
-          </View>
-        </TouchableOpacity>
-        
-        {/* Grid and other sections same as before, but Announcements use data.announcements */}
-        {/* ... */}
-        
-        {/* CGPA & Attendance Grid */}
-        <View style={styles.gridContainer}>
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: colors.primary }]}
+            style={[styles.gridCard, { backgroundColor: userColor }]}
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
             <View style={styles.cardGlow} />
-            <Award size={28} color="#fff" style={styles.cardIcon} />
-            <Text style={styles.gridCardLabel}>Overall CGPA</Text>
-            <Text style={styles.gridCardValue}>{data.cgpa || '--'}</Text>
+            <View style={styles.cardHeader}>
+              <Award size={20} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.gridCardLabel}>Academic Performance</Text>
+            </View>
+            <View style={styles.valueContainer}>
+              <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
+              <View style={styles.glassBadge}>
+                <Text style={styles.glassBadgeText}>CGPA</Text>
+              </View>
+            </View>
+            <View style={styles.cardFooter}>
+              <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
+              </View>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: colors.success }]}
+            style={[styles.gridCard, { backgroundColor: '#34C759' }]} // Vibrant Green standard for Attendance
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
             <View style={styles.cardGlow} />
-            <CheckCircle2 size={28} color="#fff" style={styles.cardIcon} />
-            <Text style={styles.gridCardLabel}>Attendance</Text>
-            <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
+            <View style={styles.cardHeader}>
+              <CheckCircle2 size={20} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.gridCardLabel}>Class Attendance</Text>
+            </View>
+            <View style={styles.valueContainer}>
+              <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
+              <View style={styles.glassBadge}>
+                <Text style={styles.glassBadgeText}>TOTAL</Text>
+              </View>
+            </View>
+            <View style={styles.cardFooter}>
+              <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+              </View>
+            </View>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        {/* Upcoming Exams Banner */}
-        <TouchableOpacity style={[styles.examsBanner, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleExamsPress} activeOpacity={0.8}>
-          <View style={[styles.examsBannerIcon, { backgroundColor: nextExam ? colors.error : colors.primary }]}>
-            <GraduationCap size={24} color="#fff" />
-          </View>
-          <View style={styles.examsBannerTextContainer}>
-            <Text style={[styles.examsBannerTitle, { color: colors.text }]}>
-              {nextExam ? `Next Exam: ${nextExam.date}` : 'Upcoming Exams'}
-            </Text>
-            <Text style={[styles.examsBannerSubtitle, { color: colors.textSecondary }]}>
-              {nextExam ? `${nextExam.subjectCode} - ${nextExam.room}` : 'View Conduct & Seating Plan'}
-            </Text>
-          </View>
-          <ChevronRight size={20} color={isDark ? colors.textSecondary : colors.primary} />
-        </TouchableOpacity>
+        {/* Next Class Widget - ANIMATED */}
+        <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
+          {nextClassInfo.status === 'upcoming' ? (
+            <View style={[styles.nextClassCard, { 
+              backgroundColor: isDark ? 'rgba(10,132,255,0.12)' : 'rgba(0,122,255,0.08)', 
+              borderColor: isDark ? 'rgba(10,132,255,0.2)' : 'rgba(0,122,255,0.1)' 
+            }]}>
+              <View style={styles.nextClassHeader}>
+                <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.1)' : 'rgba(255,149,0,0.1)' }]}>
+                  <Clock size={12} color={colors.warning} />
+                  <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
+                </View>
+                <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.1)' : 'rgba(46,125,50,0.1)' }]}>
+                  <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                </View>
+              </View>
+              
+              <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
+              
+              <View style={styles.nextClassFooter}>
+                <View style={styles.footerItem}>
+                  <Tag size={12} color={colors.textSecondary} />
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.subjectCode}</Text>
+                </View>
+                <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.footerItem}>
+                  <MapPin size={12} color={colors.textSecondary} />
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.room}</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.emptyCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.emptyIconBg, { backgroundColor: '#34C75915' }]}>
+                <Coffee size={28} color="#34C759" />
+              </View>
+              <View style={styles.emptyTextContainer}>
+                <Text style={[styles.emptyTitlePremium, { color: colors.text }]}>All Caught Up!</Text>
+                <Text style={[styles.emptySubPremium, { color: colors.textSecondary }]}>
+                  {nextClassInfo.status === 'no_classes' ? 'No more classes for today. Enjoy your free time!' : 'Your schedule is currently clear.'}
+                </Text>
+              </View>
+              <View style={[styles.emptyGlow, { backgroundColor: '#34C75910' }]} />
+            </View>
+          )}
+        </Animated.View>
+
+        {/* Utilities Section - ANIMATED */}
+        <Animated.View entering={FadeInDown.delay(600).duration(600).springify()}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Utilities</Text>
+          
+          {/* Fee Card */}
+          <TouchableOpacity 
+            style={[styles.feeCard, { 
+              backgroundColor: isDark ? 'rgba(88,86,214,0.12)' : 'rgba(88,86,214,0.08)', 
+              borderColor: isDark ? 'rgba(88,86,214,0.2)' : 'rgba(88,86,214,0.1)' 
+            }]} 
+            onPress={() => router.push('/fees' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.feeInfo}>
+              <View style={[styles.feeIconBg, { backgroundColor: isDark ? 'rgba(88,86,214,0.1)' : '#F2F2F7' }]}>
+                <FileText size={24} color={colors.secondary} />
+              </View>
+              <View>
+                <Text style={[styles.feeLabel, { color: colors.textSecondary }]}>Outstanding Fee</Text>
+                <Text style={[styles.feeValue, { color: colors.text }]}>₹ {data.fee || '0'}/-</Text>
+              </View>
+            </View>
+            <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(88,86,214,0.15)' : '#F2F2F7' }]}>
+              <Text style={[styles.payButtonText, { color: colors.secondary }]}>View Details</Text>
+              <ChevronRight size={16} color={colors.secondary} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Exams Banner */}
+          <TouchableOpacity 
+            style={[styles.examsBanner, { 
+              backgroundColor: isDark ? 'rgba(255,59,48,0.12)' : 'rgba(255,59,48,0.08)', 
+              borderColor: isDark ? 'rgba(255,59,48,0.2)' : 'rgba(255,59,48,0.1)',
+              marginTop: 12 
+            }]} 
+            onPress={handleExamsPress} 
+            activeOpacity={0.8}
+          >
+            <View style={[styles.examsBannerIcon, { backgroundColor: nextExam ? colors.error : colors.primary }]}>
+              <GraduationCap size={24} color="#fff" />
+            </View>
+            <View style={styles.examsBannerTextContainer}>
+              <Text style={[styles.examsBannerTitle, { color: colors.text }]}>
+                {nextExam ? `Next Exam: ${nextExam.date}` : 'Upcoming Exams'}
+              </Text>
+              <Text style={[styles.examsBannerSubtitle, { color: colors.textSecondary }]}>
+                {nextExam ? `${nextExam.subjectCode} - ${nextExam.room}` : 'View Conduct & Seating Plan'}
+              </Text>
+            </View>
+            <ChevronRight size={20} color={isDark ? colors.textSecondary : colors.primary} />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Pending Assignments */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Pending Assignments</Text>
         {data.assignments && data.assignments.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {data.assignments.map((assignment, index) => (
-              <View key={index} style={[styles.assignmentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.assignmentHeader}>
-                    <FileText size={18} color={colors.warning} />
-                    <Text style={[styles.assignmentCourse, { color: colors.text }]} numberOfLines={1}>{assignment.courseCode}</Text>
+            {data.assignments.map((assignment, index) => {
+              const isPractical = assignment.type?.toLowerCase().includes('practical');
+              const isCA = assignment.type?.toLowerCase().includes('ca') || assignment.type?.toLowerCase().includes('continuous');
+              
+              return (
+                <View key={index} style={[styles.assignmentCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={styles.assignmentHeaderRow}>
+                    <View style={[styles.typeIconBg, { backgroundColor: isPractical ? '#FF950015' : isCA ? '#5856D615' : '#007AFF15' }]}>
+                      {isPractical ? (
+                        <Lock size={16} color="#FF9500" />
+                      ) : isCA ? (
+                        <Award size={16} color="#5856D6" />
+                      ) : (
+                        <FileText size={16} color="#007AFF" />
+                      )}
+                    </View>
+                    <View style={styles.courseCol}>
+                      <Text style={[styles.courseCodeText, { color: colors.text }]}>{assignment.courseCode}</Text>
+                      <Text style={[styles.typeLabel, { color: colors.textSecondary }]}>{assignment.type}</Text>
+                    </View>
                   </View>
-                  <Text style={[styles.assignmentType, { color: colors.textSecondary }]} numberOfLines={2}>{assignment.type}</Text>
-                </View>
-                
-                <View style={styles.assignmentFooter}>
-                  <Text style={[styles.assignmentDate, { color: colors.textSecondary }]}>Last Date: {assignment.lastDate}</Text>
+
+                  <View style={[styles.dueBadge, { backgroundColor: colors.surface }]}>
+                    <Clock size={12} color={colors.error} />
+                    <Text style={[styles.dueText, { color: colors.text }]}>Due: {assignment.lastDate}</Text>
+                  </View>
+
                   <TouchableOpacity 
-                    style={[styles.uploadButton, { backgroundColor: isDark ? 'rgba(10,132,255,0.1)' : 'rgba(0,122,255,0.05)' }]}
+                    style={[styles.submitBtn, { backgroundColor: colors.primary }]}
                     onPress={() => router.push('/assignments_upload' as any)}
                   >
-                    <UploadCloud size={14} color={colors.primary} />
-                    <Text style={[styles.uploadButtonText, { color: colors.primary }]}>Upload</Text>
+                    <Text style={styles.submitBtnText}>Submit Task</Text>
+                    <ChevronRight size={14} color="#fff" />
                   </TouchableOpacity>
+
+                  <View style={[styles.assignmentGlow, { backgroundColor: isPractical ? '#FF950010' : '#007AFF10' }]} />
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
         ) : (
           <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -397,42 +671,12 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Next Class Widget */}
-        <Text style={[styles.sectionTitle, { marginTop: 20, color: colors.text }]}>Next Class</Text>
-        {nextClassInfo.status === 'upcoming' ? (
-          <View style={[styles.nextClassCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.nextClassHeader}>
-              <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.1)' : 'rgba(255,149,0,0.1)' }]}>
-                <Clock size={14} color={colors.warning} />
-                <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
-              </View>
-              <View style={[styles.roomBadge, { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(10,132,255,0.1)' : 'rgba(0,122,255,0.1)' }]}>
-                <Text style={{ color: colors.primary, fontSize: 10, fontWeight: 'bold' }}>Room: </Text>
-                <Text style={[styles.roomText, { color: colors.primary }]}>{nextClassInfo.room}</Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Text style={[styles.courseCode, { color: colors.primary, marginBottom: 0 }]}>{nextClassInfo.subjectCode}</Text>
-            </View>
-            <Text style={[styles.subjectText, { color: colors.text }]}>{nextClassInfo.subject}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <View style={{ backgroundColor: isDark ? 'rgba(10,132,255,0.15)' : 'rgba(0,122,255,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '600' }}>{nextClassInfo.type}</Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <CheckCircle2 size={24} color={colors.success} style={{ marginBottom: 8 }} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {nextClassInfo.status === 'no_classes' ? 'No classes scheduled for today.' : 'All classes finished for today! 🎉'}
-            </Text>
-          </View>
-        )}
-
         {/* Announcements */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
-        <View style={[styles.announcementContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.announcementContainer, { 
+          backgroundColor: isDark ? 'rgba(142,142,147,0.08)' : 'rgba(142,142,147,0.04)', 
+          borderColor: isDark ? 'rgba(142,142,147,0.2)' : 'rgba(142,142,147,0.1)' 
+        }]}>
           {data.announcements && data.announcements.length > 0 ? (
             data.announcements.slice(0, 10).map((item: any, index: number) => (
               <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: colors.border }]}>
@@ -497,38 +741,131 @@ export default function DashboardScreen() {
 
       </View>
     </ScrollView>
-      {/* Modal for My Messages */}
+      {/* Modal for My Messages - ENHANCED */}
       <Modal visible={showMessages} animationType="slide" transparent={true}>
-        <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)' }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.6)' }]}>
+          <BlurView intensity={20} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
+          
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>My Messages</Text>
-              <TouchableOpacity onPress={() => setShowMessages(false)} style={[styles.closeBtn, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.closeBtnText, { color: colors.primary }]}>Close</Text>
+              <View>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>My Messages</Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>University Announcements</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowMessages(false)} style={[styles.closeBtnCompact, { backgroundColor: colors.primary + '15' }]}>
+                <Text style={[styles.closeBtnTextCompact, { color: colors.primary }]}>Done</Text>
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.messagesList} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.messagesList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 20 }}>
               {data.messages && data.messages.length > 0 ? (
-                data.messages.map((item, idx) => (
-                  <View key={item.id || idx} style={[styles.messageItem, { backgroundColor: isDark ? colors.surface : '#FAFAFA', borderColor: colors.border }]}>
-                    <View style={[styles.messageMarker, { backgroundColor: colors.primary }]} />
-                    <View style={styles.messageBody}>
-                      <Text style={[styles.messageTitle, { color: colors.text }]}>{item.title}</Text>
-                      <Text style={[styles.messageDate, { color: colors.textSecondary }]}>{item.date}</Text>
-                      <Text style={[styles.messageContent, { color: isDark ? colors.textSecondary : '#666' }]}>{item.content}</Text>
-                    </View>
-                  </View>
-                ))
+                data.messages.map((item, idx) => {
+                  const isExpanded = expandedMessageIdx === idx;
+                  const config = getMessageConfig(item.title);
+                  const Icon = config.icon;
+                  
+                  return (
+                    <Animated.View 
+                      key={item.id || idx} 
+                      layout={Layout.springify()}
+                      entering={FadeInDown.delay(idx * 50)}
+                    >
+                      <TouchableOpacity 
+                        onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
+                        activeOpacity={0.8}
+                        style={[styles.messageCardEnhanced, { 
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', 
+                          borderColor: isExpanded ? config.color + '40' : colors.border,
+                        }]}
+                      >
+                        <View style={styles.messageHeaderRow}>
+                          <View style={[styles.categoryIconBg, { backgroundColor: config.color + '15' }]}>
+                            <Icon size={14} color={config.color} />
+                          </View>
+                          
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                              <Text style={[styles.categoryBadgeText, { color: config.color }]}>{config.label}</Text>
+                              <View style={[styles.messageIndicatorGlow, { backgroundColor: config.color }]} />
+                            </View>
+                            <Text style={[styles.messageTitleEnhanced, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 1}>
+                              {item.title}
+                            </Text>
+                          </View>
+                          
+                          <View style={[styles.expandIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
+                            <ChevronRight 
+                              size={12} 
+                              color={colors.primary} 
+                              style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }} 
+                            />
+                          </View>
+                        </View>
+                        
+                        {(isExpanded || item.content) && (
+                          <Animated.View entering={FadeInUp.duration(300)}>
+                            <Text 
+                              style={[styles.messageContentEnhanced, { 
+                                color: isDark ? colors.textSecondary : '#444',
+                              }]}
+                              numberOfLines={isExpanded ? undefined : 2}
+                            >
+                              {item.content}
+                            </Text>
+                          </Animated.View>
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                })
               ) : (
-                <View style={styles.emptyState}>
-                  <Bell size={40} color={colors.textSecondary} />
-                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No personal messages</Text>
+                <View style={styles.emptyStateCompact}>
+                  <View style={[styles.emptyIconBg, { backgroundColor: colors.primary + '10' }]}>
+                    <Bell size={32} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.emptyTextCompact, { color: colors.textSecondary }]}>No new messages for you</Text>
                 </View>
               )}
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* Modal for Profile Options */}
+      <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
+        <TouchableOpacity 
+          style={styles.profileModalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowProfileMenu(false)}
+        >
+          <View style={[styles.profileMenuContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.profileMenuHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
+            </View>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
+              <Lock size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmAdPassword.aspx', 'Wifi Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
+              <Wifi size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
+              <UserCheck size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => { setShowProfileMenu(false); logout(); }}>
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
+              <LogOut size={18} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -553,60 +890,56 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 30,
+    paddingTop: Platform.OS === 'ios' ? 50 : Constants.statusBarHeight,
     paddingHorizontal: 20,
+    paddingBottom: 15,
     backgroundColor: '#fff',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 3,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 25,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   welcomeText: {
-    color: '#8E8E93',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    opacity: 0.7,
+    letterSpacing: 0.5,
   },
   nameLarge: {
-    color: '#000',
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: -1,
+    marginTop: -4,
   },
-  notificationBtn: {
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F2F2F7',
-    padding: 12,
-    borderRadius: 22,
-    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notifBadge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF3B30',
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: '#fff',
+    paddingHorizontal: 2,
   },
   notifText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: 'bold',
   },
   logoutBtn: {
@@ -884,16 +1217,54 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  nextClassCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+  emptyCardPremium: {
     padding: 20,
-    marginBottom: 25,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+    gap: 15,
+  },
+  emptyIconBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTextContainer: {
+    flex: 1,
+  },
+  emptyTitlePremium: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  emptySubPremium: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  emptyGlow: {
+    position: 'absolute',
+    right: -20,
+    bottom: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  nextClassCard: {
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 3,
+    marginBottom: 25,
   },
   nextClassHeader: {
     flexDirection: 'row',
@@ -904,47 +1275,57 @@ const styles = StyleSheet.create({
   timeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF2E5',
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   timeText: {
-    color: '#FF9500',
-    fontWeight: '600',
-    fontSize: 13,
-    marginLeft: 5,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  roomBadge: {
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+  typeBadgeWidget: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  roomText: {
-    color: '#007AFF',
-    fontSize: 13,
-    fontWeight: 'bold',
+  typeTextWidget: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   subjectText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
+    fontSize: 19,
+    fontWeight: '800',
+    lineHeight: 24,
+    marginBottom: 15,
+    paddingHorizontal: 2,
   },
-  typeText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    fontWeight: '500',
+  nextClassFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 15,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  footerText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  footerDivider: {
+    width: 1,
+    height: 12,
+    marginHorizontal: 15,
   },
   announcementContainer: {
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    borderWidth: 1,
     marginBottom: 40,
   },
   announcementCard: {
@@ -953,7 +1334,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F2F2F7',
   },
   announcementInner: {
     flex: 1,
@@ -996,88 +1376,323 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  profileModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    height: '80%',
-    padding: 20,
+    height: '85%',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 12,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 25,
+    paddingBottom: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: 'rgba(142, 142, 147, 0.3)',
+    borderRadius: 3,
+    alignSelf: 'center',
     marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  closeBtn: {
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 15,
-  },
-  closeBtnText: {
-    color: '#007AFF',
+  modalSubtitle: {
+    fontSize: 12,
     fontWeight: '600',
+    marginTop: 2,
+  },
+  closeBtnCompact: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  closeBtnTextCompact: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   messagesList: {
     flex: 1,
+    marginTop: 20,
   },
-  messageItem: {
-    flexDirection: 'row',
-    marginBottom: 15,
-    backgroundColor: '#FAFAFA',
-    borderRadius: 15,
-    padding: 15,
+  messageCardEnhanced: {
+    padding: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  messageMarker: {
+  messageHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  messageIndicatorGlow: {
     width: 4,
-    height: '100%',
-    backgroundColor: '#007AFF',
+    height: 4,
     borderRadius: 2,
-    marginRight: 12,
   },
-  messageBody: {
-    flex: 1,
-  },
-  messageTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  messageDate: {
-    fontSize: 12,
-    color: '#8E8E93',
-    marginBottom: 8,
-  },
-  messageContent: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  emptyState: {
+  categoryIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
-    marginTop: 40,
   },
-  emptyText: {
-    color: '#8E8E93',
-    marginTop: 10,
+  categoryBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  messageTitleEnhanced: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+  },
+  messageDateEnhanced: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 6,
+    opacity: 0.6,
+  },
+  expandIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageContentEnhanced: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(142, 142, 147, 0.2)',
+  },
+  emptyStateCompact: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+  },
+  emptyIconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTextCompact: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  content: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+    marginTop: 12,
+    letterSpacing: -0.3,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 0,
+  },
+  gridCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 24,
+    minHeight: 140,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gridCardLabel: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    letterSpacing: 0.2,
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginVertical: 4,
+  },
+  gridCardValue: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  glassBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  glassBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  cardFooter: {
+    width: '100%',
+    marginTop: 5,
+  },
+  miniProgress: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  miniProgressBar: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  cardGlow: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  feeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 0,
+  },
+  examsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 12,
+  },
+  horizontalScroll: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  assignmentCardPremium: {
+    width: 260,
+    padding: 20,
+    borderRadius: 28,
+    borderWidth: 1,
+    marginRight: 15,
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    minHeight: 180,
+  },
+  assignmentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  typeIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  courseCol: {
+    flex: 1,
+  },
+  courseCodeText: {
     fontSize: 16,
+    fontWeight: '800',
+  },
+  typeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  dueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 15,
+  },
+  dueText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginTop: 15,
+  },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  assignmentGlow: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  assignmentCard: {
+    width: 280,
+    padding: 18,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    minHeight: 140,
   },
   updateCard: {
     flexDirection: 'row',
@@ -1123,5 +1738,49 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 15,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileMenuContent: {
+    width: '75%',
+    borderRadius: 24,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  profileMenuHeader: {
+    padding: 15,
+    borderBottomWidth: 1,
+    marginBottom: 5,
+  },
+  profileMenuTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F2F2F7',
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
