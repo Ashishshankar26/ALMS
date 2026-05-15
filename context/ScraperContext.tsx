@@ -852,10 +852,18 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (authData?.username && authData?.password) {
         const fillScript = `
           (function() {
-            var u = document.getElementById('txtUserName');
-            var p = document.getElementById('txtPassword');
-            if (u) u.value = '${authData.username}';
-            if (p) p.value = '${authData.password}';
+            var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+            var p = document.querySelector('input[type="password"]');
+            if (u) {
+              var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+              nSU.call(u, '${authData.username}');
+              u.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (p) {
+              var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+              nSP.call(p, '${authData.password}');
+              p.dispatchEvent(new Event('input', { bubbles: true }));
+            }
           })(); true;
         `;
         webViewRef.current?.injectJavaScript(fillScript);
@@ -1117,7 +1125,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             onMessage={onMessage}
             domStorageEnabled={true}
             javaScriptEnabled={true}
-            userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            sharedCookiesEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            mixedContentMode="always"
+            originWhitelist={['*']}
+            setSupportMultipleWindows={false}
+            userAgent="Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
           />
         </View>
       )}

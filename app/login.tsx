@@ -10,8 +10,8 @@ import { useScraper } from '../context/ScraperContext';
 import { router } from 'expo-router';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
-  const { refreshData } = useScraper();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { isScraping } = useScraper();
   const { colors, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(false);
@@ -19,42 +19,71 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // This script runs BEFORE the page loads. It places a shield over the input fields.
-  // Whenever the user taps the Password field, the 'blur' event tries to tell the website they left the User ID field.
-  // We intercept that event and kill it instantly so the website's anti-bot AJAX never fires!
+  // ─── BEFORE page loads ─────────────────────────────────────────────────
+  // 1. Kill blur/focusout/change on UMS INPUT fields only — this prevents
+  //    UMS's own anti-bot AJAX from firing when switching between fields.
+  //    Turnstile runs inside its OWN iframe (challenges.cloudflare.com),
+  //    so these main-document event interceptors do NOT affect it.
+  // 2. Hide WebView fingerprint markers so Cloudflare Turnstile doesn't
+  //    detect that we're in a WebView and auto-fail.
   const injectedJavaScriptBeforeContentLoaded = `
     (function() {
+      // --- Anti-UMS-bot: kill blur/focusout/change on login inputs ---
       function killEvent(e) {
         if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
           e.stopImmediatePropagation();
           e.stopPropagation();
         }
       }
-      // Use the capture phase (true) to intercept events BEFORE jQuery can see them
       document.addEventListener('blur', killEvent, true);
       document.addEventListener('focusout', killEvent, true);
       document.addEventListener('change', killEvent, true);
+
+      // --- Hide WebView markers from Turnstile fingerprinting ---
+      // Turnstile checks navigator.webdriver to detect automation
+      Object.defineProperty(navigator, 'webdriver', {
+        get: function() { return false; },
+        configurable: true
+      });
+      // Hide the React Native WebView bridge
+      if (window.ReactNativeWebView) {
+        Object.defineProperty(window, '__RN_WV_REF__', {
+          value: window.ReactNativeWebView,
+          writable: false,
+          configurable: false,
+          enumerable: false
+        });
+      }
     })();
     true;
   `;
 
+  // ─── AFTER page loads ──────────────────────────────────────────────────
+  // Captures credentials on login click. Uses flexible selectors since
+  // UMS now generates DYNAMIC IDs for password field and login button.
   const injectedJavaScript = `
     (function() {
-      // Monitor login button clicks to capture credentials
-      var btn = document.getElementById('btnLogin');
+      // Restore the bridge if we hid it
+      if (window.__RN_WV_REF__ && !window.ReactNativeWebView) {
+        window.ReactNativeWebView = window.__RN_WV_REF__;
+      }
+
+      // Find login button — could be #btnLogin or dynamically-named
+      var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
       if (btn) {
         btn.addEventListener('click', function() {
-          var u = document.getElementById('txtUserName') ? document.getElementById('txtUserName').value : '';
-          var p = document.getElementById('txtPassword') ? document.getElementById('txtPassword').value : '';
-          if (u && p) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SAVE_CREDENTIALS', u: u, p: p }));
+          var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var p = document.querySelector('input[type="password"]');
+          if (u && u.value && p && p.value) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SAVE_CREDENTIALS', u: u.value, p: p.value }));
           }
         });
       }
 
-      // Check for presence of fields and notify app
+      // Poll for username field, then notify app for auto-fill
       var poll = setInterval(function() {
-        if (document.getElementById('txtUserName')) {
+        var userField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+        if (userField) {
           clearInterval(poll);
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY_TO_FILL' }));
         }
@@ -73,10 +102,16 @@ export default function LoginScreen() {
     loadCreds();
   }, []);
 
+  React.useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, authLoading]);
+
   const handleNavigationStateChange = (navState: any) => {
     if (navState.url.toLowerCase().includes('dashboard') || navState.url.toLowerCase().includes('home')) {
         login({ name: 'Student', username: savedCreds?.u, password: savedCreds?.p }).then(() => {
-            router.replace('/(tabs)');
+            router.replace('/');
         });
     }
   };
@@ -91,11 +126,10 @@ export default function LoginScreen() {
         if (savedCreds) {
           webViewRef.current?.injectJavaScript(`
             (function() {
-              var u = document.getElementById('txtUserName');
-              var p = document.getElementById('txtPassword');
+              var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+              var p = document.querySelector('input[type="password"]');
               if (u) u.value = '${savedCreds.u}';
               if (p) p.value = '${savedCreds.p}';
-              // Trigger any focus events needed by the site
               u?.dispatchEvent(new Event('change', { bubbles: true }));
               p?.dispatchEvent(new Event('change', { bubbles: true }));
             })();
@@ -106,7 +140,12 @@ export default function LoginScreen() {
     } catch (e) {}
   };
 
-  const spoofedUserAgent = "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36";
+  // Updated to a recent Chrome version — old Chrome/112 may be flagged by Turnstile
+  const spoofedUserAgent = "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36";
+
+  const isDashboardTextFalseError = (message: string) => {
+    return /quick links|ums home|lpu touch|lpu live|my class|yourdost|function enabledisable|document\.getelementbyid\('ctl00|go to search menu to add quick link/i.test(message || '');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -122,74 +161,18 @@ export default function LoginScreen() {
               <GraduationCap size={40} color={colors.primary} />
             </View>
             <Text style={[styles.loginTitle, { color: colors.text }]}>LPU Student Login</Text>
-            <Text style={[styles.loginSubtitle, { color: colors.textSecondary }]}>Enter your credentials to sync your dashboard</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Registration Number</Text>
-              <TextInput 
-                style={[styles.input, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7', color: colors.text, borderColor: colors.border }]}
-                placeholder="e.g. 1220..."
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                value={username}
-                onChangeText={setUsername}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Password</Text>
-              <TextInput 
-                style={[styles.input, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7', color: colors.text, borderColor: colors.border }]}
-                placeholder="••••••••"
-                secureTextEntry
-                placeholderTextColor={isDark ? '#666' : '#999'}
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
-
-            <TouchableOpacity 
-              style={[styles.loginButton, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                const width = 500;
-                const height = 600;
-                const left = (window.innerWidth - width) / 2;
-                const top = (window.innerHeight - height) / 2;
-                window.open('https://ums.lpu.in/lpuums/LoginNew.aspx', 'LPULogin', `width=${width},height=${height},top=${top},left=${left}`);
-                // Now that the popup is open, show the "I've Logged In" button
-                setError(false); // Reuse error state or just handle navigation
-                setLoading(false);
-              }}
-            >
-              <Text style={styles.loginButtonText}>Step 1: Open Secure Login</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.dashboardButton, { borderColor: colors.primary, borderWidth: 2 }]}
-              onPress={() => {
-                if (!username) {
-                  alert('Please enter your Registration Number');
-                  return;
-                }
-                login({ name: 'Student', username: username, password: password }).then(() => {
-                  // Instant Sync Trigger for Web - Injecting username directly
-                  refreshData(username);
-                  router.replace('/(tabs)');
-                });
-              }}
-            >
-              <Text style={[styles.dashboardButtonText, { color: colors.primary }]}>Step 2: Sync & Go to Dashboard</Text>
-            </TouchableOpacity>
+            <Text style={[styles.loginSubtitle, { color: colors.textSecondary }]}>Please use the Android app to log in. UMS now uses Cloudflare verification.</Text>
 
             <View style={styles.securityBadge}>
               <Lock size={12} color="#34C759" />
-              <Text style={styles.securityText}>After logging in in the popup, click Step 2.</Text>
+              <Text style={styles.securityText}>Download the Android app for full access.</Text>
             </View>
           </Animated.View>
         </View>
       ) : (
         <WebView
           ref={webViewRef}
-          source={{ 
+          source={{
             uri: 'https://ums.lpu.in/lpuums/LoginNew.aspx',
             headers: {
               'X-Requested-With': ''
@@ -208,6 +191,12 @@ export default function LoginScreen() {
           sharedCookiesEnabled={true}
           thirdPartyCookiesEnabled={true}
           mixedContentMode="always"
+          // --- Turnstile compatibility props ---
+          originWhitelist={['*']}
+          setSupportMultipleWindows={false}
+          allowsInlineMediaPlayback={true}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={true}
         />
       )}
     </View>
