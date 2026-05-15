@@ -116,7 +116,7 @@ export default function AttendanceScreen() {
     const safeToMissTerm = Math.min(remainingPrecise, Math.max(0, rawSafeToMiss));
     
     const forecastIfMissed = totalTermClasses > 0 
-      ? Math.floor((effectiveAttended + (remainingPrecise - safeToMissTerm)) / totalTermClasses * 100)
+      ? Math.round((effectiveAttended + (remainingPrecise - safeToMissTerm)) / totalTermClasses * 100)
       : 0;
 
     return { 
@@ -291,7 +291,7 @@ export default function AttendanceScreen() {
                               styles.projectionValue, 
                               { color: ((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? colors.error : '#34C759' }
                             ]}>
-                              {Math.floor(((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) * 100)}%
+                              {Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) * 100)}%
                             </Text>
                             <Text style={[styles.projectionHint, { color: colors.textSecondary }]}>If you miss 1</Text>
                           </View>
