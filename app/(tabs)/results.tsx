@@ -128,8 +128,6 @@ export default function ResultsScreen() {
                             <Text style={[styles.subjectName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
                             <View style={styles.subjectMeta}>
                               <Text style={[styles.subjectCode, { color: colors.textSecondary }]}>{sub.code}</Text>
-                              <View style={styles.dot} />
-                              <Text style={[styles.creditsText, { color: colors.textSecondary }]}>4 Credits</Text>
                             </View>
                           </View>
                           

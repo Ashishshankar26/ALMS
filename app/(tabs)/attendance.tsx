@@ -58,13 +58,17 @@ export default function AttendanceScreen() {
   const EST_CLASSES_PER_WEEK = 4; // Default estimate
   const remainingClassesEst = diffWeeks * EST_CLASSES_PER_WEEK;
 
-  // Calculate Overall Attendance including Duty Leaves
+  // Calculate totals for the summary section
   const totalClasses = attendanceData.reduce((acc, curr) => acc + (curr.totalClasses || 0), 0);
   const attendedClasses = attendanceData.reduce((acc, curr) => acc + (curr.attendedClasses || 0), 0);
   const dutyLeaves = attendanceData.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0);
   
-  const overallAttendance = totalClasses > 0 ? Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100).toString() : '0';
-  const rawOverallAttendance = totalClasses > 0 ? Math.ceil((attendedClasses / totalClasses) * 100).toString() : '0';
+  // Use UMS-provided overall attendance (fetched from #AttPercent on dashboard)
+  // Only calculate ourselves as fallback if UMS value is missing
+  const umsOverallAttendance = data.overallAttendance && data.overallAttendance !== '0.0' ? data.overallAttendance : null;
+  const calcOverall = totalClasses > 0 ? Math.round(((attendedClasses + dutyLeaves) / totalClasses) * 100).toString() : '0';
+  const overallAttendance = umsOverallAttendance || calcOverall;
+  const rawOverallAttendance = totalClasses > 0 ? Math.round((attendedClasses / totalClasses) * 100).toString() : '0';
   
   const displayAttendance = showAggregate ? overallAttendance : rawOverallAttendance;
 
@@ -187,9 +191,13 @@ export default function AttendanceScreen() {
       <View style={styles.list}>
         <Text style={[styles.sectionTitleCompact, { color: colors.text }]}>COURSE ANALYTICS</Text>
         {attendanceData.map((item, index) => {
-          const effectivePct = item.totalClasses > 0 
-            ? Math.ceil(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100) 
-            : 0;
+          // Use the ACTUAL percentage fetched from UMS (from .c100 span on dashboard)
+          // Only calculate ourselves as fallback if UMS value is 0 or missing
+          const effectivePct = (item.percentage && item.percentage > 0)
+            ? item.percentage
+            : (item.totalClasses > 0 
+              ? Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100) 
+              : 0);
           const status = getStatus(effectivePct);
           const isSelected = selectedSubject === item.subjectCode;
 
