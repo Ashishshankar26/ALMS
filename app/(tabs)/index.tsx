@@ -826,7 +826,7 @@ export default function DashboardScreen() {
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       {/* Enhanced Header Section with Profile */}
-      <View style={[styles.header, { backgroundColor: profileColor, borderBottomColor: 'transparent' }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: 'transparent' }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={[styles.welcomeText, { color: isDark ? colors.textSecondary : '#8E8E93', letterSpacing: 1.2 }]}>WELCOME BACK,</Text>
@@ -862,7 +862,7 @@ export default function DashboardScreen() {
         </View>
 
         {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: isDark ? '#2C2C2E' : '#FAFAFA', borderColor: colors.border }]}>
+          <View style={[styles.premiumProfileCard, { backgroundColor: profileColor, borderColor: 'rgba(255,255,255,0.1)' }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
