@@ -34,27 +34,27 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if vertical movement is significant (>10px) 
+        // to avoid getting "stuck" while normal scrolling
+        return Math.abs(gestureState.dy) > 10;
+      },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
       },
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderMove: (_, gestureState) => {
-        translateY.setValue(gestureState.dy);
-      },
+      onPanResponderMove: RNAnimated.event(
+        [null, { dy: translateY }],
+        { useNativeDriver: true }
+      ),
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
         
         const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
         
         if (isTap) {
-          // Use the live ref to get the actual current index
           const currentIdx = activeIndexRef.current;
           const activeCard = cards[currentIdx];
-          
           if (activeCard.key === 'fee') onFeePress();
           else if (activeCard.key === 'exams') onExamsPress();
           else if (activeCard.key === 'attendance') router.push('/attendance' as any);
@@ -68,9 +68,11 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 20,
-          stiffness: 150,
-          mass: 0.8,
+          damping: 24, // Smoother damping
+          stiffness: 180, // Snappier return
+          mass: 0.6,
+          restSpeedThreshold: 0.001,
+          restDisplacementThreshold: 0.001,
         }).start();
       },
       onPanResponderTerminate: () => {
@@ -78,8 +80,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 20,
-          stiffness: 150,
+          damping: 24,
+          stiffness: 180,
         }).start();
       },
     })
