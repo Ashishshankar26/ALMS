@@ -86,78 +86,26 @@ export const useScraper = () => useContext(ScraperContext);
 const DASHBOARD_SCRIPT = `
 (function() {
   try {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "DASHBOARD SCRIPT LOADED - DIRECT POST" }));
     var log = function(msg) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "MINIMAL: " + msg }));
     };
-    log("DASHBOARD SCRIPT START");
-
-    // Poll until the page's own AJAX has rendered the course cards AND the CGPA/Att values
-    var pollCount = 0;
-    var poll = setInterval(function() {
-      pollCount++;
-      var coursesList = document.getElementById("CoursesList");
-      var cgpaEl      = document.getElementById("cgpa");
-      var attPerEl    = document.getElementById("AttPercent");
-
-      var hasCoursesLoaded = coursesList && coursesList.querySelectorAll(".mycoursesdiv").length > 0;
-      var hasCgpa  = cgpaEl  && /[0-9]+\\.[0-9]+/.test(cgpaEl.innerText);
-      var hasAtt   = attPerEl && /[0-9]+/.test(attPerEl.innerText);
-
-      if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 20) {
-        clearInterval(poll);
-        var fetchTarget = sessionStorage.getItem('fetch_attendance_for');
-        if (fetchTarget) {
-          sessionStorage.removeItem('fetch_attendance_for');
-          log("Dashboard: Fetching detailed logs for " + fetchTarget);
-          var rows = coursesList ? coursesList.querySelectorAll(".mycoursesdiv") : [];
-          var targetRow = null;
-          for (var i = 0; i < rows.length; i++) {
-            if (rows[i].innerText.includes(fetchTarget)) { targetRow = rows[i]; break; }
-          }
-          if (targetRow) {
-            targetRow.click();
-            var apoll = 0;
-            var ap = setInterval(function() {
-              apoll++;
-              var mBody = document.querySelector('.modal.show .modal-body') || document.querySelector('#modalAttendance .modal-body') || document.querySelector('#AttendanceModal .modal-body');
-              if (mBody && mBody.innerText.includes('Faculty')) {
-                clearInterval(ap);
-                var logs = [];
-                var attRows = mBody.querySelectorAll('.row, li, tr, .card');
-                for (var i = 0; i < attRows.length; i++) {
-                  var rText = attRows[i].innerText.trim();
-                  if (rText && (rText.match(/^[P|A|D|O|E|L]\\s/i) || rText.includes('Faculty'))) {
-                    var statusMatch = rText.match(/^(P|A|D|O|E|L)\\b/i);
-                    var dateMatch = rText.match(/(\\d{1,2}\\s+[A-Za-z]{3},\\s*\\d{4})/);
-                    var timeMatch = rText.match(/(\\[[A-Z]\\]\\s*-?\\s*\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2}\\s*[APM]{2})/i) || rText.match(/(\\[[A-Z]\\])/i);
-                    var facMatch = rText.match(/Faculty\\s*:\\s*([^\\n(]+)/i);
-                    logs.push({
-                      status: statusMatch ? statusMatch[1].toUpperCase() : '?',
-                      date: dateMatch ? dateMatch[1] : '',
-                      time: timeMatch ? timeMatch[1] : '',
-                      faculty: facMatch ? facMatch[1].trim() : '',
-                      raw: rText
-                    });
-                  }
-                }
-                var closeBtn = document.querySelector('.modal.show .close, .modal.show [data-dismiss="modal"]');
-                if (closeBtn) closeBtn.click();
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: logs } }));
-              } else if (apoll > 40) {
-                clearInterval(ap);
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
-              }
-            }, 250);
-          } else {
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
-          }
-        } else {
-          log("Dashboard: Poll done, starting scrapeAll");
-          scrapeAll();
-        }
-      }
-    }, 500);
+    log("SCRIPT STARTING");
+    
+    // Test extraction immediately
+    var name = document.getElementById("p_name") ? document.getElementById("p_name").innerText : "Element p_name not found";
+    log("Name check: " + name);
+    
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: "DASHBOARD_DATA",
+      payload: { profile: { name: name } },
+      isPartial: true
+    }));
+    
+  } catch(e) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "MINIMAL ERROR: " + e.toString() }));
+  }
+})(); true;
+`;
 
     function scrapeAll() {
           try {
@@ -1055,9 +1003,11 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     // Auto-inject scripts based on URL with guards to avoid double-injection
     if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
-      console.log('INJECTING DASHBOARD_SCRIPT...');
+      console.log('INJECTING DASHBOARD_SCRIPT (with delay)...');
       didDashboard.current = true;
-      webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
+      setTimeout(() => {
+        webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
+      }, 2000);
     } else if (url.includes('frmRoomBooking.aspx') && !didBooking.current) {
       console.log('INJECTING ROOM_BOOKING_SCRIPT...');
       didBooking.current = true;
