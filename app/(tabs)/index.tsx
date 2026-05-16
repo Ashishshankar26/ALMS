@@ -35,17 +35,12 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Reduced threshold for better responsiveness
-        return Math.abs(gestureState.dy) > 6;
-      },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
       },
-      onPanResponderMove: RNAnimated.event(
-        [null, { dy: translateY }],
-        { useNativeDriver: true }
-      ),
+      onPanResponderMove: (_, gestureState) => {
+        translateY.setValue(gestureState.dy);
+      },
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
         
@@ -67,8 +62,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 24, // Smoother damping
-          stiffness: 180, // Snappier return
+          damping: 24,
+          stiffness: 180,
           mass: 0.6,
           restSpeedThreshold: 0.001,
           restDisplacementThreshold: 0.001,
