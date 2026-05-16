@@ -10,7 +10,7 @@ const { width } = Dimensions.get('window');
 const SEMESTER_DATE_KEY = '@semester_end_date';
 
 export default function AttendanceScreen() {
-  const { data, isScraping } = useScraper();
+  const { data, isScraping, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [targetPct, setTargetPct] = useState(75);

@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 type TabType = 'REGULAR' | 'BACKLOG';
 
 export default function ResultsScreen() {
-  const { data } = useScraper();
+  const { data, isScraping, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   
   const resultsData = (data.results && data.results.length > 0) ? data.results : [];
