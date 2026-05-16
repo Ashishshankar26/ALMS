@@ -1300,6 +1300,32 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.examUrl) merged.examUrl = p.examUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
+          // CHECK MESSAGES FOR ROOM BOOKINGS (In case someone else booked it for the user)
+          if (p.messages?.length > 0) {
+            const today = new Date().toLocaleDateString('en-US'); // MM/DD/YYYY to match portal
+            const bookingMsg = p.messages.find(m => 
+              (m.title.toLowerCase().includes('discussion room') || m.title.toLowerCase().includes('carrel')) &&
+              (m.date.toLowerCase().includes('today') || m.date.includes(today) || m.date.includes('Recently'))
+            );
+            
+            if (bookingMsg) {
+              const content = bookingMsg.content;
+              // Extract Room No: "4D2: Discussion Room 2"
+              const roomMatch = content.match(/Room\\s*(?:No)?\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(Discussion\\s*Room\\s*\\d+)/i);
+              // Extract Slot: "5:30PM to 6:30PM"
+              const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)\\s*to\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM))/i);
+              
+              if (roomMatch) {
+                merged.roomBooking = {
+                  room: roomMatch[1].trim(),
+                  date: bookingMsg.date.toLowerCase().includes('today') ? today : bookingMsg.date,
+                  slot: slotMatch ? slotMatch[1].trim() : 'Booked via Message'
+                };
+                console.log('Room Booking found in messages:', JSON.stringify(merged.roomBooking));
+              }
+            }
+          }
+          
           // Trigger Makeup Scraping if URL found (Continues in background)
           if (p.makeupUrl) {
             webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
@@ -1330,7 +1356,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const payload = msg.payload;
         console.log('ROOM BOOKING DATA RECEIVED:', JSON.stringify(payload));
         setData(prev => {
-          const merged = { ...prev, roomBooking: payload, lastUpdated: new Date().toISOString() };
+          // If the page scraper found nothing but we found a booking in messages earlier, keep it
+          const finalBooking = payload ? payload : prev.roomBooking;
+          const merged = { ...prev, roomBooking: finalBooking, lastUpdated: new Date().toISOString() };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
           
           // FINISH sync with timetable
