@@ -216,7 +216,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'attendance',
-      color: '#6D28D9',
+      color: '#10B981', // Aesthetic Lush Emerald Green
       render: () => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
@@ -609,28 +609,6 @@ export default function DashboardScreen() {
   const attColor = getAttendanceColor(overallAttendance);
   const userColor = getUserColor(profile.vid);
 
-  const getProfileColor = (vid: string) => {
-    if (!vid) return isDark ? '#1C1C1E' : '#FFFFFF';
-    const palette = [
-      '#FF3B30', // Red
-      '#FF9500', // Orange
-      '#34C759', // Green
-      '#007AFF', // Blue
-      '#5856D6', // Purple
-      '#AF52DE', // Violet
-      '#FF2D55', // Pink
-      '#E91E63', // Magenta
-    ];
-    let hash = 999; // Different salt for this specific card
-    for (let i = 0; i < vid.length; i++) {
-      hash = ((hash << 5) + hash) + vid.charCodeAt(i);
-    }
-    const baseColor = palette[Math.abs(hash) % palette.length];
-    return isDark ? `${baseColor}20` : `${baseColor}08`; // Very subtle tint
-  };
-
-  const infoCardColor = getProfileColor(profile.vid);
-
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
     if (Platform.OS === 'web' && profile?.name === 'Loading...' && !isScraping) {
@@ -869,25 +847,25 @@ export default function DashboardScreen() {
         </View>
 
         {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: colors.border, borderLeftWidth: 0 }]}>
+          <View style={[styles.premiumProfileCard, { backgroundColor: isDark ? '#2C2C2E' : '#FAFAFA', borderColor: colors.border }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
-                <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
+                <View style={[styles.editBadge, { backgroundColor: userColor }]}>
                   <User size={10} color="#fff" />
                 </View>
               </TouchableOpacity>
               <View style={styles.profileDetails}>
                 <Text style={[styles.fullName, { color: colors.text }]}>{profile.name}</Text>
                 <View style={styles.badgeRow}>
-                  <View style={[styles.vidBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#E5F1FF' }]}>
+                  <View style={[styles.vidBadge, { backgroundColor: isDark ? 'rgba(10,132,255,0.15)' : '#E5F1FF' }]}>
                     <Text style={[styles.vidText, { color: colors.primary }]}>{profile.vid}</Text>
                   </View>
-                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
+                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? colors.surface : '#F2F2F7' }]}>
                     <Text style={[styles.sectionText, { color: colors.text }]}>{profile.section}</Text>
                   </View>
                   {profile.rollNo && (
-                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFF9E5' }]}>
+                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,149,0,0.15)' : '#FFF9E5' }]}>
                       <Text style={[styles.rollText, { color: colors.warning }]}>Roll: {profile.rollNo}</Text>
                     </View>
                   )}
@@ -896,8 +874,8 @@ export default function DashboardScreen() {
               </View>
             </View>
             <View style={[styles.syncRow, { borderTopColor: colors.border }]}>
-              <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
-              <Text style={[styles.syncText, { color: colors.textSecondary }]}>
+              <View style={styles.statusDot} />
+              <Text style={styles.syncText}>
                 Last synced: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
               </Text>
             </View>
