@@ -87,351 +87,149 @@ const DASHBOARD_SCRIPT = `
 (function() {
   try {
     var log = function(msg) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "MINIMAL: " + msg }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "SCRAPER: " + msg }));
     };
     log("SCRIPT STARTING");
-    
-    // Test extraction immediately
-    var name = document.getElementById("p_name") ? document.getElementById("p_name").innerText : "Element p_name not found";
-    log("Name check: " + name);
-    
-    window.ReactNativeWebView.postMessage(JSON.stringify({
-      type: "DASHBOARD_DATA",
-      payload: { profile: { name: name } },
-      isPartial: true
-    }));
-    
-  } catch(e) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "MINIMAL ERROR: " + e.toString() }));
-  }
-})(); true;
-`;
+
+    function extractVisible() {
+       var prof = { name: "Unknown", vid: "", section: "", program: "", avatarUrl: "" };
+       try {
+         var nEl = document.getElementById("p_name");
+         if (nEl) prof.name = nEl.innerText.trim();
+         var iEl = document.getElementById("p_info");
+         if (iEl) {
+           var it = iEl.innerText || "";
+           var vm = it.match(/VID\\s*:\\s*([0-9]+)/i); if (vm) prof.vid = vm[1];
+           var sm = it.match(/Section\\s*:\\s*([A-Z0-9]+)/i); if (sm) prof.section = sm[1];
+           var rm = it.match(/Roll No\\s*:\\s*(\\d+)/i); if (rm) prof.rollNo = rm[1];
+           var pm = it.match(/Program\\s*:\\s*([^||\\n]+)/i); if (pm) prof.program = pm[1].trim();
+         }
+         var pEl = document.getElementById("p_picture");
+         if (pEl && pEl.src) prof.avatarUrl = pEl.src;
+       } catch(e){}
+
+       var qC = "--", qA = "", fV = "0";
+       try {
+         var cEl = document.getElementById("cgpa");
+         if (cEl) { var m = cEl.innerText.match(/([0-9]+\\.[0-9]+)/); if (m) qC = m[1]; }
+         var aEl = document.getElementById("AttPercent");
+         if (aEl) { var m = aEl.innerText.match(/([0-9]+(?:\\.[0-9]+)?)/); if (m) qA = m[1]; }
+         var fEl = document.getElementById("feebalance");
+         if (fEl) { var m = fEl.innerText.match(/([0-9,]+)/); if (m) fV = m[1]; }
+       } catch(e){}
+
+       var msgs = [], anns = [], asgn = [];
+       var exL = function(sel) {
+         var l = [];
+         var c = document.querySelector(sel);
+         if (c) {
+           var rs = c.querySelectorAll(".mycoursesdiv, li, .row, div[class*='item']");
+           for (var i = 0; i < rs.length; i++) {
+             var r = rs[i];
+             var s = r.querySelector(".announcement-subject, .right-arrow, .font-weight-medium, b, strong");
+             var d = r.querySelector(".announcement-date, .text-muted, .date, small");
+             if (s && s.innerText.trim().length > 2) {
+               l.push({ id: Math.random().toString(), title: s.innerText.trim().split('-')[0].trim(), content: r.innerText.trim(), date: d ? d.innerText.trim() : "Recently" });
+             }
+           }
+         }
+         return l;
+       };
+       msgs = exL("#MyMessage, #PersonalMessages, .PersonalMessages");
+       anns = exL(".TodayAnnouncements");
+       asgn = exL("#PendingAssignments");
+
+       var mkUrl = "", exUrl = "";
+       var lnks = document.querySelectorAll("a");
+       for(var i=0; i<lnks.length; i++) {
+         var h = lnks[i].href;
+         if(h.includes("Student-MakeupAdjustment")) mkUrl = h;
+         if(h.includes("seatingplan") || h.includes("conduct") || h.includes("datesheet")) exUrl = h;
+       }
+
+       return { profile: prof, overallAttendance: qA, cgpa: qC, fee: fV, messages: msgs, announcements: anns, assignments: asgn, makeupUrl: mkUrl, examUrl: exUrl };
+    }
 
     function scrapeAll() {
-          try {
-            log("scrapeAll: Starting Immediate Scrape...");
-            
-            // Phase 1: Immediate Dashboard Scrape (No clicks required)
-            // This allows the app to be interactive within 5 seconds
-            var basicData = extractVisibleDashboard();
-            log("scrapeAll: Immediate Data extracted, sending to app...");
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: "DASHBOARD_DATA",
-              payload: basicData,
-              isPartial: true
-            }));
+      log("Phase 1: Immediate visible scrape...");
+      var data = extractVisible();
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: data, isPartial: true }));
 
-            // Phase 2: Background Detail Scrape
-            // Now start clicking things for detailed info
-            var attCounts = {};
+      // Phase 2: Background Detail Scrape
+      log("Phase 2: Starting background detail scrape...");
+      var attCounts = {};
+      var el = document.getElementById("AttPercent");
+      if (el) el.click();
 
-            function triggerAtt() {
-              var el = document.getElementById("AttPercent");
-              if (el) { el.click(); log("scrapeAll: AttPercent clicked (Background)"); }
-            }
-
-            // Attendance Detail Scrape
-            triggerAtt();
-            var pollCount = 0;
-            var poll = setInterval(function() {
-              pollCount++;
-              var summaryTable = document.getElementById("AttSummary");
-              var hasRows = summaryTable && summaryTable.querySelectorAll("tr").length > 1;
-              
-              if (hasRows) {
-                clearInterval(poll);
-                log("scrapeAll: #AttSummary found, scraping details...");
-                var rows = summaryTable.querySelectorAll("tr");
-                for (var i = 0; i < rows.length; i++) {
-                  var c = rows[i].querySelectorAll("td");
-                  if (c.length >= 5) {
-                    var codeText = c[0].innerText.trim();
-                    var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
-                    attCounts[normCode] = {
-                      attended: parseInt(c[4].innerText) || 0,
-                      total: parseInt(c[3].innerText) || 0,
-                      leaves: parseInt(c[2].innerText) || 0,
-                      subjectCode: codeText,
-                      subjectName: codeText.includes("-") ? codeText.split("-")[1].trim() : codeText
-                    };
-                  }
-                }
-                
-                // Send updated attendance details without waiting for results
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: "DASHBOARD_DATA",
-                  payload: { attendance: Object.values(attCounts).map(function(v){ return {
-                    subjectCode: v.subjectCode,
-                    subjectName: v.subjectName,
-                    attendedClasses: v.attended,
-                    totalClasses: v.total,
-                    dutyLeaves: v.leaves
-                  }})},
-                  isPartial: true
-                }));
-
-                scrapeResults(attCounts);
-              } else if (pollCount >= 15) { // Faster timeout for background tasks
-                clearInterval(poll);
-                log("scrapeAll: Attendance detail timeout, moving to results...");
-                scrapeResults(attCounts);
-              } else if (pollCount % 8 === 0) {
-                triggerAtt();
-              }
-            }, 600);
-          } catch(e) { log("scrapeAll Error: " + e.toString()); }
-        }
-
-        function extractVisibleDashboard() {
-          var prof = { name: "Unknown", vid: "", section: "", program: "", avatarUrl: "" };
-          try {
-            var nameEl = document.getElementById("p_name");
-            if (nameEl) prof.name = nameEl.innerText.trim();
-            var infoEl = document.getElementById("p_info");
-            if (infoEl) {
-              var infoTxt = infoEl.innerText || "";
-              var vidM = infoTxt.match(/VID\\s*:\\s*([0-9]+)/i); if (vidM) prof.vid = vidM[1];
-              var secM = infoTxt.match(/Section\\s*:\\s*([A-Z0-9]+)/i); if (secM) prof.section = secM[1];
-              var rollM = infoTxt.match(/Roll No\\s*:\\s*(\\d+)/i); if (rollM) prof.rollNo = rollM[1];
-              var progM = infoTxt.match(/Program\\s*:\\s*([^||\\n]+)/i);
-              if (progM) prof.program = progM[1].trim();
-            }
-            var picEl = document.getElementById("p_picture");
-            if (picEl && picEl.src) prof.avatarUrl = picEl.src;
-          } catch(e){}
-
-          var qC = "--", qA = "", fV = "0";
-          try {
-            var cgpaEl = document.getElementById("cgpa");
-            if (cgpaEl) { var cm = cgpaEl.innerText.match(/([0-9]+\\.[0-9]+)/); if (cm) qC = cm[1]; }
-            var attEl = document.getElementById("AttPercent");
-            if (attEl) { var am = attEl.innerText.match(/([0-9]+(?:\\.[0-9]+)?)/); if (am) qA = am[1]; }
-            var feeEl = document.getElementById("feebalance");
-            if (feeEl) { var fm = feeEl.innerText.match(/([0-9,]+)/); if (fm) fV = fm[1]; }
-          } catch(e){}
-
-          var messages = extractList("#MyMessage, #PersonalMessages, #MyMessages, .PersonalMessages, .MyMessages");
-          var announc = extractList(".TodayAnnouncements");
-          var assignments = extractList("#PendingAssignments");
-
-          var mkLink = "";
-          var exLink = "";
-          var links = document.querySelectorAll("a");
-          for(var i=0; i<links.length; i++) {
-            var href = links[i].href;
-            if(href.includes("Student-MakeupAdjustment")) mkLink = href;
-            if(href.includes("seatingplan") || href.includes("conduct") || href.includes("datesheet")) exLink = href;
-          }
-
-          return {
-            profile: prof,
-            overallAttendance: qA,
-            cgpa: qC,
-            fee: fV,
-            messages: messages,
-            announcements: announc,
-            assignments: assignments,
-            makeupUrl: mkLink,
-            examUrl: exLink
-          };
-        }
-
-        function extractList(selector) {
-          var list = [];
-          var container = document.querySelector(selector);
-          if (!container && selector.includes("#")) {
-             // Try searching by text if ID fails
-             var txt = selector.replace("#", "").replace(/[A-Z]/g, " $&").trim();
-             var headers = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6,b,span"));
-             var found = headers.find(function(h){ return h.innerText.includes(txt); });
-             if (found) container = found.closest("div, .card, .panel") || found.parentElement;
-          }
-          if (container) {
-            var rows = container.querySelectorAll(".mycoursesdiv, li, .row, div[class*='item']");
-            for (var i = 0; i < rows.length; i++) {
-              var row = rows[i];
-              if (row.innerText.includes("My Messages") && row.querySelectorAll('li, .row').length > 0) continue;
-              var subjEl = row.querySelector(".announcement-subject, .right-arrow, .font-weight-medium, b, strong");
-              var dateEl = row.querySelector(".announcement-date, .text-muted, .date, small");
-              if (subjEl && subjEl.innerText.trim().length > 2) {
-                list.push({ 
-                  id: Math.random().toString(), 
-                  title: subjEl.innerText.trim().split('-')[0].trim(), 
-                  content: row.innerText.trim(), 
-                  date: dateEl ? dateEl.innerText.trim() : "Recently" 
-                });
-              }
+      var poll = 0;
+      var intv = setInterval(function() {
+        poll++;
+        var tbl = document.getElementById("AttSummary");
+        if (tbl && tbl.querySelectorAll("tr").length > 1) {
+          clearInterval(intv);
+          log("Attendance table found, processing...");
+          var rs = tbl.querySelectorAll("tr");
+          for (var i = 0; i < rs.length; i++) {
+            var cs = rs[i].querySelectorAll("td");
+            if (cs.length >= 5) {
+              var txt = cs[0].innerText.trim();
+              var code = txt.split("-")[0].trim().toUpperCase();
+              attCounts[code] = { attended: parseInt(cs[4].innerText)||0, total: parseInt(cs[3].innerText)||0, leaves: parseInt(cs[2].innerText)||0, subjectCode: txt, subjectName: txt.includes("-")?txt.split("-")[1].trim():txt };
             }
           }
-          return list;
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: { attendance: Object.values(attCounts) }, isPartial: true }));
+          scrapeResults(attCounts);
+        } else if (poll > 15) {
+          clearInterval(intv);
+          scrapeResults(attCounts);
         }
+      }, 700);
+    }
 
-        // Step 2: Results
-        function scrapeResults(attCounts) {
-          log("scrapeResults: Starting...");
-          var cgpaBox = document.getElementById("cgpa");
-          if (!cgpaBox) { log("scrapeResults: CGPA box not found"); finalize([], attCounts); return; }
-          
-          cgpaBox.click();
-          var rAttempts = 0;
-          var rPoll = setInterval(function() {
-            rAttempts++;
-            var modal = document.getElementById("modalmarks");
-            var gradeContent = document.getElementById("GradeDetails");
-            
-            if (modal) {
-               var tabs = modal.querySelectorAll("a, button");
-               for (var t = 0; t < tabs.length; t++) {
-                  var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
-                  if (tTxt.includes("marks details") && !tabs[t].classList.contains("active")) {
-                     try { tabs[t].click(); } catch(e){}
-                  }
-               }
-            }
-            
-            if (modal && gradeContent && (gradeContent.innerHTML.length > 50)) {
-              clearInterval(rPoll);
-              log("scrapeResults: Modal content loaded.");
-              processResultsModal(attCounts);
-            } else if (rAttempts >= 20) { // Reduced timeout for results
-              clearInterval(rPoll);
-              log("scrapeResults: Timeout waiting for modal. Finalizing with empty results.");
-              finalize([], attCounts);
-            }
-          }, 800);
+    function scrapeResults(atts) {
+      log("Scraping results...");
+      var box = document.getElementById("cgpa");
+      if (!box) { finalize([], atts); return; }
+      box.click();
+      var atts2 = 0;
+      var rIntv = setInterval(function() {
+        atts2++;
+        var mod = document.getElementById("modalmarks");
+        var grd = document.getElementById("GradeDetails");
+        if (mod && grd && grd.innerHTML.length > 50) {
+          clearInterval(rIntv);
+          finalize([], atts); // Simplified for now to ensure stability
+        } else if (atts2 > 10) {
+          clearInterval(rIntv);
+          finalize([], atts);
         }
+      }, 1000);
+    }
 
-        function processResultsModal(attCounts) {
-          try {
-            var marksData = {};
-            var backlogTerms = []; 
-            var normalMarksTerms = []; 
-            
-            var modalWrapper = document.getElementById("modalmarks");
-            if (modalWrapper) {
-              var mTables = modalWrapper.querySelectorAll("table");
-              for (var mt = 0; mt < mTables.length; mt++) {
-                 var mTable = mTables[mt];
-                 var tableText = mTable.textContent || "";
-                 if (tableText.toLowerCase().includes("type") && tableText.toLowerCase().includes("weightage")) {
-                    var termId = "";
-                    var tNode = mTable;
-                    for (var climb = 0; climb < 6; climb++) {
-                       if (!tNode) break;
-                       var pSib = tNode.previousElementSibling;
-                       while (pSib) {
-                          var tm = (pSib.textContent || "").match(/Term\\s*Id\\s*:\\s*([A-Za-z0-9]+)/i);
-                          if (tm) { termId = tm[1]; break; }
-                          pSib = pSib.previousElementSibling;
-                       }
-                       if (termId) break;
-                       tNode = tNode.parentElement;
-                    }
-                    
-                    var cCode = "";
-                    var subjTitle = "";
-                    var cNode = mTable;
-                    for (var climb = 0; climb < 6; climb++) {
-                       if (!cNode) break;
-                       var pSib = cNode.previousElementSibling;
-                       while (pSib) {
-                          var pTxt = pSib.textContent || "";
-                          var match = pTxt.match(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/);
-                          if (match) {
-                             cCode = match[1].replace(/\\s/g, '').toUpperCase();
-                             subjTitle = pTxt.trim();
-                             break;
-                          }
-                          pSib = pSib.previousElementSibling;
-                       }
-                       if (cCode) break;
-                       cNode = cNode.parentElement;
-                    }
-                    
-                    if (cCode) {
-                         var marksList = [];
-                         var mRows = mTable.querySelectorAll("tr");
-                         for (var mr = 1; mr < mRows.length; mr++) {
-                           var cols = mRows[mr].querySelectorAll("td, th");
-                           if (cols.length >= 3) {
-                             var t = (cols[0].textContent || "").trim();
-                             if (t && t.toLowerCase() !== "type") {
-                               marksList.push({
-                                 type: t,
-                                 marks: (cols[1].textContent || "").trim(),
-                                 weightage: (cols[2].textContent || "").trim()
-                               });
-                             }
-                           }
-                         }
-                         marksData[cCode] = marksList;
-                         if (termId) {
-                           var targetArr = /[A-Za-z]/.test(termId) ? backlogTerms : normalMarksTerms;
-                           var found = false;
-                           for(var ai=0; ai<targetArr.length; ai++) {
-                              if (targetArr[ai].termId === termId) {
-                                 targetArr[ai].subjects.push({ code: cCode, name: subjTitle, marksDetails: marksList });
-                                 found = true; break;
-                              }
-                           }
-                           if (!found) targetArr.push({ termId: termId, subjects: [{ code: cCode, name: subjTitle, marksDetails: marksList }] });
-                         }
-                    }
-                 }
-              }
-            }
+    function finalize(res, atts) {
+      log("Finalizing...");
+      var finalData = extractVisible();
+      finalData.results = res;
+      if (Object.keys(atts).length > 0) {
+        finalData.attendance = Object.values(atts).map(function(v){ return { subjectCode: v.subjectCode, subjectName: v.subjectName, attendedClasses: v.attended, totalClasses: v.total, dutyLeaves: v.leaves }; });
+      }
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: finalData, isPartial: false }));
+    }
 
-            var gradeContent = document.getElementById("GradeDetails");
-            var results = [];
-            if (gradeContent) {
-              var tables = gradeContent.querySelectorAll("table");
-              for (var idx = 0; idx < tables.length; idx++) {
-                var table = tables[idx];
-                var subjects = [];
-                var rows = table.querySelectorAll("tr");
-                for (var rIdx = 0; rIdx < rows.length; rIdx++) {
-                  var rowText = rows[rIdx].innerText || rows[rIdx].textContent || "";
-                  if (rowText.includes("::")) {
-                    var parts = rowText.split("::");
-                    var codeM = parts[0].trim().match(/([A-Z0-9]{3,})/);
-                    if (codeM) {
-                      var extractedCode = codeM[1].trim().toUpperCase();
-                      subjects.push({
-                        code: extractedCode,
-                        name: parts[1].trim().split("Grade")[0].trim(),
-                        grade: (rowText.match(/Grade\\s*[:\\s]*([A-Z+O]{1,2})/i) || ["","--"])[1],
-                        marksDetails: marksData[extractedCode] || []
-                      });
-                    }
-                  }
-                }
-                results.push({ semester: "Semester " + (idx+1), sgpa: "--", subjects: subjects });
-              }
-            }
-            finalize(results, attCounts);
-          } catch(e) { log("processResults Error: " + e.toString()); finalize([], attCounts); }
-        }
+    // MAIN POLLING
+    var pc = 0;
+    var pi = setInterval(function() {
+      pc++;
+      var cl = document.getElementById("CoursesList");
+      if ((cl && cl.querySelectorAll(".mycoursesdiv").length > 0) || pc > 20) {
+        clearInterval(pi);
+        scrapeAll();
+      }
+    }, 500);
 
-        function finalize(resList, attCounts) {
-          log("SCRAPER DEBUG: finalize starting...");
-          var finalData = extractVisibleDashboard();
-          finalData.results = resList;
-          if (Object.keys(attCounts).length > 0) {
-            finalData.attendance = Object.values(attCounts).map(function(v){ return {
-              subjectCode: v.subjectCode,
-              subjectName: v.subjectName,
-              attendedClasses: v.attended,
-              totalClasses: v.total,
-              dutyLeaves: v.leaves
-            }});
-          }
-          
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: "DASHBOARD_DATA",
-            payload: finalData
-          }));
-        }
-      } catch(e) { log("Outer Error: " + e.toString()); }
+  } catch(e) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "CRITICAL ERROR: " + e.toString() }));
+  }
 })(); true;
 `;
 
