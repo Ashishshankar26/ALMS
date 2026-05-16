@@ -609,6 +609,21 @@ export default function DashboardScreen() {
   const attColor = getAttendanceColor(overallAttendance);
   const userColor = getUserColor(profile.vid);
 
+  const getProfileColor = (vid: string) => {
+    if (!vid) return isDark ? '#1C1C1E' : '#FFFFFF';
+    const palette = [
+      '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF9500', '#34C759'
+    ];
+    let hash = 5381; // Different salt
+    for (let i = 0; i < vid.length; i++) {
+      hash = ((hash << 5) + hash) + vid.charCodeAt(i);
+    }
+    const baseColor = palette[Math.abs(hash) % palette.length];
+    return isDark ? `${baseColor}25` : `${baseColor}10`; // Subtle glass effect
+  };
+
+  const profileColor = getProfileColor(profile.vid);
+
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
     if (Platform.OS === 'web' && profile?.name === 'Loading...' && !isScraping) {
@@ -811,7 +826,7 @@ export default function DashboardScreen() {
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       {/* Enhanced Header Section with Profile */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: 'transparent' }]}>
+      <View style={[styles.header, { backgroundColor: profileColor, borderBottomColor: 'transparent' }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={[styles.welcomeText, { color: isDark ? colors.textSecondary : '#8E8E93', letterSpacing: 1.2 }]}>WELCOME BACK,</Text>
