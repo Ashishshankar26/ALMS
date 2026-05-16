@@ -1338,7 +1338,10 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (bookingMsg) {
               const content = bookingMsg.content;
               console.log('SCRAPER DEBUG: Booking Msg Content:', content);
-              const roomMatch = content.match(/Room\\s*(?:No)?\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(Discussion\\s*Room\\s*\\d+)/i) || content.match(/(Room\\s*\\d+[A-Z0-9-]*)/i);
+              const roomMatch = content.match(/Room\\s*(?:Number|No|#)?\\s*:?\\s*([^\\n,.]+)/i) || 
+                                content.match(/(Discussion\\s*Room\\s*\\d+)/i) || 
+                                content.match(/(Room\\s*\\d+[A-Z0-9-]*)/i) ||
+                                content.match(/Seat\\s*No\\(s\\)\\s*:?([^\\n,.]+)/i);
               
               // Lenient time slot regex: handles "5:30PM to 6:30PM", "5:30PM to :6:30PM", "5:30-6:30", etc.
               const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || 
