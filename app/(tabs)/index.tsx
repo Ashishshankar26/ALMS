@@ -216,7 +216,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'attendance',
-      color: '#10B981', // Aesthetic Lush Emerald Green
+      color: '#6366F1', // Modern & Aesthetic Electric Indigo
       render: () => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
