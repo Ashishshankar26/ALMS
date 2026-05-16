@@ -953,6 +953,10 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const didDashboard = useRef(false);
   const didTimetable = useRef(false);
   const didMakeup = useRef(false);
+  const didBooking = useRef(false);
+  const didExams = useRef(false);
+  const isProcessingPhase = useRef(false);
+  const isFullyDone = useRef(false);
 
   // Load initial data from storage
   useEffect(() => {
@@ -978,23 +982,19 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
+      didBooking.current = false;
+      didExams.current = false;
     }
   }, [isAuthenticated]);
 
-  const isProcessingPhase = useRef(false);
-
-  const isFullyDone = useRef(false);
-
   const refreshData = (webUsername?: string) => {
-    console.log('REFRESH DATA START', { webUsername });
+    const finalUsername = webUsername || authData?.username;
+    console.log('REFRESH DATA START', { webUsername, finalUsername });
+    
     // MASTER KEY: On web, we allow refresh even if auth state is still propagating
     if (isAuthenticated || Platform.OS === 'web') {
-      if (Platform.OS === 'web') {
-        // WEB SYNC: Instant activation for PWA
-        setIsScraping(true);
-        const finalUsername = webUsername || authData?.username || 'Student';
-        console.log('Web Sync: Injecting data for', finalUsername);
-        
+      if (!isAuthenticated && Platform.OS === 'web' && finalUsername) {
+        // WEB SYNC: Fallback for manual sync
         setData(prev => ({
           ...prev,
           profile: {
@@ -1016,14 +1016,16 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
+      didBooking.current = false;
+      didExams.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
       setIsScraping(true);
 
-      // Safety watchdog: force stop loading after 15s
+      // Safety watchdog
       setTimeout(() => {
         setIsScraping(false);
-      }, 15000);
+      }, 25000);
 
       // Force navigate back to dashboard to start sync
       setTimeout(() => { 
@@ -1049,21 +1051,26 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
-    // Auto-inject scripts based on URL
-    if (url.includes('StudentDashboard.aspx')) {
+    // Auto-inject scripts based on URL with guards to avoid double-injection
+    if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
       console.log('INJECTING DASHBOARD_SCRIPT...');
+      didDashboard.current = true;
       webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
-    } else if (url.includes('frmRoomBooking.aspx')) {
+    } else if (url.includes('frmRoomBooking.aspx') && !didBooking.current) {
       console.log('INJECTING ROOM_BOOKING_SCRIPT...');
+      didBooking.current = true;
       webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
-    } else if (url.includes('frmStudentTimeTable.aspx')) {
+    } else if (url.includes('frmStudentTimeTable.aspx') && !didTimetable.current) {
       console.log('INJECTING TIMETABLE_SCRIPT...');
+      didTimetable.current = true;
       webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
-    } else if (url.includes('Student-MakeupAdjustment')) {
+    } else if (url.includes('Student-MakeupAdjustment') && !didMakeup.current) {
       console.log('INJECTING MAKEUP_SCRIPT...');
+      didMakeup.current = true;
       webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
-    } else if (url.includes('seatingplan')) {
+    } else if ((url.includes('seatingplan') || url.includes('seating-plan')) && !didExams.current) {
       console.log('INJECTING EXAMS_SCRIPT...');
+      didExams.current = true;
       webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
     }
 
