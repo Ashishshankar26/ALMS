@@ -483,9 +483,9 @@ const DASHBOARD_SCRIPT = `
             payload: finalData
           }));
         }
-tch(e) { log("Main Error: " + e.toString()); }
-    }
-  } catch(e) { log("Outer Error: " + e.toString()); }
+          } catch(e) { log("Main Error: " + e.toString()); }
+        }
+      } catch(e) { log("Outer Error: " + e.toString()); }
 })(); true;
 `;
 
