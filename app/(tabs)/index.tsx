@@ -116,16 +116,19 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
                 <Text style={styles.stackLabelWhite}>FINANCIAL SUMMARY</Text>
               </View>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                Academic Session 2024-25
+              </Text>
               <Text style={[styles.stackBigValue, { fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
                   <FileText size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{isClear ? 'All Clear' : 'Balance'}</Text>
+                  <Text style={[styles.stackSubWhite]}>{isClear ? 'All Clear' : 'Outstanding'}</Text>
                 </View>
                 <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
                   <Wifi size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>Live</Text>
+                  <Text style={[styles.stackSubWhite]}>Live Sync</Text>
                 </View>
               </View>
             </View>
@@ -159,7 +162,10 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
                 <Text style={styles.stackLabelWhite}>ROOM & LIBRARY</Text>
               </View>
-              <Text style={[styles.stackBigValue, { color: '#fff', fontSize: booking ? 24 : 32 }]}>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                {booking ? 'Active Reservation' : 'Resource Hub Availability'}
+              </Text>
+              <Text style={[styles.stackBigValue, { color: '#fff', fontSize: (booking?.room || 'Library Booking').length > 15 ? 24 : 32 }]}>
                 {booking ? booking.room : 'Library Booking'}
               </Text>
               <View style={styles.stackFooterRow}>
@@ -170,7 +176,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
                   <Calendar size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{booking ? booking.date : 'Standard'}</Text>
+                  <Text style={[styles.stackSubWhite]}>{booking ? booking.date : 'Standard Access'}</Text>
                 </View>
               </View>
             </View>
@@ -251,6 +257,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
                 <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
               </View>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                Live Attendance Tracking
+              </Text>
               <Text style={styles.stackBigValue}>{data.overallAttendance}%</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
@@ -260,7 +269,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
                   <Award size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>DL: {dutyLeaves}</Text>
+                  <Text style={[styles.stackSubWhite]}>DLs: {dutyLeaves}</Text>
                 </View>
               </View>
             </View>
