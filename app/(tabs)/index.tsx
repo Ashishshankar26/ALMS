@@ -142,8 +142,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <BlurView intensity={60} tint="light" style={styles.stackCardInner}>
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.3)' }]} />
+          <BlurView intensity={90} tint="light" style={styles.stackCardInner}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.85)' }]} />
             <View style={styles.stackHandleLight} />
             <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
                <BookOpen size={20} color="#000" />
