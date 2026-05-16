@@ -1009,26 +1009,31 @@ export default function DashboardScreen() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
         <View style={[styles.announcementContainer, { 
           backgroundColor: isDark ? 'rgba(142,142,147,0.08)' : 'rgba(142,142,147,0.04)', 
-          borderColor: isDark ? 'rgba(142,142,147,0.2)' : 'rgba(142,142,147,0.1)' 
+          borderColor: isDark ? 'rgba(142,142,147,0.2)' : 'rgba(142,142,147,0.1)',
+          maxHeight: 280, // Show roughly 3.5 items
+          padding: 0, // Remove padding to allow ScrollView to fill
         }]}>
           {data.announcements && data.announcements.length > 0 ? (
-            data.announcements.slice(0, 10).map((item: any, index: number) => (
-              <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: colors.border }]}>
-                <View style={styles.announcementInner}>
-                  <View style={[styles.announcementIndicator, { backgroundColor: colors.primary }]} />
-                  <View style={styles.announcementContent}>
-                    <Text style={[styles.announcementTitle, { color: colors.text }]} numberOfLines={3}>{item.title}</Text>
-                    <Text style={[styles.announcementDate, { color: colors.textSecondary }]}>{item.date}</Text>
+            <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+              {data.announcements.map((item: any, index: number) => (
+                <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: colors.border, width: '100%', marginRight: 0 }]}>
+                  <View style={styles.announcementInner}>
+                    <View style={[styles.announcementIndicator, { backgroundColor: colors.primary }]} />
+                    <View style={styles.announcementContent}>
+                      <Text style={[styles.announcementTitle, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
+                      <Text style={[styles.announcementDate, { color: colors.textSecondary }]}>{item.date}</Text>
+                    </View>
                   </View>
-                </View>
-                <ChevronRight size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            ))
+                  <ChevronRight size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           ) : (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, margin: 15 }]}>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No new announcements.</Text>
             </View>
           )}
+        </View>
           {/* Update Manager */}
         <View style={[styles.updateCard, { backgroundColor: isDark ? 'rgba(10,132,255,0.05)' : '#F0F7FF', borderColor: colors.primary + '30', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }]}>
           <View style={[styles.updateInfo, { marginBottom: 15, flexDirection: 'column', alignItems: 'center' }]}>
@@ -1070,8 +1075,6 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-      </View>
 
       </View>
     </ScrollView>
@@ -2584,6 +2587,14 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
+  },
+  announcementCard: {
+    padding: 18,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 80,
   },
   assignmentCard: {
     width: 280,
