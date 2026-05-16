@@ -1337,14 +1337,18 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             
             if (bookingMsg) {
               const content = bookingMsg.content;
+              log('SCRAPER DEBUG: Booking Msg Content: ' + content);
               const roomMatch = content.match(/Room\\s*(?:No)?\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(Discussion\\s*Room\\s*\\d+)/i) || content.match(/(Room\\s*\\d+[A-Z0-9-]*)/i);
-              const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)\\s*to\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM))/i);
+              
+              // Lenient time slot regex: handles "5:30PM to 6:30PM", "5:30PM to :6:30PM", "5:30-6:30", etc.
+              const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || 
+                                content.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?\\s*(?:to|-)\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i);
               
               if (roomMatch) {
                 merged.roomBooking = {
                   room: roomMatch[1].trim(),
                   date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
-                  slot: slotMatch ? slotMatch[1].trim() : 'Confirmed via Message'
+                  slot: slotMatch ? slotMatch[1].trim() : 'Booked'
                 };
                 console.log('Room Booking confirmed from message:', JSON.stringify(merged.roomBooking));
               }
