@@ -86,150 +86,532 @@ export const useScraper = () => useContext(ScraperContext);
 const DASHBOARD_SCRIPT = `
 (function() {
   try {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "DASHBOARD SCRIPT LOADED - DIRECT POST" }));
     var log = function(msg) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "SCRAPER: " + msg }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
     };
-    log("SCRIPT STARTING");
+    log("DASHBOARD SCRIPT START");
 
-    function extractVisible() {
-       var prof = { name: "Unknown", vid: "", section: "", program: "", avatarUrl: "" };
-       try {
-         var nEl = document.getElementById("p_name");
-         if (nEl) prof.name = nEl.innerText.trim();
-         var iEl = document.getElementById("p_info");
-         if (iEl) {
-           var it = iEl.innerText || "";
-           var vm = it.match(/VID\\s*:\\s*([0-9]+)/i); if (vm) prof.vid = vm[1];
-           var sm = it.match(/Section\\s*:\\s*([A-Z0-9]+)/i); if (sm) prof.section = sm[1];
-           var rm = it.match(/Roll No\\s*:\\s*(\\d+)/i); if (rm) prof.rollNo = rm[1];
-           var pm = it.match(/Program\\s*:\\s*([^||\\n]+)/i); if (pm) prof.program = pm[1].trim();
-         }
-         var pEl = document.getElementById("p_picture");
-         if (pEl && pEl.src) prof.avatarUrl = pEl.src;
-       } catch(e){}
+    // Poll until the page's own AJAX has rendered the course cards AND the CGPA/Att values
+    var pollCount = 0;
+    var poll = setInterval(function() {
+      pollCount++;
+      var coursesList = document.getElementById("CoursesList");
+      var cgpaEl      = document.getElementById("cgpa");
+      var attPerEl    = document.getElementById("AttPercent");
 
-       var qC = "--", qA = "", fV = "0";
-       try {
-         var cEl = document.getElementById("cgpa");
-         if (cEl) { var m = cEl.innerText.match(/([0-9]+\\.[0-9]+)/); if (m) qC = m[1]; }
-         var aEl = document.getElementById("AttPercent");
-         if (aEl) { var m = aEl.innerText.match(/([0-9]+(?:\\.[0-9]+)?)/); if (m) qA = m[1]; }
-         var fEl = document.getElementById("feebalance");
-         if (fEl) { var m = fEl.innerText.match(/([0-9,]+)/); if (m) fV = m[1]; }
-       } catch(e){}
+      var hasCoursesLoaded = coursesList && coursesList.querySelectorAll(".mycoursesdiv").length > 0;
+      var hasCgpa  = cgpaEl  && /[0-9]+\\.[0-9]+/.test(cgpaEl.innerText);
+      var hasAtt   = attPerEl && /[0-9]+/.test(attPerEl.innerText);
 
-       var msgs = [], anns = [], asgn = [];
-       var exL = function(sel) {
-         var l = [];
-         var c = document.querySelector(sel);
-         if (c) {
-           var rs = c.querySelectorAll(".mycoursesdiv, li, .row, div[class*='item']");
-           for (var i = 0; i < rs.length; i++) {
-             var r = rs[i];
-             var s = r.querySelector(".announcement-subject, .right-arrow, .font-weight-medium, b, strong");
-             var d = r.querySelector(".announcement-date, .text-muted, .date, small");
-             if (s && s.innerText.trim().length > 2) {
-               l.push({ id: Math.random().toString(), title: s.innerText.trim().split('-')[0].trim(), content: r.innerText.trim(), date: d ? d.innerText.trim() : "Recently" });
-             }
-           }
-         }
-         return l;
-       };
-       msgs = exL("#MyMessage, #PersonalMessages, .PersonalMessages");
-       anns = exL(".TodayAnnouncements");
-       asgn = exL("#PendingAssignments");
-
-       var mkUrl = "", exUrl = "";
-       var lnks = document.querySelectorAll("a");
-       for(var i=0; i<lnks.length; i++) {
-         var h = lnks[i].href;
-         if(h.includes("Student-MakeupAdjustment")) mkUrl = h;
-         if(h.includes("seatingplan") || h.includes("conduct") || h.includes("datesheet")) exUrl = h;
-       }
-
-       return { profile: prof, overallAttendance: qA, cgpa: qC, fee: fV, messages: msgs, announcements: anns, assignments: asgn, makeupUrl: mkUrl, examUrl: exUrl };
-    }
-
-    function scrapeAll() {
-      log("Phase 1: Immediate visible scrape...");
-      var data = extractVisible();
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: data, isPartial: true }));
-
-      // Phase 2: Background Detail Scrape
-      log("Phase 2: Starting background detail scrape...");
-      var attCounts = {};
-      var el = document.getElementById("AttPercent");
-      if (el) el.click();
-
-      var poll = 0;
-      var intv = setInterval(function() {
-        poll++;
-        var tbl = document.getElementById("AttSummary");
-        if (tbl && tbl.querySelectorAll("tr").length > 1) {
-          clearInterval(intv);
-          log("Attendance table found, processing...");
-          var rs = tbl.querySelectorAll("tr");
-          for (var i = 0; i < rs.length; i++) {
-            var cs = rs[i].querySelectorAll("td");
-            if (cs.length >= 5) {
-              var txt = cs[0].innerText.trim();
-              var code = txt.split("-")[0].trim().toUpperCase();
-              attCounts[code] = { attended: parseInt(cs[4].innerText)||0, total: parseInt(cs[3].innerText)||0, leaves: parseInt(cs[2].innerText)||0, subjectCode: txt, subjectName: txt.includes("-")?txt.split("-")[1].trim():txt };
-            }
+      if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 20) {
+        clearInterval(poll);
+        var fetchTarget = sessionStorage.getItem('fetch_attendance_for');
+        if (fetchTarget) {
+          sessionStorage.removeItem('fetch_attendance_for');
+          log("Dashboard: Fetching detailed logs for " + fetchTarget);
+          var rows = coursesList ? coursesList.querySelectorAll(".mycoursesdiv") : [];
+          var targetRow = null;
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i].innerText.includes(fetchTarget)) { targetRow = rows[i]; break; }
           }
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: { attendance: Object.values(attCounts) }, isPartial: true }));
-          scrapeResults(attCounts);
-        } else if (poll > 15) {
-          clearInterval(intv);
-          scrapeResults(attCounts);
+          if (targetRow) {
+            targetRow.click();
+            var apoll = 0;
+            var ap = setInterval(function() {
+              apoll++;
+              var mBody = document.querySelector('.modal.show .modal-body') || document.querySelector('#modalAttendance .modal-body') || document.querySelector('#AttendanceModal .modal-body');
+              if (mBody && mBody.innerText.includes('Faculty')) {
+                clearInterval(ap);
+                var logs = [];
+                var attRows = mBody.querySelectorAll('.row, li, tr, .card');
+                for (var i = 0; i < attRows.length; i++) {
+                  var rText = attRows[i].innerText.trim();
+                  if (rText && (rText.match(/^[P|A|D|O|E|L]\\s/i) || rText.includes('Faculty'))) {
+                    var statusMatch = rText.match(/^(P|A|D|O|E|L)\\b/i);
+                    var dateMatch = rText.match(/(\\d{1,2}\\s+[A-Za-z]{3},\\s*\\d{4})/);
+                    var timeMatch = rText.match(/(\\[[A-Z]\\]\\s*-?\\s*\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2}\\s*[APM]{2})/i) || rText.match(/(\\[[A-Z]\\])/i);
+                    var facMatch = rText.match(/Faculty\\s*:\\s*([^\\n(]+)/i);
+                    logs.push({
+                      status: statusMatch ? statusMatch[1].toUpperCase() : '?',
+                      date: dateMatch ? dateMatch[1] : '',
+                      time: timeMatch ? timeMatch[1] : '',
+                      faculty: facMatch ? facMatch[1].trim() : '',
+                      raw: rText
+                    });
+                  }
+                }
+                var closeBtn = document.querySelector('.modal.show .close, .modal.show [data-dismiss="modal"]');
+                if (closeBtn) closeBtn.click();
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: logs } }));
+              } else if (apoll > 40) {
+                clearInterval(ap);
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
+              }
+            }, 250);
+          } else {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
+          }
+        } else {
+          log("Dashboard: Poll done, starting scrapeAll");
+          scrapeAll();
         }
-      }, 700);
-    }
-
-    function scrapeResults(atts) {
-      log("Scraping results...");
-      var box = document.getElementById("cgpa");
-      if (!box) { finalize([], atts); return; }
-      box.click();
-      var atts2 = 0;
-      var rIntv = setInterval(function() {
-        atts2++;
-        var mod = document.getElementById("modalmarks");
-        var grd = document.getElementById("GradeDetails");
-        if (mod && grd && grd.innerHTML.length > 50) {
-          clearInterval(rIntv);
-          finalize([], atts); // Simplified for now to ensure stability
-        } else if (atts2 > 10) {
-          clearInterval(rIntv);
-          finalize([], atts);
-        }
-      }, 1000);
-    }
-
-    function finalize(res, atts) {
-      log("Finalizing...");
-      var finalData = extractVisible();
-      finalData.results = res;
-      if (Object.keys(atts).length > 0) {
-        finalData.attendance = Object.values(atts).map(function(v){ return { subjectCode: v.subjectCode, subjectName: v.subjectName, attendedClasses: v.attended, totalClasses: v.total, dutyLeaves: v.leaves }; });
-      }
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DASHBOARD_DATA", payload: finalData, isPartial: false }));
-    }
-
-    // MAIN POLLING
-    var pc = 0;
-    var pi = setInterval(function() {
-      pc++;
-      var cl = document.getElementById("CoursesList");
-      if ((cl && cl.querySelectorAll(".mycoursesdiv").length > 0) || pc > 20) {
-        clearInterval(pi);
-        scrapeAll();
       }
     }, 500);
 
-  } catch(e) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "CRITICAL ERROR: " + e.toString() }));
-  }
+    function scrapeAll() {
+      try {
+        log("scrapeAll: Starting...");
+        var attCounts = {};
+
+        function triggerAtt() {
+          var el = document.getElementById("AttPercent");
+          if (el) { el.click(); log("scrapeAll: AttPercent clicked"); }
+        }
+
+        // Step 1: Attendance
+        function startScrape() {
+          log("Dashboard: Starting Scrape...");
+          triggerAtt();
+          var pollCount = 0;
+          var poll = setInterval(function() {
+            pollCount++;
+            var summaryTable = document.getElementById("AttSummary");
+            var hasRows = summaryTable && summaryTable.querySelectorAll("tr").length > 1;
+            
+            if (hasRows) {
+              clearInterval(poll);
+              log("scrapeAll: #AttSummary found, scraping...");
+              var rows = summaryTable.querySelectorAll("tr");
+              for (var i = 0; i < rows.length; i++) {
+                var c = rows[i].querySelectorAll("td");
+                if (c.length >= 5) {
+                  var codeText = c[0].innerText.trim();
+                  var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
+                  attCounts[normCode] = {
+                    attended: parseInt(c[4].innerText) || 0,
+                    total: parseInt(c[3].innerText) || 0,
+                    leaves: parseInt(c[2].innerText) || 0,
+                    subjectCode: codeText,
+                    subjectName: codeText.includes("-") ? codeText.split("-")[1].trim() : codeText
+                  };
+                }
+              }
+              scrapeResults();
+            } else if (pollCount >= 30) {
+              clearInterval(poll);
+              log("scrapeAll: Attendance timeout, moving to results...");
+              scrapeResults();
+            } else if (pollCount % 10 === 0) {
+              triggerAtt();
+            }
+          }, 500);
+        }
+
+        // Step 2: Results
+        function scrapeResults() {
+          log("scrapeResults: Starting...");
+          var cgpaBox = document.getElementById("cgpa");
+          if (!cgpaBox) { log("scrapeResults: CGPA box not found"); finalize([]); return; }
+          
+          cgpaBox.click();
+          var rAttempts = 0;
+          var rPoll = setInterval(function() {
+            rAttempts++;
+            var modal = document.getElementById("modalmarks");
+            var gradeContent = document.getElementById("GradeDetails");
+            
+            // Try to force click the Marks tab using text content if possible, to trigger any lazy loading
+            var tabs = modal ? modal.querySelectorAll("a, button") : [];
+            for (var t = 0; t < tabs.length; t++) {
+               var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
+               if (tTxt.includes("marks details") && !tabs[t].classList.contains("active")) {
+                  try { tabs[t].click(); } catch(e){}
+               }
+            }
+            
+            if (modal && gradeContent && (gradeContent.innerHTML.length > 50 || rAttempts >= 30)) {
+              clearInterval(rPoll);
+              if (rAttempts >= 30) { 
+                log("scrapeResults: Timeout waiting for modal content."); 
+                finalize([]); 
+                return; 
+              }
+              log("scrapeResults: Modal content loaded.");
+              
+              var marksData = {};
+              var backlogTerms = []; 
+              var normalMarksTerms = []; 
+
+              try {
+                var modalWrapper = document.getElementById("modalmarks");
+                if (modalWrapper) {
+                  var mTables = modalWrapper.querySelectorAll("table");
+                  log("scrapeResults: Modal has " + mTables.length + " total tables.");
+                  var marksCount = 0;
+                  for (var mt = 0; mt < mTables.length; mt++) {
+                     var mTable = mTables[mt];
+                     var tableText = mTable.textContent || "";
+                     if (tableText.toLowerCase().includes("type") && tableText.toLowerCase().includes("weightage")) {
+                        marksCount++;
+                        
+                        var termId = "";
+                        var tNode = mTable;
+                        for (var climb = 0; climb < 10; climb++) {
+                           if (!tNode) break;
+                           var pSib = tNode.previousElementSibling;
+                           while (pSib) {
+                              var tm = (pSib.textContent || "").match(/Term\\s*Id\\s*:\\s*([A-Za-z0-9]+)/i);
+                              if (tm) { termId = tm[1]; break; }
+                              pSib = pSib.previousElementSibling;
+                           }
+                           if (termId) break;
+                           tNode = tNode.parentElement;
+                        }
+                        
+                        var cCode = "";
+                        var subjTitle = "";
+                        var cNode = mTable;
+                        for (var climb = 0; climb < 10; climb++) {
+                           if (!cNode) break;
+                           var pSib = cNode.previousElementSibling;
+                           while (pSib) {
+                              var pTxt = pSib.textContent || "";
+                              var match = pTxt.match(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/);
+                              if (match && pTxt.length < 200) {
+                                 cCode = match[1].replace(/\\s/g, '').toUpperCase();
+                                 subjTitle = pTxt.trim();
+                                 break;
+                              }
+                              
+                              if (pSib.querySelectorAll) {
+                                 var desc = pSib.querySelectorAll("*");
+                                 for (var d = desc.length - 1; d >= 0; d--) {
+                                    var dTxt = desc[d].textContent || "";
+                                    var dMatch = dTxt.match(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/);
+                                    if (dMatch && dTxt.length < 200) {
+                                       cCode = dMatch[1].replace(/\\s/g, '').toUpperCase();
+                                       subjTitle = dTxt.trim();
+                                       break;
+                                    }
+                                 }
+                              }
+                              if (cCode) break;
+                              pSib = pSib.previousElementSibling;
+                           }
+                           if (cCode) break;
+                           cNode = cNode.parentElement;
+                        }
+                        
+                        if (cCode) {
+                             var marksList = [];
+                             var mRows = mTable.querySelectorAll("tr");
+                             for (var mr = 1; mr < mRows.length; mr++) {
+                               var cols = mRows[mr].querySelectorAll("td, th");
+                               if (cols.length >= 3) {
+                                 var t = (cols[0].textContent || "").trim();
+                                 if (t && t.toLowerCase() !== "type") {
+                                   marksList.push({
+                                     type: t,
+                                     marks: (cols[1].textContent || "").trim(),
+                                     weightage: (cols[2].textContent || "").trim()
+                                   });
+                                 }
+                               }
+                             }
+                             
+                             marksData[cCode] = marksList;
+                             
+                             if (termId) {
+                               var subjObj = {
+                                  code: cCode,
+                                  name: subjTitle.replace(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/i, "").replace(/[:\\-]/g, "").trim(),
+                                  grade: "--",
+                                  marksDetails: marksList
+                               };
+                               
+                               var targetArr = /[A-Za-z]/.test(termId) ? backlogTerms : normalMarksTerms;
+                               var found = false;
+                               for(var arrIdx=0; arrIdx<targetArr.length; arrIdx++) {
+                                  if (targetArr[arrIdx].termId === termId) {
+                                     targetArr[arrIdx].subjects.push(subjObj);
+                                     found = true;
+                                     break;
+                                  }
+                               }
+                               if (!found) {
+                                  targetArr.push({ termId: termId, subjects: [subjObj] });
+                               }
+                             }
+                        }
+                     }
+                  }
+                  log("scrapeResults: Extracted marks for " + Object.keys(marksData).length + " subjects");
+                }
+              } catch(e) { log("scrapeResults Marks Error: " + e.toString()); }
+
+              var gradeTab = document.getElementById("second-tab1");
+              if (gradeTab && !gradeTab.classList.contains("active")) gradeTab.click();
+              
+              setTimeout(function() {
+                try {
+                  var results = [];
+                  var allText = gradeContent.innerText || gradeContent.textContent || "";
+                  var tables = gradeContent.querySelectorAll("table");
+                  log("scrapeResults: Parsing " + tables.length + " tables in Grade Details.");
+                  
+                  var termMatches = [];
+                  var tRegex = /Term\\s*[:\\s]*([IVX\\d]+)/gi;
+                  var gRegex = /TGPA\\s*[:\\s]*([0-9.]+)/gi;
+                  var tList = [], gList = [], m1, m2;
+                  while ((m1 = tRegex.exec(allText)) !== null) tList.push(m1[1]);
+                  while ((m2 = gRegex.exec(allText)) !== null) gList.push(m2[1]);
+                  for (var i = 0; i < tList.length; i++) termMatches.push({ term: tList[i], tgpa: gList[i] || "--" });
+
+                  for (var idx = 0; idx < tables.length; idx++) {
+                    var table = tables[idx];
+                    var termInfo = termMatches[idx] || { term: (idx+1).toString(), tgpa: "--" };
+                    var subjects = [];
+                    var rows = table.querySelectorAll("tr");
+                    for (var rIdx = 0; rIdx < rows.length; rIdx++) {
+                      var row = rows[rIdx];
+                      var rowText = row.innerText || row.textContent || "";
+                      if (rowText && !rowText.includes("Course") && rowText.includes("::")) {
+                        var parts = rowText.split("::");
+                        var codeM = parts[0].trim().match(/([A-Z0-9]{3,})/);
+                        var rest = parts[1].trim();
+                        var gradeM = rest.match(/Grade\\s*[:\\s]*([A-Z+O]{1,2})/i) || rest.match(/\\s+([A-Z+O]{1,2})$/);
+                        var name = rest;
+                        if (gradeM) name = rest.replace(gradeM[0], "").trim();
+
+                        if (codeM) {
+                          var extractedCode = codeM[1].trim().toUpperCase();
+                          subjects.push({
+                            code: extractedCode,
+                            name: name,
+                            grade: gradeM ? gradeM[1].trim() : "--",
+                            marksDetails: marksData[extractedCode] || []
+                          });
+                        }
+                      }
+                    }
+                    results.push({ semester: "Semester " + termInfo.term, sgpa: termInfo.tgpa, subjects: subjects });
+                  }
+                  
+                  if (normalMarksTerms.length > results.length) {
+                     var currentTerm = normalMarksTerms[normalMarksTerms.length - 1];
+                     var semNum = results.length + 1;
+                     var romanMap = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                     var rNum = romanMap[semNum] || semNum.toString();
+                     results.push({
+                        semester: "Semester " + rNum,
+                        sgpa: "--",
+                        subjects: currentTerm.subjects
+                     });
+                  }
+                  
+                  for (var i = 0; i < backlogTerms.length; i++) {
+                     results.push({
+                        semester: "Term " + backlogTerms[i].termId,
+                        sgpa: "--",
+                        subjects: backlogTerms[i].subjects
+                     });
+                  }
+                  
+                  log("scrapeResults: Final results count=" + results.length);
+                  finalize(results);
+                } catch(e) { log("scrapeResults Error: " + e.toString()); finalize([]); }
+              }, 1500);
+            }
+          }, 500);
+        }
+
+        // Step 3: Finalize and Send
+        function finalize(resList) {
+          log("SCRAPER DEBUG: finalize starting...");
+          try {
+            var prof = { name: "Unknown", vid: "", section: "", program: "", avatarUrl: "" };
+            var nameEl = document.getElementById("p_name");
+            if (nameEl) prof.name = nameEl.innerText.trim();
+            var infoEl = document.getElementById("p_info");
+            if (infoEl) {
+              var infoTxt = infoEl.innerText || "";
+              log("SCRAPER DEBUG: Profile Info Raw: " + infoTxt);
+              var vidM = infoTxt.match(/VID\\s*:\\s*([0-9]+)/i); if (vidM) prof.vid = vidM[1];
+              var secM = infoTxt.match(/Section\\s*:\\s*([A-Z0-9]+)/i); if (secM) prof.section = secM[1];
+              var rollM = infoTxt.match(/Roll No\\s*:\\s*(\\d+)/i); if (rollM) prof.rollNo = rollM[1];
+              
+              // Smart program detection
+              var progM = infoTxt.match(/Program\\s*:\\s*([^||\\n]+)/i);
+              if (progM) {
+                prof.program = progM[1].trim();
+              } else {
+                // Split and find the part that isn't the name, VID, or Section
+                var parts = infoTxt.split(/[|\\n]/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 3; });
+                for (var i = parts.length - 1; i >= 0; i--) {
+                  var p = parts[i];
+                  if (!p.includes("VID") && !p.includes("Section") && !p.includes("Roll No") && p.toLowerCase() !== prof.name.toLowerCase()) {
+                    prof.program = p;
+                    break;
+                  }
+                }
+              }
+            }
+            var picEl = document.getElementById("p_picture");
+            if (picEl && picEl.src) prof.avatarUrl = picEl.src;
+
+            var qC = "--", qA = "", fV = "0";
+            var cgpaEl = document.getElementById("cgpa");
+            if (cgpaEl) { var cm = cgpaEl.innerText.match(/([0-9]+\\.[0-9]+)/); if (cm) qC = cm[1]; }
+            var attEl = document.getElementById("AttPercent");
+            if (attEl) { var am = attEl.innerText.match(/([0-9]+(?:\\.[0-9]+)?)/); if (am) qA = am[1]; }
+            var feeEl = document.getElementById("feebalance");
+            if (feeEl) { var fm = feeEl.innerText.match(/([0-9,]+)/); if (fm) fV = fm[1]; }
+
+            var att = [];
+            var cl = document.getElementById("CoursesList");
+            if (cl) {
+              var rows = cl.querySelectorAll(".mycoursesdiv");
+              for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var pctSpan = row.querySelector(".c100 span");
+                var pctText = (pctSpan ? pctSpan.innerText : "0").replace(/%/g, "");
+                var bTag = row.querySelector("b");
+                var code = bTag ? bTag.innerText.trim().replace(/\\s*:$/, "") : "";
+                var pTag = row.querySelector("p.font-weight-medium");
+                var name = "";
+                if (pTag) {
+                  var parts = pTag.innerText.split(":");
+                  if (parts.length > 1) name = parts[1].split("\\n")[0].trim();
+                }
+                if (code && code.length > 2) {
+                  var normCode = code.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
+                  var counts = attCounts[normCode] || { attended: 0, total: 0, leaves: 0 };
+                  att.push({ 
+                    subjectCode: code, subjectName: name, 
+                    attendedClasses: Number(counts.attended), totalClasses: Number(counts.total), 
+                    dutyLeaves: Number(counts.leaves), percentage: Number(pctText) || 0 
+                  });
+                }
+              }
+            }
+
+            var assignments = [];
+            var paEl = document.getElementById("PendingAssignments");
+            if (paEl) {
+              var aRows = paEl.querySelectorAll(".mycoursesdiv");
+              for (var i = 0; i < aRows.length; i++) {
+                var row = aRows[i];
+                var cols = row.querySelectorAll("div[class*='col']");
+                var code = cols.length > 0 ? cols[0].innerText.trim() : "";
+                var pTag = row.querySelector("p.font-weight-medium");
+                var detail = pTag ? pTag.innerText : "";
+                var ldM = detail.match(/Last\\s*Date\\s*:\\s*([0-9\\-\\/]+)/i);
+                if (code && code.length > 1) {
+                  assignments.push({ 
+                    id: Math.random().toString(), courseCode: code, 
+                    type: detail.replace(/Course\\s*:\\s*/i, "").trim(), lastDate: ldM ? ldM[1] : "" 
+                  });
+                }
+              }
+            }
+
+            var announc = [];
+            var annContainer = document.querySelector(".TodayAnnouncements");
+            if (annContainer) {
+              var annRows = annContainer.querySelectorAll(".row");
+              for (var i = 0; i < annRows.length; i++) {
+                var row = annRows[i];
+                var subjEl = row.querySelector(".announcement-subject");
+                var dateEl = row.querySelector(".announcement-date");
+                if (subjEl) {
+                  announc.push({ 
+                    id: Math.random().toString(), title: subjEl.innerText.trim(), 
+                    content: subjEl.innerText.trim(), date: dateEl ? dateEl.innerText.trim() : "Today" 
+                  });
+                }
+              }
+            }
+
+            var messages = [];
+            // Try original explicit IDs from Git history first
+            var msgContainer = document.getElementById("MyMessage") || document.getElementById("PersonalMessages") || document.getElementById("MyMessages") || document.querySelector(".PersonalMessages") || document.querySelector(".MyMessages");
+            
+            // Smart discovery if IDs fail
+            if (!msgContainer) {
+              var headers = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,span,b,p'));
+              var msgHeader = headers.find(function(el) { 
+                var txt = el.innerText.trim();
+                return txt === "My Messages" || txt === "Personal Messages" || (txt.includes("My Messages") && el.children.length === 0);
+              });
+              if (msgHeader) {
+                msgContainer = msgHeader.closest('.card, .box, .panel, div[class*="container"]') || msgHeader.parentElement;
+                log("SCRAPER DEBUG: Smart Discovery found message header, using container: " + msgContainer.tagName);
+              }
+            }
+
+            if (msgContainer) {
+              // Extract from list items or rows (Original used .mycoursesdiv)
+              var msgRows = msgContainer.querySelectorAll(".mycoursesdiv, li, .row, div[class*='item']");
+              for (var i = 0; i < msgRows.length; i++) {
+                var row = msgRows[i];
+                // Ignore the header itself
+                if (row.innerText.includes("My Messages") && row.querySelectorAll('li, .row').length > 0) continue;
+                
+                var subjEl = row.querySelector(".right-arrow") || row.querySelector(".font-weight-medium") || row.querySelector("b") || row.querySelector("strong") || row.querySelector(".announcement-subject");
+                var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date") || row.querySelector("small");
+                
+                if (subjEl && subjEl.innerText.trim().length > 2) {
+                  var fullText = row.innerText.trim();
+                  messages.push({ 
+                    id: Math.random().toString(), 
+                    title: subjEl.innerText.trim().substring(0, 100).split('-')[0].trim(), 
+                    content: fullText, 
+                    date: dateEl ? dateEl.innerText.trim() : "Recently" 
+                  });
+                } else if (row.innerText.trim().length > 5) {
+                  // Fallback for simple rows
+                  var t = row.innerText.trim();
+                  messages.push({
+                    id: Math.random().toString(),
+                    title: t.substring(0, 60),
+                    content: t,
+                    date: "Recently"
+                  });
+                }
+              }
+            }
+            // Filter out duplicates and empty entries
+            messages = messages.filter(function(m, index, self) {
+              return m.title.length > 1 && self.findIndex(function(t) { return t.title === m.title; }) === index;
+            });
+            log("SCRAPER DEBUG: Found " + messages.length + " personal messages");
+
+            var mkLink = "";
+            var exLink = "";
+            var links = document.querySelectorAll("a");
+            for(var i=0; i<links.length; i++) {
+              var href = links[i].href;
+              if(href.includes("Student-MakeupAdjustment")) mkLink = href;
+              if(href.includes("seatingplan") || href.includes("conduct") || href.includes("datesheet")) exLink = href;
+            }
+
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: "DASHBOARD_DATA",
+              payload: { 
+                profile: prof, overallAttendance: qA, cgpa: qC, fee: fV, 
+                attendance: att, assignments: assignments, announcements: announc,
+                messages: messages,
+                makeupUrl: mkLink, examUrl: exLink, results: resList || []
+              }
+            }));
+          } catch(e) { log("Finalize Error: " + e.toString()); }
+        }
+
+        startScrape();
+      } catch(e) { log("Main Error: " + e.toString()); }
+    }
+  } catch(e) { log("Outer Error: " + e.toString()); }
 })(); true;
 `;
 
@@ -310,10 +692,10 @@ const ROOM_BOOKING_SCRIPT = `
     var attempts = 0;
     var interval = setInterval(function() {
       attempts++;
-      if (tryScrape() || attempts > 20) {
+      if (tryScrape() || attempts > 10) {
         clearInterval(interval);
+        // If still no booking after 10 attempts, send the "None" signal
         if (!booking) {
-           log('RoomBooking: Failed after 20 attempts.');
            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ROOM_BOOKING_DATA', payload: null }));
         }
       }
@@ -697,10 +1079,6 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const didDashboard = useRef(false);
   const didTimetable = useRef(false);
   const didMakeup = useRef(false);
-  const didBooking = useRef(false);
-  const didExams = useRef(false);
-  const isProcessingPhase = useRef(false);
-  const isFullyDone = useRef(false);
 
   // Load initial data from storage
   useEffect(() => {
@@ -726,23 +1104,23 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
-      didBooking.current = false;
-      didExams.current = false;
     }
   }, [isAuthenticated]);
 
+  const isProcessingPhase = useRef(false);
+
+  const isFullyDone = useRef(false);
+
   const refreshData = (webUsername?: string) => {
-    if (isScraping) {
-      console.log('REFRESH DATA SKIPPED: Already scraping');
-      return;
-    }
-    const finalUsername = webUsername || authData?.username;
-    console.log('REFRESH DATA START', { webUsername, finalUsername });
-    
+    console.log('REFRESH DATA START', { webUsername });
     // MASTER KEY: On web, we allow refresh even if auth state is still propagating
     if (isAuthenticated || Platform.OS === 'web') {
-      if (!isAuthenticated && Platform.OS === 'web' && finalUsername) {
-        // WEB SYNC: Fallback for manual sync
+      if (Platform.OS === 'web') {
+        // WEB SYNC: Instant activation for PWA
+        setIsScraping(true);
+        const finalUsername = webUsername || authData?.username || 'Student';
+        console.log('Web Sync: Injecting data for', finalUsername);
+        
         setData(prev => ({
           ...prev,
           profile: {
@@ -764,16 +1142,14 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
-      didBooking.current = false;
-      didExams.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
       setIsScraping(true);
 
-      // Safety watchdog
+      // Safety watchdog: force stop loading after 15s
       setTimeout(() => {
         setIsScraping(false);
-      }, 25000);
+      }, 15000);
 
       // Force navigate back to dashboard to start sync
       setTimeout(() => { 
@@ -799,52 +1175,22 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
-    // Auto-inject scripts based on URL with robust JS-side guards
-    // We remove the TS-side refs (didDashboard etc.) because they persist through reloads,
-    // but the JS environment is wiped on reload, necessitating re-injection.
-    
+    // Auto-inject scripts based on URL
     if (url.includes('StudentDashboard.aspx')) {
-      console.log('INJECTING DASHBOARD_SCRIPT (conditional)...');
-      setTimeout(() => {
-        webViewRef.current?.injectJavaScript(`
-          if (!window.__DASHBOARD_SCRIPT_INJECTED__) {
-            window.__DASHBOARD_SCRIPT_INJECTED__ = true;
-            ${DASHBOARD_SCRIPT}
-          }
-        `);
-      }, 2000);
+      console.log('INJECTING DASHBOARD_SCRIPT...');
+      webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
     } else if (url.includes('frmRoomBooking.aspx')) {
-      console.log('INJECTING ROOM_BOOKING_SCRIPT (conditional)...');
-      webViewRef.current?.injectJavaScript(`
-        if (!window.__BOOKING_SCRIPT_INJECTED__) {
-          window.__BOOKING_SCRIPT_INJECTED__ = true;
-          ${ROOM_BOOKING_SCRIPT}
-        }
-      `);
+      console.log('INJECTING ROOM_BOOKING_SCRIPT...');
+      webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
     } else if (url.includes('frmStudentTimeTable.aspx')) {
-      console.log('INJECTING TIMETABLE_SCRIPT (conditional)...');
-      webViewRef.current?.injectJavaScript(`
-        if (!window.__TIMETABLE_SCRIPT_INJECTED__) {
-          window.__TIMETABLE_SCRIPT_INJECTED__ = true;
-          ${TIMETABLE_SCRIPT}
-        }
-      `);
+      console.log('INJECTING TIMETABLE_SCRIPT...');
+      webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
     } else if (url.includes('Student-MakeupAdjustment')) {
-      console.log('INJECTING MAKEUP_SCRIPT (conditional)...');
-      webViewRef.current?.injectJavaScript(`
-        if (!window.__MAKEUP_SCRIPT_INJECTED__) {
-          window.__MAKEUP_SCRIPT_INJECTED__ = true;
-          ${MAKEUP_SCRIPT}
-        }
-      `);
-    } else if (url.includes('seatingplan') || url.includes('seating-plan')) {
-      console.log('INJECTING EXAMS_SCRIPT (conditional)...');
-      webViewRef.current?.injectJavaScript(`
-        if (!window.__EXAMS_SCRIPT_INJECTED__) {
-          window.__EXAMS_SCRIPT_INJECTED__ = true;
-          ${EXAMS_SCRIPT}
-        }
-      `);
+      console.log('INJECTING MAKEUP_SCRIPT...');
+      webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
+    } else if (url.includes('seatingplan')) {
+      console.log('INJECTING EXAMS_SCRIPT...');
+      webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
     }
 
     // Recovery Logic: If redirected to login while we should be authenticated
@@ -931,9 +1277,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       } else if (msg.type === 'DASHBOARD_DATA') {
         const p = msg.payload || {};
-        console.log('DASHBOARD DATA RECEIVED (Partial:', msg.isPartial, ')');
+        console.log('DASHBOARD DATA RECEIVED:', Object.keys(p));
         
-        // Stop blocking loading here so user can see dashboard immediately
+        // STOP blocking loading here so user can see dashboard immediately
         setIsScraping(false);
 
         setData(prev => {
@@ -952,23 +1298,19 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.cgpa) merged.cgpa = p.cgpa;
           if (p.fee) merged.fee = p.fee;
           if (p.examUrl) merged.examUrl = p.examUrl;
-          if (p.makeupUrl) merged.makeupUrl = p.makeupUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
-          merged.lastUpdated = new Date().toISOString();
-          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
-
-          // Only proceed with sync chain if this is NOT a partial update
-          if (!msg.isPartial) {
-            if (p.makeupUrl) {
-              webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
-            } else if (p.examUrl) {
-              webViewRef.current?.injectJavaScript(`window.location.href = '${p.examUrl}'; true;`);
-            } else {
-              webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
-            }
+          // Trigger Makeup Scraping if URL found (Continues in background)
+          if (p.makeupUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
+          } else if (p.examUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${p.examUrl}'; true;`);
+          } else {
+            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
           }
 
+          merged.lastUpdated = new Date().toISOString();
+          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
           return merged;
         });
 
