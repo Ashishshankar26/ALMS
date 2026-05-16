@@ -2412,7 +2412,6 @@ const styles = StyleSheet.create({
   stackContentLeft: {
     flex: 1,
     justifyContent: 'center',
-    paddingTop: 20, // Add space for the top glass icon
   },
   stackLabelRow: {
     flexDirection: 'row',
@@ -2500,17 +2499,18 @@ const styles = StyleSheet.create({
   // Library specific (In Stack)
   stackGlassIcon: {
     position: 'absolute',
-    top: 24,
-    left: 24,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    bottom: -10,
+    right: -10,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    zIndex: 10,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    zIndex: 0,
+    opacity: 0.6,
   },
   stackContentBottom: {
     flex: 1,
