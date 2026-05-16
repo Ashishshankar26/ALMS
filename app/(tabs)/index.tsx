@@ -302,6 +302,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                   { translateY: isTop ? translateY : RNAnimated.add(-offsetY, backCardShift) },
                   { rotateZ: isTop ? rotate : '0deg' },
                 ],
+                borderColor: card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
+                borderWidth: 1.5,
                 opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
                 // Add a dynamic shadow for the top card
                 shadowOpacity: isTop ? translateY.interpolate({
