@@ -32,21 +32,22 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   }, [activeIndex]);
 
 
+  // Reanimated shared values for ultra-smooth 60fps animations
+  const translationY = Animated.useSharedValue(0);
+  const activeIndexShared = Animated.useSharedValue(0);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture if vertical movement is significant (>10px) 
-        // to avoid getting "stuck" while normal scrolling
-        return Math.abs(gestureState.dy) > 10;
+        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
       },
-      onPanResponderMove: RNAnimated.event(
-        [null, { dy: translateY }],
-        { useNativeDriver: true }
-      ),
+      onPanResponderMove: (_, gestureState) => {
+        translationY.value = gestureState.dy;
+      },
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
         
@@ -60,29 +61,24 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
           else if (activeCard.key === 'attendance') router.push('/attendance' as any);
           else if (activeCard.key === 'library') onLibraryPress();
         } else if (gestureState.dy < -SWIPE_THRESHOLD) {
-          setActiveIndex((prev: number) => (prev + 1) % cardCount);
+          const nextIdx = (activeIndexRef.current + 1) % cardCount;
+          setActiveIndex(nextIdx);
+          activeIndexShared.value = Animated.withSpring(nextIdx);
         } else if (gestureState.dy > SWIPE_THRESHOLD) {
-          setActiveIndex((prev: number) => (prev - 1 + cardCount) % cardCount);
+          const nextIdx = (activeIndexRef.current - 1 + cardCount) % cardCount;
+          setActiveIndex(nextIdx);
+          activeIndexShared.value = Animated.withSpring(nextIdx);
         }
         
-        RNAnimated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          damping: 24, // Smoother damping
-          stiffness: 180, // Snappier return
-          mass: 0.6,
-          restSpeedThreshold: 0.001,
-          restDisplacementThreshold: 0.001,
-        }).start();
+        translationY.value = Animated.withSpring(0, {
+          damping: 25,
+          stiffness: 200,
+          mass: 0.5,
+        });
       },
       onPanResponderTerminate: () => {
         if (onScrollToggle) onScrollToggle(true);
-        RNAnimated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          damping: 24,
-          stiffness: 180,
-        }).start();
+        translationY.value = Animated.withSpring(0);
       },
     })
   ).current;
@@ -269,51 +265,47 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     <View style={styles.stackContainer} {...panResponder.panHandlers}>
       {cardOrder.map((cardIdx, stackPos) => {
         const card = cards[cardIdx];
-        const isTop = stackPos === cardOrder.length - 1;
         const depth = cardOrder.length - 1 - stackPos;
-        const scale = 1 - depth * 0.08;
-        const offsetY = depth * 34;
+        const isTop = depth === 0;
 
-        // --- ENHANCED ANIMATIONS ---
-        const rotate = translateY.interpolate({
-          inputRange: [-150, 0, 150],
-          outputRange: ['-8deg', '0deg', '8deg'],
-          extrapolate: 'clamp',
-        });
+        const animatedStyle = Animated.useAnimatedStyle(() => {
+          const scale = 1 - depth * 0.08;
+          const offsetY = depth * 34;
 
-        const scaleTop = translateY.interpolate({
-          inputRange: [-150, 0, 150],
-          outputRange: [0.94, 1, 0.94],
-          extrapolate: 'clamp',
-        });
+          // Interpolations using Reanimated worklets for maximum smoothness
+          const rotateZ = isTop 
+            ? Animated.interpolate(translationY.value, [-200, 0, 200], [-10, 0, 10]) + 'deg'
+            : '0deg';
 
-        // Background cards slightly react to the top card's drag
-        const backCardShift = translateY.interpolate({
-          inputRange: [-100, 0, 100],
-          outputRange: [15, 0, -15],
-          extrapolate: 'clamp',
+          const scaleVal = isTop
+            ? Animated.interpolate(translationY.value, [-200, 0, 200], [0.92, 1, 0.92])
+            : scale;
+
+          const translateYVal = isTop
+            ? translationY.value
+            : -offsetY + Animated.interpolate(translationY.value, [-100, 0, 100], [15, 0, -15]);
+
+          const opacity = isTop ? 1 : depth === 1 ? 0.8 : depth === 2 ? 0.5 : 0.3;
+
+          return {
+            transform: [
+              { scale: scaleVal },
+              { translateY: translateYVal },
+              { rotateZ: rotateZ },
+            ],
+            opacity: opacity,
+            zIndex: cardOrder.length - depth,
+            shadowOpacity: isTop ? Animated.interpolate(translationY.value, [-50, 0, 50], [0.4, 0.2, 0.4]) : 0.1,
+          };
         });
 
         return (
-          <RNAnimated.View
+          <Animated.View
             key={card.key}
             style={[
               styles.stackCard,
-              {
-                backgroundColor: card.color,
-                zIndex: cardOrder.length - depth,
-                transform: [
-                  { scale: isTop ? scaleTop : scale },
-                  { translateY: isTop ? translateY : RNAnimated.add(-offsetY, backCardShift) },
-                  { rotateZ: isTop ? rotate : '0deg' },
-                ],
-                opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
-                // Add a dynamic shadow for the top card
-                shadowOpacity: isTop ? translateY.interpolate({
-                  inputRange: [-50, 0, 50],
-                  outputRange: [0.4, 0.25, 0.4],
-                }) : 0.1,
-              },
+              { backgroundColor: card.color },
+              animatedStyle,
             ]}
           >
             {depth > 0 && (
