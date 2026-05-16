@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate, FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
 // ... (other imports) ...
@@ -24,7 +24,6 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const { isScraping, refreshData } = useScraper();
   const [activeIndex, setActiveIndex] = React.useState(0);
   const activeIndexRef = useRef(0);
-  const translateY = useRef(new RNAnimated.Value(0)).current;
   const cardCount = 4;
   
   React.useEffect(() => {
@@ -33,8 +32,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
 
 
   // Reanimated shared values for ultra-smooth 60fps animations
-  const translationY = Animated.useSharedValue(0);
-  const activeIndexShared = Animated.useSharedValue(0);
+  const translationY = useSharedValue(0);
+  const activeIndexShared = useSharedValue(0);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -63,14 +62,14 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         } else if (gestureState.dy < -SWIPE_THRESHOLD) {
           const nextIdx = (activeIndexRef.current + 1) % cardCount;
           setActiveIndex(nextIdx);
-          activeIndexShared.value = Animated.withSpring(nextIdx);
+          activeIndexShared.value = withSpring(nextIdx);
         } else if (gestureState.dy > SWIPE_THRESHOLD) {
           const nextIdx = (activeIndexRef.current - 1 + cardCount) % cardCount;
           setActiveIndex(nextIdx);
-          activeIndexShared.value = Animated.withSpring(nextIdx);
+          activeIndexShared.value = withSpring(nextIdx);
         }
         
-        translationY.value = Animated.withSpring(0, {
+        translationY.value = withSpring(0, {
           damping: 25,
           stiffness: 200,
           mass: 0.5,
@@ -78,7 +77,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       },
       onPanResponderTerminate: () => {
         if (onScrollToggle) onScrollToggle(true);
-        translationY.value = Animated.withSpring(0);
+        translationY.value = withSpring(0);
       },
     })
   ).current;
@@ -268,22 +267,22 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const depth = cardOrder.length - 1 - stackPos;
         const isTop = depth === 0;
 
-        const animatedStyle = Animated.useAnimatedStyle(() => {
+        const animatedStyle = useAnimatedStyle(() => {
           const scale = 1 - depth * 0.08;
           const offsetY = depth * 34;
 
           // Interpolations using Reanimated worklets for maximum smoothness
           const rotateZ = isTop 
-            ? Animated.interpolate(translationY.value, [-200, 0, 200], [-10, 0, 10]) + 'deg'
+            ? interpolate(translationY.value, [-200, 0, 200], [-10, 0, 10]) + 'deg'
             : '0deg';
 
           const scaleVal = isTop
-            ? Animated.interpolate(translationY.value, [-200, 0, 200], [0.92, 1, 0.92])
+            ? interpolate(translationY.value, [-200, 0, 200], [0.92, 1, 0.92])
             : scale;
 
           const translateYVal = isTop
             ? translationY.value
-            : -offsetY + Animated.interpolate(translationY.value, [-100, 0, 100], [15, 0, -15]);
+            : -offsetY + interpolate(translationY.value, [-100, 0, 100], [15, 0, -15]);
 
           const opacity = isTop ? 1 : depth === 1 ? 0.8 : depth === 2 ? 0.5 : 0.3;
 
@@ -295,7 +294,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             ],
             opacity: opacity,
             zIndex: cardOrder.length - depth,
-            shadowOpacity: isTop ? Animated.interpolate(translationY.value, [-50, 0, 50], [0.4, 0.2, 0.4]) : 0.1,
+            shadowOpacity: isTop ? interpolate(translationY.value, [-50, 0, 50], [0.4, 0.2, 0.4]) : 0.1,
           };
         });
 
@@ -329,7 +328,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
               </View>
             )}
-          </RNAnimated.View>
+          </Animated.View>
         );
       })}
     </View>
