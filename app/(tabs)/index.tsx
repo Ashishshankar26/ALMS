@@ -617,8 +617,7 @@ export default function DashboardScreen() {
     }
   }, [profile?.name, isScraping]);
 
-  const userColor = getUserColor(profile?.vid || '');
-  
+
   React.useEffect(() => {
     async function syncNotifications() {
       if (Platform.OS === 'web') return; // Notifications not supported on web in this context
