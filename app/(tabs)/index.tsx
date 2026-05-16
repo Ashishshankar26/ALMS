@@ -24,6 +24,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const { isScraping, refreshData } = useScraper();
   const [activeIndex, setActiveIndex] = React.useState(0);
   const activeIndexRef = useRef(0);
+  const translateY = useRef(new RNAnimated.Value(0)).current;
   const cardCount = 4;
   
   React.useEffect(() => {
@@ -31,14 +32,13 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   }, [activeIndex]);
 
 
-  const translateY = useRef(new RNAnimated.Value(0)).current;
-
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture if movement is primarily vertical and > 10px
-        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        // Only capture if vertical movement is significant (>10px) 
+        // to avoid getting "stuck" while normal scrolling
+        return Math.abs(gestureState.dy) > 10;
       },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
@@ -68,9 +68,11 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 20,
-          stiffness: 150,
-          mass: 0.8,
+          damping: 24, // Smoother damping
+          stiffness: 180, // Snappier return
+          mass: 0.6,
+          restSpeedThreshold: 0.001,
+          restDisplacementThreshold: 0.001,
         }).start();
       },
       onPanResponderTerminate: () => {
@@ -78,8 +80,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
-          damping: 20,
-          stiffness: 150,
+          damping: 24,
+          stiffness: 180,
         }).start();
       },
     })
@@ -285,6 +287,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
           extrapolate: 'clamp',
         });
 
+        // Background cards slightly react to the top card's drag
         const backCardShift = translateY.interpolate({
           inputRange: [-100, 0, 100],
           outputRange: [15, 0, -15],
@@ -305,6 +308,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                   { rotateZ: isTop ? rotate : '0deg' },
                 ],
                 opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
+                // Add a dynamic shadow for the top card
                 shadowOpacity: isTop ? translateY.interpolate({
                   inputRange: [-50, 0, 50],
                   outputRange: [0.4, 0.25, 0.4],
