@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, Layout, useSharedValue, useAnimatedStyle, withSpring, interpolate, Extrapolation, runOnJS } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
 // ... (other imports) ...
@@ -22,73 +22,55 @@ const SWIPE_THRESHOLD = 25;
 // ── Swipeable Utility Card Stack ──
 function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onLibraryPress, onExamsPress, onScrollToggle }: any) {
   const { isScraping, refreshData } = useScraper();
+  const scrollPosition = useSharedValue(0);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const activeIndexRef = useRef(0);
-  const translateY = useRef(new RNAnimated.Value(0)).current;
   const cardCount = 4;
-  
-  React.useEffect(() => {
-    activeIndexRef.current = activeIndex;
-  }, [activeIndex]);
-
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 10;
+      },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
       },
-      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_, gestureState) => {
-        translateY.setValue(gestureState.dy);
+        // Map dy to 0-1 range for the shared value
+        scrollPosition.value = activeIndex - gestureState.dy / (CARD_HEIGHT * 0.8);
       },
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
         
         const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
-        
         if (isTap) {
-          // Use the live ref to get the actual current index
-          const currentIdx = activeIndexRef.current;
-          const activeCard = cards[currentIdx];
-          
+          const activeCard = cards[activeIndex];
           if (activeCard.key === 'fee') onFeePress();
           else if (activeCard.key === 'exams') onExamsPress();
           else if (activeCard.key === 'attendance') router.push('/attendance' as any);
           else if (activeCard.key === 'library') onLibraryPress();
-        } else if (gestureState.dy < -SWIPE_THRESHOLD) {
-          setActiveIndex((prev: number) => (prev + 1) % cardCount);
-        } else if (gestureState.dy > SWIPE_THRESHOLD) {
-          setActiveIndex((prev: number) => (prev - 1 + cardCount) % cardCount);
+          
+          // Reset position just in case
+          scrollPosition.value = withSpring(activeIndex);
+          return;
         }
-        
-        RNAnimated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 10,
-        }).start();
+
+        let nextIndex = activeIndex;
+        if (gestureState.dy < -SWIPE_THRESHOLD) {
+          nextIndex = (activeIndex + 1) % cardCount;
+        } else if (gestureState.dy > SWIPE_THRESHOLD) {
+          nextIndex = (activeIndex - 1 + cardCount) % cardCount;
+        }
+
+        scrollPosition.value = withSpring(nextIndex, { damping: 15, stiffness: 100 });
+        runOnJS(setActiveIndex)(nextIndex);
       },
       onPanResponderTerminate: () => {
         if (onScrollToggle) onScrollToggle(true);
-        RNAnimated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
+        scrollPosition.value = withSpring(activeIndex);
       },
     })
   ).current;
-
-  const getCardOrder = () => {
-    const order = [];
-    for (let i = 0; i < cardCount; i++) {
-      order.push((activeIndex + i) % cardCount);
-    }
-    return order.reverse();
-  };
 
   const cards = [
     {
@@ -258,56 +240,89 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
   ];
 
-  const cardOrder = getCardOrder();
-
   return (
     <View style={styles.stackContainer} {...panResponder.panHandlers}>
-      {cardOrder.map((cardIdx, stackPos) => {
-        const card = cards[cardIdx];
-        const isTop = stackPos === cardOrder.length - 1;
-        const depth = cardOrder.length - 1 - stackPos;
+      {cards.map((card, index) => {
+        const animatedStyle = useAnimatedStyle(() => {
+          // Calculate relative position with wrap-around
+          let pos = (index - scrollPosition.value) % cardCount;
+          if (pos < -1) pos += cardCount;
+          if (pos > cardCount - 2) pos -= cardCount;
 
-        const scale = 1 - depth * 0.08;
-        const offsetY = depth * 34;
+          // pos 0: TOP
+          // pos 1: MID
+          // pos 2: BACK
+          // pos -1: SWIPED AWAY (UP)
+          
+          const translateY = interpolate(
+            pos,
+            [-1, 0, 1, 2, 3],
+            [-CARD_HEIGHT * 1.2, 0, 36, 72, 108],
+            Extrapolation.CLAMP
+          );
+
+          const scale = interpolate(
+            pos,
+            [-1, 0, 1, 2],
+            [0.85, 1, 0.92, 0.84],
+            Extrapolation.CLAMP
+          );
+
+          const opacity = interpolate(
+            pos,
+            [-1, 0, 1, 2, 3],
+            [0, 1, 0.8, 0.4, 0],
+            Extrapolation.CLAMP
+          );
+
+          return {
+            transform: [{ translateY }, { scale }],
+            opacity,
+            zIndex: cardCount - Math.round(pos),
+          };
+        });
 
         return (
-          <RNAnimated.View
+          <Animated.View
             key={card.key}
             style={[
               styles.stackCard,
-              {
-                backgroundColor: card.color,
-                zIndex: cardOrder.length - depth,
-                transform: [
-                  { scale },
-                  { translateY: isTop ? translateY : -offsetY },
-                ],
-                opacity: depth === 3 ? 0.4 : depth === 2 ? 0.6 : depth === 1 ? 0.8 : 1,
-              },
+              { backgroundColor: card.color },
+              animatedStyle,
             ]}
           >
-            {depth > 0 && (
-              <View style={styles.stackPeekLayer}>
-                <View style={styles.stackPeekBadge}>
-                  <Lock size={12} color="#fff" />
-                  <Text style={styles.stackPeekText}>
-                    {card.key === 'fee' ? 'FEES' : card.key === 'exams' ? 'EXAMS' : card.key === 'attendance' ? 'ATTENDANCE' : 'LIBRARY'}
-                  </Text>
-                </View>
+            {/* Peeking Label (Visible when depth > 0) */}
+            <Animated.View style={[styles.stackPeekLayer, {
+               opacity: useAnimatedStyle(() => {
+                 let pos = (index - scrollPosition.value) % cardCount;
+                 if (pos < -1) pos += cardCount;
+                 if (pos > cardCount - 2) pos -= cardCount;
+                 return { opacity: interpolate(pos, [0, 0.5, 1], [0, 1, 1], Extrapolation.CLAMP) };
+               }).opacity
+            }]}>
+              <View style={styles.stackPeekBadge}>
+                <Layers size={12} color={card.key === 'library' ? '#000' : '#fff'} />
+                <Text style={[styles.stackPeekText, { color: card.key === 'library' ? '#000' : '#fff' }]}>
+                  {card.key === 'fee' ? 'FEES' : card.key === 'exams' ? 'EXAMS' : card.key === 'attendance' ? 'ATTENDANCE' : 'LIBRARY'}
+                </Text>
               </View>
-            )}
+            </Animated.View>
 
-            {isTop && (
-              <View style={{ flex: 1 }}>
-                {card.render()}
-                <View style={styles.stackDots}>
-                  {cards.map((_, i) => (
-                    <View key={i} style={[styles.stackDot, { backgroundColor: i === activeIndex ? '#fff' : 'rgba(255,255,255,0.2)' }]} />
-                  ))}
-                </View>
+            {/* Main Content (Visible when depth is near 0) */}
+            <Animated.View style={[{ flex: 1 }, useAnimatedStyle(() => {
+                 let pos = (index - scrollPosition.value) % cardCount;
+                 if (pos < -1) pos += cardCount;
+                 if (pos > cardCount - 2) pos -= cardCount;
+                 return { opacity: interpolate(pos, [0, 0.5], [1, 0], Extrapolation.CLAMP) };
+            })]}>
+              {card.render()}
+              <View style={styles.stackDots}>
+                {cards.map((_, i) => (
+                  <View key={i} style={[styles.stackDot, { backgroundColor: i === activeIndex ? (card.key === 'library' ? '#000' : '#fff') : 'rgba(0,0,0,0.1)' }]} />
+                ))}
               </View>
-            )}
-          </RNAnimated.View>
+            </Animated.View>
+          </Animated.View>
         );
       })}
     </View>
