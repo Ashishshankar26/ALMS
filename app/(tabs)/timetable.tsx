@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { useScraper } from '../../context/ScraperContext';
 import { Clock, MapPin, Tag, User, ChevronDown, ChevronUp } from 'lucide-react-native';
@@ -8,7 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TimetableScreen() {
-  const { data } = useScraper();
+  const { data, isScraping, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   const timetable = data.timetable || {};
   
@@ -165,7 +165,18 @@ export default function TimetableScreen() {
         </ScrollView>
       </Animated.View>
 
-      <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView 
+        style={styles.list} 
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={isScraping} 
+            onRefresh={refreshData}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
 
         {/* Makeup Classes Section - COLLAPSIBLE */}
         {makeupClasses.length > 0 && (

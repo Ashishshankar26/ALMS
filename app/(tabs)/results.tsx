@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { useScraper } from '../../context/ScraperContext';
 import { ChevronDown, ChevronUp, GraduationCap, Award, BookOpen, Star } from 'lucide-react-native';
@@ -65,6 +65,14 @@ export default function ResultsScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={isScraping} 
+            onRefresh={refreshData}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Hero Header - ANIMATED */}
         <Animated.View 

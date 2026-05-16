@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { useScraper } from '../../context/ScraperContext';
 import { CheckCircle, AlertTriangle, XCircle, Calculator, Plus, Minus, Calendar, Edit2, Clock, Award, List } from 'lucide-react-native';
@@ -134,6 +134,14 @@ export default function AttendanceScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={isScraping} 
+            onRefresh={refreshData}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Hero Header - ANIMATED */}
         <Animated.View 
