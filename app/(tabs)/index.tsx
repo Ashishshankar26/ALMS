@@ -25,6 +25,11 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const scrollPosition = useSharedValue(0);
   const [activeIndex, setActiveIndex] = React.useState(0);
   const cardCount = 4;
+  const activeIndexRef = useRef(0);
+  
+  React.useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -36,38 +41,37 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         if (onScrollToggle) onScrollToggle(false);
       },
       onPanResponderMove: (_, gestureState) => {
-        // Map dy to 0-1 range for the shared value
-        scrollPosition.value = activeIndex - gestureState.dy / (CARD_HEIGHT * 0.8);
+        // Use ref to avoid closure staleness
+        scrollPosition.value = activeIndexRef.current - gestureState.dy / (CARD_HEIGHT * 0.8);
       },
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
         
         const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
         if (isTap) {
-          const activeCard = cards[activeIndex];
+          const activeCard = cards[activeIndexRef.current];
           if (activeCard.key === 'fee') onFeePress();
           else if (activeCard.key === 'exams') onExamsPress();
           else if (activeCard.key === 'attendance') router.push('/attendance' as any);
           else if (activeCard.key === 'library') onLibraryPress();
           
-          // Reset position just in case
-          scrollPosition.value = withSpring(activeIndex);
+          scrollPosition.value = withSpring(activeIndexRef.current);
           return;
         }
 
-        let nextIndex = activeIndex;
+        let nextIndex = activeIndexRef.current;
         if (gestureState.dy < -SWIPE_THRESHOLD) {
-          nextIndex = (activeIndex + 1) % cardCount;
+          nextIndex = (activeIndexRef.current + 1) % cardCount;
         } else if (gestureState.dy > SWIPE_THRESHOLD) {
-          nextIndex = (activeIndex - 1 + cardCount) % cardCount;
+          nextIndex = (activeIndexRef.current - 1 + cardCount) % cardCount;
         }
 
-        scrollPosition.value = withSpring(nextIndex, { damping: 15, stiffness: 100 });
+        scrollPosition.value = withSpring(nextIndex, { damping: 20, stiffness: 150 });
         runOnJS(setActiveIndex)(nextIndex);
       },
       onPanResponderTerminate: () => {
         if (onScrollToggle) onScrollToggle(true);
-        scrollPosition.value = withSpring(activeIndex);
+        scrollPosition.value = withSpring(activeIndexRef.current);
       },
     })
   ).current;
