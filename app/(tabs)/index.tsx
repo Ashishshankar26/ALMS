@@ -868,8 +868,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: 'transparent', borderLeftWidth: 4, borderLeftColor: infoCardColor.replace(/20|12$/, 'ff') }]}>
+          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: 'transparent' }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
