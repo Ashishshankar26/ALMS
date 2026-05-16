@@ -641,27 +641,17 @@ const ROOM_BOOKING_SCRIPT = `
         // Lenient check for headers
         if (txt.includes('Room Number') && (txt.includes('Booking Time') || txt.includes('Time'))) {
           log('RoomBooking: Target table matched in ' + name);
-          var rows = [];
-          if (table.tBodies && table.tBodies.length > 0) {
-            rows = Array.from(table.tBodies[0].rows);
-            log('RoomBooking: Found ' + rows.length + ' rows in tbody[0]');
-          } else {
-            rows = Array.from(table.querySelectorAll('tr'));
-            log('RoomBooking: Found ' + rows.length + ' rows via querySelector');
-          }
-
+          var rows = Array.from(table.querySelectorAll('tr'));
           for (var r = 0; r < rows.length; r++) {
-            var row = rows[r];
-            var cells = Array.from(row.querySelectorAll('td, th'));
+            var cells = Array.from(rows[r].querySelectorAll('td, th'));
             if (cells.length >= 5) {
               var cellTxt = cells.map(function(c){ return (c.innerText || c.textContent || '').trim(); });
-              log('RoomBooking: Row ' + r + ' cells: ' + JSON.stringify(cellTxt));
               
-              // Skip headers based on text content
-              if (cellTxt.join('').toLowerCase().includes('bookingid')) continue;
+              // Skip headers
+              if (cellTxt.join('').includes('BookingId') || cellTxt.join('').includes('RoomNumber')) continue;
               
               // Check if first cell is numeric (Booking ID)
-              if (cellTxt[0] && /^\\d+$/.test(cellTxt[0])) {
+              if (/^\\d+$/.test(cellTxt[0])) {
                  booking = {
                    room: cellTxt[3], // 4th column
                    date: cellTxt[1], // 2nd column
@@ -1310,79 +1300,6 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.examUrl) merged.examUrl = p.examUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
-          // CHECK MESSAGES FOR ROOM BOOKINGS (In case someone else booked it for the user)
-          if (p.messages?.length > 0) {
-            const now = new Date();
-            const d = now.getDate().toString().padStart(2, '0');
-            const m = (now.getMonth() + 1).toString().padStart(2, '0');
-            const y = now.getFullYear();
-            
-            const todayUS = `${m}/${d}/${y}`; // 05/16/2026
-            const todayIN = `${d}/${m}/${y}`; // 16/05/2026
-            const todayUS_noZero = `${now.getMonth() + 1}/${now.getDate()}/${y}`; // 5/16/2026
-            
-            console.log('Checking messages for booking. Today:', todayUS, todayIN);
-            
-            const bookingMsg = p.messages.find(msg => {
-              const t = msg.title.toLowerCase();
-              const c = msg.content.toLowerCase();
-              const d = msg.date;
-              
-              const isBooking = t.includes('discussion room') || t.includes('carrel') || c.includes('discussion room') || c.includes('room booking') || t.includes('booking');
-              const isToday = d.toLowerCase().includes('today') || d.includes(todayUS) || d.includes(todayIN) || d.includes(todayUS_noZero) || d.includes('Recently');
-              
-              if (isBooking) console.log('Found potential booking msg:', msg.title, 'Date:', msg.date, 'isToday:', isToday);
-              return isBooking && isToday;
-            });
-            
-            if (bookingMsg) {
-              const content = bookingMsg.content;
-              console.log('SCRAPER DEBUG: Parsing booking content:', content.substring(0, 100) + '...');
-              
-              // Try multiple patterns for room
-              const roomPatterns = [
-                /Room\\s*(?:Number|No|#)?\\s*:?\\s*([^\\n,.]+)/i,
-                /Discussion\\s*Room\\s*([^\\n,.]+)/i,
-                /Seat\\s*No\\(s\\)\\s*:?\\s*([^\\n,.]+)/i,
-                /Room\\s*([^\\n,.]+)/i
-              ];
-              
-              let room = 'Room Confirmed';
-              for (const pattern of roomPatterns) {
-                const match = content.match(pattern);
-                if (match && match[1]) {
-                  room = match[1].trim();
-                  console.log('SCRAPER DEBUG: Room match found:', room, 'with pattern:', pattern.toString());
-                  break;
-                }
-              }
-              
-              // Try multiple patterns for time
-              const timePatterns = [
-                /Time\\s*:?\\s*([^\\n,.]+)/i,
-                /(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?\\s*(?:to|-)\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i,
-                /Slot\\s*:?\\s*([^\\n,.]+)/i
-              ];
-              
-              let slot = 'Booked';
-              for (const pattern of timePatterns) {
-                const match = content.match(pattern);
-                if (match && match[1]) {
-                  slot = match[1].trim();
-                  console.log('SCRAPER DEBUG: Slot match found:', slot);
-                  break;
-                }
-              }
-              
-              merged.roomBooking = {
-                room: room,
-                date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
-                slot: slot
-              };
-              console.log('Final Room Booking state set:', JSON.stringify(merged.roomBooking));
-            }
-          }
-          
           // Trigger Makeup Scraping if URL found (Continues in background)
           if (p.makeupUrl) {
             webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
@@ -1413,9 +1330,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const payload = msg.payload;
         console.log('ROOM BOOKING DATA RECEIVED:', JSON.stringify(payload));
         setData(prev => {
-          // If the page scraper found nothing but we found a booking in messages earlier, keep it
-          const finalBooking = payload ? payload : prev.roomBooking;
-          const merged = { ...prev, roomBooking: finalBooking, lastUpdated: new Date().toISOString() };
+          const merged = { ...prev, roomBooking: payload, lastUpdated: new Date().toISOString() };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
           
           // FINISH sync with timetable
