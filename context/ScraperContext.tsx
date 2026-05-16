@@ -988,6 +988,10 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [isAuthenticated]);
 
   const refreshData = (webUsername?: string) => {
+    if (isScraping) {
+      console.log('REFRESH DATA SKIPPED: Already scraping');
+      return;
+    }
     const finalUsername = webUsername || authData?.username;
     console.log('REFRESH DATA START', { webUsername, finalUsername });
     
