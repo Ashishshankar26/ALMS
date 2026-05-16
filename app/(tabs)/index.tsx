@@ -138,14 +138,14 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'library',
-      color: '#4338CA',
-      gradient: ['#6D28D9', '#4338CA'],
+      color: '#F43F5E',
+      gradient: ['#F43F5E', '#FB923C'],
       render: () => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <LinearGradient colors={['#6D28D9', '#4338CA']} style={styles.stackCardInner}>
+          <LinearGradient colors={['#F43F5E', '#FB923C']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <BookOpen size={20} color="#fff" />
