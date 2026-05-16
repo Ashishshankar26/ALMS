@@ -91,6 +91,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     return order.reverse();
   };
 
+  const cards = [
     {
       key: 'fee',
       color: '#1A1110',
