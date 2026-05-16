@@ -626,7 +626,7 @@ export default function DashboardScreen() {
       hash = ((hash << 5) + hash) + vid.charCodeAt(i);
     }
     const baseColor = palette[Math.abs(hash) % palette.length];
-    return isDark ? `${baseColor}20` : `${baseColor}12`; // Subtle light version
+    return isDark ? `${baseColor}20` : `${baseColor}08`; // Very subtle tint
   };
 
   const infoCardColor = getProfileColor(profile.vid);
@@ -869,11 +869,11 @@ export default function DashboardScreen() {
         </View>
 
         {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: 'transparent' }]}>
+          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: colors.border, borderLeftWidth: 0 }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
-                <View style={[styles.editBadge, { backgroundColor: infoCardColor.replace(/20|12$/, 'ff') }]}>
+                <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
                   <User size={10} color="#fff" />
                 </View>
               </TouchableOpacity>
@@ -883,11 +883,11 @@ export default function DashboardScreen() {
                   <View style={[styles.vidBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#E5F1FF' }]}>
                     <Text style={[styles.vidText, { color: colors.primary }]}>{profile.vid}</Text>
                   </View>
-                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? colors.surface : '#F2F2F7' }]}>
+                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
                     <Text style={[styles.sectionText, { color: colors.text }]}>{profile.section}</Text>
                   </View>
                   {profile.rollNo && (
-                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,149,0,0.1)' : '#FFF9E5' }]}>
+                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFF9E5' }]}>
                       <Text style={[styles.rollText, { color: colors.warning }]}>Roll: {profile.rollNo}</Text>
                     </View>
                   )}
