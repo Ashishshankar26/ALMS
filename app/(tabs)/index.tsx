@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, D
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
@@ -90,169 +91,136 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     return order.reverse();
   };
 
-  const cards = [
     {
       key: 'fee',
       color: '#1A1110',
+      gradient: ['#1F2937', '#111827'],
       render: () => {
         const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
         return (
-          <View style={styles.stackCardInner}>
-            <View style={[styles.cardDecorCircle, { top: -20, right: -20, backgroundColor: '#FFFFFF10' }]} />
-            <View style={[styles.cardDecorCircle, { bottom: -40, left: -20, backgroundColor: '#FFFFFF05', width: 120, height: 120 }]} />
+          <LinearGradient colors={['#1F2937', '#111827']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
+            
+            <View style={styles.stackGlassIcon}>
+               <FileText size={20} color="#fff" />
+            </View>
+
             <TouchableOpacity style={styles.stackFab} onPress={onFeePress}>
               <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.stackContentLeft}>
-              <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 69, 58, 0.15)' }]}>
-                  <Text style={[styles.miniStatusText, { color: isClear ? '#34C759' : '#FF453A' }]}>{isClear ? 'CLEAR' : 'DUE'}</Text>
-                </View>
-                <Text style={styles.stackLabelWhite}>FINANCIAL SUMMARY</Text>
-              </View>
-              <Text style={[styles.stackBigValue, { fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
-              <View style={styles.stackFooterRow}>
-                <View style={styles.footerInfoItem}>
-                  <FileText size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{isClear ? 'All Clear' : 'Balance'}</Text>
-                </View>
-                <View style={styles.footerInfoSeparator} />
-                <View style={styles.footerInfoItem}>
-                  <Wifi size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>Live</Text>
+
+            <View style={styles.stackContentBottom}>
+              <Text style={styles.stackImageLabel}>Financial Summary</Text>
+              <View style={styles.stackValueRowImage}>
+                <Text style={styles.stackImageValue}>₹{formattedFee}</Text>
+                <View style={[styles.miniStatusBadgeImage, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 69, 58, 0.2)' }]}>
+                  <Text style={[styles.miniStatusTextImage, { color: isClear ? '#34C759' : '#FF453A' }]}>{isClear ? 'CLEAR' : 'DUE'}</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         );
       },
     },
     {
       key: 'library',
-      color: '#FFFFFF',
+      color: '#6366F1',
+      gradient: ['#A855F7', '#6366F1'],
       render: () => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <View style={styles.stackCardInner}>
-            <View style={[styles.cardDecorCircle, { top: -30, left: -30, backgroundColor: '#00000005', width: 150, height: 150 }]} />
-            <View style={styles.stackHandleLight} />
-            <TouchableOpacity style={[styles.stackFab, { borderColor: 'rgba(0,0,0,0.1)', backgroundColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
-              <ChevronRight size={18} color="#000" />
+          <LinearGradient colors={['#A855F7', '#6366F1']} style={styles.stackCardInner}>
+            <View style={styles.stackHandle} />
+            
+            <View style={styles.stackGlassIcon}>
+               <BookOpen size={20} color="#fff" />
+            </View>
+
+            <TouchableOpacity style={styles.stackFab} onPress={onLibraryPress}>
+              <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.stackContentLeft}>
-              <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(88, 86, 214, 0.1)' : (isOpen ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 69, 58, 0.1)') }]}>
-                  <Text style={[styles.miniStatusText, { color: booking ? '#5856D6' : (isOpen ? '#34C759' : '#FF453A') }]}>
-                    {booking ? 'BOOKED' : (isOpen ? 'OPEN' : 'CLOSED')}
-                  </Text>
-                </View>
-                <Text style={[styles.stackLabelWhite, { color: 'rgba(0,0,0,0.4)' }]}>ROOM & LIBRARY</Text>
-              </View>
-              <Text style={[styles.stackBigValue, { color: '#000', fontSize: booking ? 24 : 32 }]}>
-                {booking ? booking.room : 'Library Booking'}
-              </Text>
-              <View style={styles.stackFooterRow}>
-                <View style={styles.footerInfoItem}>
-                  <Clock size={11} color="#000" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubBlack]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
-                </View>
-                <View style={styles.footerInfoSeparatorBlack} />
-                <View style={styles.footerInfoItem}>
-                  <Calendar size={11} color="#000" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubBlack]}>{booking ? booking.date : 'Standard'}</Text>
+
+            <View style={styles.stackContentBottom}>
+              <Text style={styles.stackImageLabel}>Room & Library</Text>
+              <View style={styles.stackValueRowImage}>
+                <Text style={styles.stackImageValue}>{booking ? booking.room : 'Open for Booking'}</Text>
+                <View style={[styles.miniStatusBadgeImage, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Text style={[styles.miniStatusTextImage, { color: '#fff' }]}>{booking ? 'BOOKED' : 'READY'}</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         );
       },
     },
     {
       key: 'exams',
-      color: '#D61F69',
+      color: '#059669',
+      gradient: ['#34D399', '#059669'],
       render: () => {
         const subjectName = nextExam ? (data.attendance.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
         return (
-          <View style={styles.stackCardInner}>
-            <View style={[styles.cardDecorCircle, { top: -10, right: -40, backgroundColor: '#FFFFFF15', width: 100, height: 100 }]} />
+          <LinearGradient colors={['#34D399', '#059669']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
+            
+            <View style={styles.stackGlassIcon}>
+               <Award size={20} color="#fff" />
+            </View>
+
             <TouchableOpacity style={styles.stackFab} onPress={onExamsPress}>
               <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.stackContentLeft}>
-              <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                  <Clock size={10} color="#FFFFFF" />
-                  <Text style={[styles.miniStatusText, { color: '#FFFFFF' }]}>{nextExam ? 'UPCOMING' : 'SYNC'}</Text>
-                </View>
-                <Text style={styles.stackLabelWhite}>EXAMINATION HUB</Text>
-              </View>
-              {nextExam?.subjectCode && (
-                <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
-                  {nextExam.subjectCode}
-                </Text>
-              )}
-              <Text style={[styles.stackBigValue, { fontSize: subjectName.length > 15 ? 24 : 32 }]}>{subjectName}</Text>
-              <View style={styles.stackFooterRow}>
-                <View style={styles.footerInfoItem}>
-                  <MapPin size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.room : 'Schedule'}</Text>
-                </View>
-                <View style={styles.footerInfoSeparator} />
-                <View style={styles.footerInfoItem}>
-                  <Layers size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.date : 'Seating'}</Text>
-                </View>
+
+            <View style={styles.stackContentBottom}>
+              <Text style={styles.stackImageLabel}>Examination Hub</Text>
+              <View style={styles.stackValueRowImage}>
+                <Text style={[styles.stackImageValue, { fontSize: subjectName.length > 15 ? 18 : 24 }]}>{subjectName}</Text>
+                {nextExam && (
+                  <View style={[styles.miniStatusBadgeImage, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <Text style={[styles.miniStatusTextImage, { color: '#fff' }]}>UPCOMING</Text>
+                  </View>
+                )}
               </View>
             </View>
-          </View>
+          </LinearGradient>
         );
       },
     },
     {
       key: 'attendance',
-      color: '#6366F1', // Modern & Aesthetic Electric Indigo
+      color: '#2563EB',
+      gradient: ['#60A5FA', '#2563EB'],
       render: () => {
-        const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
-        const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
-        const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
-        const totalPresent = attendedClasses + dutyLeaves;
-        
         const attVal = parseFloat(data.overallAttendance);
+        const color = attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30');
+        const label = attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARN' : 'CRIT');
+        
         return (
-          <View style={styles.stackCardInner}>
-            <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: '#FFFFFF10', width: 140, height: 140 }]} />
+          <LinearGradient colors={['#60A5FA', '#2563EB']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
+            
+            <View style={styles.stackGlassIcon}>
+               <UserCheck size={20} color="#fff" />
+            </View>
+
             <TouchableOpacity style={styles.stackFab} onPress={() => router.push('/attendance' as any)}>
               <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.stackContentLeft}>
-              <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: attVal >= 80 ? 'rgba(52, 199, 89, 0.2)' : (attVal >= 75 ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 59, 48, 0.2)') }]}>
-                  <CheckCircle2 size={10} color={attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30')} />
-                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30') }]}>{attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}</Text>
-                </View>
-                <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
-              </View>
-              <Text style={styles.stackBigValue}>{data.overallAttendance}%</Text>
-              <View style={styles.stackFooterRow}>
-                <View style={styles.footerInfoItem}>
-                  <UserCheck size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{totalPresent}/{totalClasses} Total</Text>
-                </View>
-                <View style={styles.footerInfoSeparator} />
-                <View style={styles.footerInfoItem}>
-                  <Award size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>DL: {dutyLeaves}</Text>
+
+            <View style={styles.stackContentBottom}>
+              <Text style={styles.stackImageLabel}>Class Attendance</Text>
+              <View style={styles.stackValueRowImage}>
+                <Text style={styles.stackImageValue}>{data.overallAttendance}%</Text>
+                <View style={[styles.miniStatusBadgeImage, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Text style={[styles.miniStatusTextImage, { color: '#fff' }]}>{label}</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         );
       },
     },
@@ -2485,6 +2453,49 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   // Library specific (In Stack)
+  stackGlassIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  stackContentBottom: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 4,
+  },
+  stackImageLabel: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  stackImageValue: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  stackValueRowImage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  miniStatusBadgeImage: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  miniStatusTextImage: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   libIconWrapper: {
     width: 60,
     height: 60,
