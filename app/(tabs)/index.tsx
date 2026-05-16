@@ -868,6 +868,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {profile && (
           <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: 'transparent' }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
