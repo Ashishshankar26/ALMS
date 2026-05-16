@@ -233,9 +233,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             </TouchableOpacity>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: attVal > 75 ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 149, 0, 0.2)' }]}>
-                  <CheckCircle2 size={10} color={attVal > 75 ? '#34C759' : '#FF9500'} />
-                  <Text style={[styles.miniStatusText, { color: attVal > 75 ? '#34C759' : '#FF9500' }]}>{attVal > 75 ? 'SAFE' : 'LOW'}</Text>
+                <View style={[styles.miniStatusBadge, { backgroundColor: attVal >= 80 ? 'rgba(52, 199, 89, 0.2)' : (attVal >= 75 ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 59, 48, 0.2)') }]}>
+                  <CheckCircle2 size={10} color={attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30')} />
+                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30') }]}>{attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}</Text>
                 </View>
                 <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
               </View>
@@ -591,6 +591,24 @@ export default function DashboardScreen() {
     return color;
   };
 
+  const getPerformanceColor = (cgpa: string) => {
+    const val = parseFloat(cgpa || '0');
+    if (val >= 9.0) return '#FF9500'; // Gold/Orange
+    if (val >= 8.0) return '#34C759'; // Green
+    if (val >= 7.0) return '#007AFF'; // Blue
+    if (val >= 6.0) return '#5856D6'; // Purple
+    return '#FF3B30'; // Red
+  };
+
+  const getAttendanceColor = (att: number) => {
+    if (att >= 80) return '#34C759'; // Green (Safe)
+    if (att >= 75) return '#FF9500'; // Orange (Warning)
+    return '#FF3B30'; // Red (Critical)
+  };
+
+  const perfColor = getPerformanceColor(data.cgpa);
+  const attColor = getAttendanceColor(overallAttendance);
+
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
     if (Platform.OS === 'web' && profile?.name === 'Loading...' && !isScraping) {
@@ -873,7 +891,7 @@ export default function DashboardScreen() {
           style={styles.gridContainer}
         >
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: userColor }]}
+            style={[styles.gridCard, { backgroundColor: perfColor }]}
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
@@ -896,7 +914,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: '#34C759' }]} // Vibrant Green standard for Attendance
+            style={[styles.gridCard, { backgroundColor: attColor }]} 
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
