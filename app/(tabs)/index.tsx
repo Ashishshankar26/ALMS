@@ -2614,13 +2614,14 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   stackDots: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'center',
     gap: 8,
     position: 'absolute',
-    bottom: 12,
-    left: 0,
-    right: 0,
+    top: 0,
+    bottom: 0,
+    right: 16,
+    zIndex: 100,
   },
   stackDot: {
     width: 6,
