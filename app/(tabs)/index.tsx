@@ -34,11 +34,10 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture if vertical movement is significant (>10px) 
-        // to avoid getting "stuck" while normal scrolling
-        return Math.abs(gestureState.dy) > 10;
+        // Reduced threshold for better responsiveness
+        return Math.abs(gestureState.dy) > 6;
       },
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
