@@ -35,6 +35,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: () => {
         if (onScrollToggle) onScrollToggle(false);
       },
