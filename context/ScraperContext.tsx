@@ -1313,14 +1313,25 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           // CHECK MESSAGES FOR ROOM BOOKINGS (In case someone else booked it for the user)
           if (p.messages?.length > 0) {
             const now = new Date();
-            const todayUS = now.toLocaleDateString('en-US'); // 5/16/2026
-            const todayIN = now.toLocaleDateString('en-GB'); // 16/05/2026
+            const d = now.getDate().toString().padStart(2, '0');
+            const m = (now.getMonth() + 1).toString().padStart(2, '0');
+            const y = now.getFullYear();
             
-            const bookingMsg = p.messages.find(m => {
-              const t = m.title.toLowerCase();
-              const c = m.content.toLowerCase();
-              const isBooking = t.includes('discussion room') || t.includes('carrel') || c.includes('discussion room') || c.includes('room booking');
-              const isToday = m.date.toLowerCase().includes('today') || m.date.includes(todayUS) || m.date.includes(todayIN) || m.date.includes('Recently');
+            const todayUS = `${m}/${d}/${y}`; // 05/16/2026
+            const todayIN = `${d}/${m}/${y}`; // 16/05/2026
+            const todayUS_noZero = `${now.getMonth() + 1}/${now.getDate()}/${y}`; // 5/16/2026
+            
+            console.log('Checking messages for booking. Today:', todayUS, todayIN);
+            
+            const bookingMsg = p.messages.find(msg => {
+              const t = msg.title.toLowerCase();
+              const c = msg.content.toLowerCase();
+              const d = msg.date;
+              
+              const isBooking = t.includes('discussion room') || t.includes('carrel') || c.includes('discussion room') || c.includes('room booking') || t.includes('booking');
+              const isToday = d.toLowerCase().includes('today') || d.includes(todayUS) || d.includes(todayIN) || d.includes(todayUS_noZero) || d.includes('Recently');
+              
+              if (isBooking) console.log('Found potential booking msg:', msg.title, 'Date:', msg.date, 'isToday:', isToday);
               return isBooking && isToday;
             });
             
@@ -1335,7 +1346,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
                   slot: slotMatch ? slotMatch[1].trim() : 'Confirmed via Message'
                 };
-                console.log('Room Booking found in messages:', JSON.stringify(merged.roomBooking));
+                console.log('Room Booking confirmed from message:', JSON.stringify(merged.roomBooking));
               }
             }
           }
