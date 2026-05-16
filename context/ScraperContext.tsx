@@ -1337,24 +1337,49 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             
             if (bookingMsg) {
               const content = bookingMsg.content;
-              console.log('SCRAPER DEBUG: Booking Msg Content:', content);
-              const roomMatch = content.match(/Room\\s*(?:Number|No|#)?\\s*:?\\s*([^\\n,.]+)/i) || 
-                                content.match(/(Discussion\\s*Room\\s*\\d+)/i) || 
-                                content.match(/(Room\\s*\\d+[A-Z0-9-]*)/i) ||
-                                content.match(/Seat\\s*No\\(s\\)\\s*:?([^\\n,.]+)/i);
+              console.log('SCRAPER DEBUG: Parsing booking content:', content.substring(0, 100) + '...');
               
-              // Lenient time slot regex: handles "5:30PM to 6:30PM", "5:30PM to :6:30PM", "5:30-6:30", etc.
-              const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || 
-                                content.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?\\s*(?:to|-)\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i);
+              // Try multiple patterns for room
+              const roomPatterns = [
+                /Room\\s*(?:Number|No|#)?\\s*:?\\s*([^\\n,.]+)/i,
+                /Discussion\\s*Room\\s*([^\\n,.]+)/i,
+                /Seat\\s*No\\(s\\)\\s*:?\\s*([^\\n,.]+)/i,
+                /Room\\s*([^\\n,.]+)/i
+              ];
               
-              if (roomMatch) {
-                merged.roomBooking = {
-                  room: roomMatch[1].trim(),
-                  date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
-                  slot: slotMatch ? slotMatch[1].trim() : 'Booked'
-                };
-                console.log('Room Booking confirmed from message:', JSON.stringify(merged.roomBooking));
+              let room = 'Room Confirmed';
+              for (const pattern of roomPatterns) {
+                const match = content.match(pattern);
+                if (match && match[1]) {
+                  room = match[1].trim();
+                  console.log('SCRAPER DEBUG: Room match found:', room, 'with pattern:', pattern.toString());
+                  break;
+                }
               }
+              
+              // Try multiple patterns for time
+              const timePatterns = [
+                /Time\\s*:?\\s*([^\\n,.]+)/i,
+                /(\\d{1,2}:\\d{2}\\s*(?:AM|PM)?\\s*(?:to|-)\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM)?)/i,
+                /Slot\\s*:?\\s*([^\\n,.]+)/i
+              ];
+              
+              let slot = 'Booked';
+              for (const pattern of timePatterns) {
+                const match = content.match(pattern);
+                if (match && match[1]) {
+                  slot = match[1].trim();
+                  console.log('SCRAPER DEBUG: Slot match found:', slot);
+                  break;
+                }
+              }
+              
+              merged.roomBooking = {
+                room: room,
+                date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
+                slot: slot
+              };
+              console.log('Final Room Booking state set:', JSON.stringify(merged.roomBooking));
             }
           }
           
