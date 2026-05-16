@@ -29,6 +29,9 @@
     "web": {
       "bundler": "metro",
       "output": "static",
+      "name": "ALMS",
+      "shortName": "ALMS",
+      "description": "ALMS student portal companion for timetable, attendance, results, fees, exams, and leave management.",
       "favicon": "./assets/images/favicon.png",
       "themeColor": "#4C0099",
       "backgroundColor": "#4C0099",

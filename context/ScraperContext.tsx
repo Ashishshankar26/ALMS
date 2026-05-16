@@ -25,6 +25,7 @@ export interface ScrapedData {
   profile: any;
   timetable: any;
   attendance: SubjectAttendance[];
+  attendanceLogs: Record<string, any[]>;
   results: SemesterResult[];
   announcements: any[];
   messages: any[];
@@ -40,6 +41,7 @@ type ScraperContextType = {
   isScraping: boolean;
   refreshData: (webUsername?: string) => void;
   dumpHtml: () => void;
+  fetchAttendanceLogs: (subjectCode: string) => void;
 };
 
 const MOCK_DATA: ScrapedData = {
@@ -52,6 +54,7 @@ const MOCK_DATA: ScrapedData = {
   },
   timetable: {},
   attendance: [],
+  attendanceLogs: {},
   results: [],
   announcements: [],
   messages: [],
@@ -67,6 +70,7 @@ const ScraperContext = createContext<ScraperContextType>({
   isScraping: false,
   refreshData: () => {},
   dumpHtml: () => {},
+  fetchAttendanceLogs: () => {},
 });
 
 export const useScraper = () => useContext(ScraperContext);
@@ -96,8 +100,56 @@ const DASHBOARD_SCRIPT = `
 
       if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 20) {
         clearInterval(poll);
-        log("Dashboard: Poll done, starting scrapeAll");
-        scrapeAll();
+        var fetchTarget = sessionStorage.getItem('fetch_attendance_for');
+        if (fetchTarget) {
+          sessionStorage.removeItem('fetch_attendance_for');
+          log("Dashboard: Fetching detailed logs for " + fetchTarget);
+          var rows = coursesList ? coursesList.querySelectorAll(".mycoursesdiv") : [];
+          var targetRow = null;
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i].innerText.includes(fetchTarget)) { targetRow = rows[i]; break; }
+          }
+          if (targetRow) {
+            targetRow.click();
+            var apoll = 0;
+            var ap = setInterval(function() {
+              apoll++;
+              var mBody = document.querySelector('.modal.show .modal-body') || document.querySelector('#modalAttendance .modal-body') || document.querySelector('#AttendanceModal .modal-body');
+              if (mBody && mBody.innerText.includes('Faculty')) {
+                clearInterval(ap);
+                var logs = [];
+                var attRows = mBody.querySelectorAll('.row, li, tr, .card');
+                for (var i = 0; i < attRows.length; i++) {
+                  var rText = attRows[i].innerText.trim();
+                  if (rText && (rText.match(/^[P|A|D|O|E|L]\\s/i) || rText.includes('Faculty'))) {
+                    var statusMatch = rText.match(/^(P|A|D|O|E|L)\\b/i);
+                    var dateMatch = rText.match(/(\\d{1,2}\\s+[A-Za-z]{3},\\s*\\d{4})/);
+                    var timeMatch = rText.match(/(\\[[A-Z]\\]\\s*-?\\s*\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2}\\s*[APM]{2})/i) || rText.match(/(\\[[A-Z]\\])/i);
+                    var facMatch = rText.match(/Faculty\\s*:\\s*([^\\n(]+)/i);
+                    logs.push({
+                      status: statusMatch ? statusMatch[1].toUpperCase() : '?',
+                      date: dateMatch ? dateMatch[1] : '',
+                      time: timeMatch ? timeMatch[1] : '',
+                      faculty: facMatch ? facMatch[1].trim() : '',
+                      raw: rText
+                    });
+                  }
+                }
+                var closeBtn = document.querySelector('.modal.show .close, .modal.show [data-dismiss="modal"]');
+                if (closeBtn) closeBtn.click();
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: logs } }));
+              } else if (apoll > 40) {
+                clearInterval(ap);
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
+              }
+            }, 250);
+          } else {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
+          }
+        } else {
+          log("Dashboard: Poll done, starting scrapeAll");
+          scrapeAll();
+        }
       }
     }, 500);
 
@@ -163,24 +215,144 @@ const DASHBOARD_SCRIPT = `
             var modal = document.getElementById("modalmarks");
             var gradeContent = document.getElementById("GradeDetails");
             
+            // Try to force click the Marks tab using text content if possible, to trigger any lazy loading
+            var tabs = modal ? modal.querySelectorAll("a, button") : [];
+            for (var t = 0; t < tabs.length; t++) {
+               var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
+               if (tTxt.includes("marks details") && !tabs[t].classList.contains("active")) {
+                  try { tabs[t].click(); } catch(e){}
+               }
+            }
+            
             if (modal && gradeContent && (gradeContent.innerHTML.length > 50 || rAttempts >= 30)) {
               clearInterval(rPoll);
               if (rAttempts >= 30) { 
-                log("scrapeResults: Timeout waiting for modal content. HTML Length=" + (gradeContent ? gradeContent.innerHTML.length : 0)); 
+                log("scrapeResults: Timeout waiting for modal content."); 
                 finalize([]); 
                 return; 
               }
-              log("scrapeResults: Modal content loaded. HTML Length=" + gradeContent.innerHTML.length);
+              log("scrapeResults: Modal content loaded.");
               
+              var marksData = {};
+              var backlogTerms = []; 
+              var normalMarksTerms = []; 
+
+              try {
+                var modalWrapper = document.getElementById("modalmarks");
+                if (modalWrapper) {
+                  var mTables = modalWrapper.querySelectorAll("table");
+                  log("scrapeResults: Modal has " + mTables.length + " total tables.");
+                  var marksCount = 0;
+                  for (var mt = 0; mt < mTables.length; mt++) {
+                     var mTable = mTables[mt];
+                     var tableText = mTable.textContent || "";
+                     if (tableText.toLowerCase().includes("type") && tableText.toLowerCase().includes("weightage")) {
+                        marksCount++;
+                        
+                        var termId = "";
+                        var tNode = mTable;
+                        for (var climb = 0; climb < 10; climb++) {
+                           if (!tNode) break;
+                           var pSib = tNode.previousElementSibling;
+                           while (pSib) {
+                              var tm = (pSib.textContent || "").match(/Term\\s*Id\\s*:\\s*([A-Za-z0-9]+)/i);
+                              if (tm) { termId = tm[1]; break; }
+                              pSib = pSib.previousElementSibling;
+                           }
+                           if (termId) break;
+                           tNode = tNode.parentElement;
+                        }
+                        
+                        var cCode = "";
+                        var subjTitle = "";
+                        var cNode = mTable;
+                        for (var climb = 0; climb < 10; climb++) {
+                           if (!cNode) break;
+                           var pSib = cNode.previousElementSibling;
+                           while (pSib) {
+                              var pTxt = pSib.textContent || "";
+                              var match = pTxt.match(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/);
+                              if (match && pTxt.length < 200) {
+                                 cCode = match[1].replace(/\\s/g, '').toUpperCase();
+                                 subjTitle = pTxt.trim();
+                                 break;
+                              }
+                              
+                              if (pSib.querySelectorAll) {
+                                 var desc = pSib.querySelectorAll("*");
+                                 for (var d = desc.length - 1; d >= 0; d--) {
+                                    var dTxt = desc[d].textContent || "";
+                                    var dMatch = dTxt.match(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/);
+                                    if (dMatch && dTxt.length < 200) {
+                                       cCode = dMatch[1].replace(/\\s/g, '').toUpperCase();
+                                       subjTitle = dTxt.trim();
+                                       break;
+                                    }
+                                 }
+                              }
+                              if (cCode) break;
+                              pSib = pSib.previousElementSibling;
+                           }
+                           if (cCode) break;
+                           cNode = cNode.parentElement;
+                        }
+                        
+                        if (cCode) {
+                             var marksList = [];
+                             var mRows = mTable.querySelectorAll("tr");
+                             for (var mr = 1; mr < mRows.length; mr++) {
+                               var cols = mRows[mr].querySelectorAll("td, th");
+                               if (cols.length >= 3) {
+                                 var t = (cols[0].textContent || "").trim();
+                                 if (t && t.toLowerCase() !== "type") {
+                                   marksList.push({
+                                     type: t,
+                                     marks: (cols[1].textContent || "").trim(),
+                                     weightage: (cols[2].textContent || "").trim()
+                                   });
+                                 }
+                               }
+                             }
+                             
+                             marksData[cCode] = marksList;
+                             
+                             if (termId) {
+                               var subjObj = {
+                                  code: cCode,
+                                  name: subjTitle.replace(/([A-Za-z]{3,4}\\s*[0-9]{3,4})/i, "").replace(/[:\\-]/g, "").trim(),
+                                  grade: "--",
+                                  marksDetails: marksList
+                               };
+                               
+                               var targetArr = /[A-Za-z]/.test(termId) ? backlogTerms : normalMarksTerms;
+                               var found = false;
+                               for(var arrIdx=0; arrIdx<targetArr.length; arrIdx++) {
+                                  if (targetArr[arrIdx].termId === termId) {
+                                     targetArr[arrIdx].subjects.push(subjObj);
+                                     found = true;
+                                     break;
+                                  }
+                               }
+                               if (!found) {
+                                  targetArr.push({ termId: termId, subjects: [subjObj] });
+                               }
+                             }
+                        }
+                     }
+                  }
+                  log("scrapeResults: Extracted marks for " + Object.keys(marksData).length + " subjects");
+                }
+              } catch(e) { log("scrapeResults Marks Error: " + e.toString()); }
+
               var gradeTab = document.getElementById("second-tab1");
               if (gradeTab && !gradeTab.classList.contains("active")) gradeTab.click();
               
               setTimeout(function() {
                 try {
                   var results = [];
-                  var allText = gradeContent.innerText || "";
+                  var allText = gradeContent.innerText || gradeContent.textContent || "";
                   var tables = gradeContent.querySelectorAll("table");
-                  log("scrapeResults: Parsing " + tables.length + " tables. allText sample: " + allText.substring(0, 50));
+                  log("scrapeResults: Parsing " + tables.length + " tables in Grade Details.");
                   
                   var termMatches = [];
                   var tRegex = /Term\\s*[:\\s]*([IVX\\d]+)/gi;
@@ -197,7 +369,7 @@ const DASHBOARD_SCRIPT = `
                     var rows = table.querySelectorAll("tr");
                     for (var rIdx = 0; rIdx < rows.length; rIdx++) {
                       var row = rows[rIdx];
-                      var rowText = row.innerText.trim();
+                      var rowText = row.innerText || row.textContent || "";
                       if (rowText && !rowText.includes("Course") && rowText.includes("::")) {
                         var parts = rowText.split("::");
                         var codeM = parts[0].trim().match(/([A-Z0-9]{3,})/);
@@ -207,18 +379,39 @@ const DASHBOARD_SCRIPT = `
                         if (gradeM) name = rest.replace(gradeM[0], "").trim();
 
                         if (codeM) {
+                          var extractedCode = codeM[1].trim().toUpperCase();
                           subjects.push({
-                            code: codeM[1].trim(),
+                            code: extractedCode,
                             name: name,
                             grade: gradeM ? gradeM[1].trim() : "--",
-                            credits: "4"
+                            marksDetails: marksData[extractedCode] || []
                           });
                         }
                       }
                     }
                     results.push({ semester: "Semester " + termInfo.term, sgpa: termInfo.tgpa, subjects: subjects });
-                    log("scrapeResults: Pushed " + termInfo.term + " with " + subjects.length + " subjects");
                   }
+                  
+                  if (normalMarksTerms.length > results.length) {
+                     var currentTerm = normalMarksTerms[normalMarksTerms.length - 1];
+                     var semNum = results.length + 1;
+                     var romanMap = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                     var rNum = romanMap[semNum] || semNum.toString();
+                     results.push({
+                        semester: "Semester " + rNum,
+                        sgpa: "--",
+                        subjects: currentTerm.subjects
+                     });
+                  }
+                  
+                  for (var i = 0; i < backlogTerms.length; i++) {
+                     results.push({
+                        semester: "Term " + backlogTerms[i].termId,
+                        sgpa: "--",
+                        subjects: backlogTerms[i].subjects
+                     });
+                  }
+                  
                   log("scrapeResults: Final results count=" + results.length);
                   finalize(results);
                 } catch(e) { log("scrapeResults Error: " + e.toString()); finalize([]); }
@@ -1078,6 +1271,16 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return merged;
         });
 
+      } else if (msg.type === 'ATTENDANCE_LOGS') {
+        const payload = msg.payload || {};
+        if (payload.subjectCode && payload.logs) {
+          setData(prev => {
+            const mergedLogs = { ...prev.attendanceLogs, [payload.subjectCode]: payload.logs };
+            const merged = { ...prev, attendanceLogs: mergedLogs };
+            AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+            return merged;
+          });
+        }
       } else if (msg.type === 'URL_CHANGE') {
         const url = msg.payload;
         if (url.includes('StudentDashboard.aspx')) {
@@ -1113,8 +1316,28 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(heartbeat);
   }, [isAuthenticated, isScraping]);
 
+  const fetchAttendanceLogs = (subjectCode: string) => {
+    if (!webViewRef.current) return;
+    const script = `
+      (function() {
+         var log = function(m) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: m })); };
+         var fetchTarget = '${subjectCode}';
+         log('Injecting fetchAttendanceLogs for ' + fetchTarget);
+         if (!window.location.href.includes('StudentDashboard.aspx')) {
+           log('Navigating to dashboard...');
+           sessionStorage.setItem('fetch_attendance_for', fetchTarget);
+           window.location.href = 'https://ums.lpu.in/lpuums/StudentDashboard.aspx';
+         } else {
+           sessionStorage.setItem('fetch_attendance_for', fetchTarget);
+           window.location.reload();
+         }
+      })(); true;
+    `;
+    webViewRef.current.injectJavaScript(script);
+  };
+
   return (
-    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml }}>
+    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs }}>
       {children}
       {isAuthenticated && (
         <View style={{ height: 0, width: 0, overflow: 'hidden', position: 'absolute', opacity: 0 }}>

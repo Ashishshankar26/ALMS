@@ -8,11 +8,30 @@ import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 
+type TabType = 'REGULAR' | 'BACKLOG';
+
 export default function ResultsScreen() {
   const { data } = useScraper();
   const { colors, isDark } = useTheme();
+  
   const resultsData = (data.results && data.results.length > 0) ? data.results : [];
+  
+  const isBacklog = (term: string) => {
+    const cleaned = term.replace(/Term/i, '').replace(/Semester/i, '').replace(/Id/i, '').replace(/:/g, '').trim().toUpperCase();
+    const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+    if (romanNumerals.includes(cleaned)) return false;
+    if (/^\\d+$/.test(cleaned)) return false;
+    return /[A-Z]/.test(cleaned);
+  };
+  
+  const regularResults = resultsData.filter(sem => !isBacklog(sem.semester));
+  const backlogResults = resultsData.filter(sem => isBacklog(sem.semester));
+  
+  const [activeTab, setActiveTab] = useState<TabType>('REGULAR');
+  const displayData = activeTab === 'REGULAR' ? regularResults : backlogResults;
+
   const [expandedSem, setExpandedSem] = useState<string | null>(resultsData[0]?.semester || null);
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
 
   const getGradeColor = (grade: string) => {
     const g = grade.toUpperCase();
@@ -76,15 +95,47 @@ export default function ResultsScreen() {
             <View style={[styles.dividerCompact, { backgroundColor: colors.border }]} />
             <View style={styles.statItemCompact}>
               <BookOpen size={14} color={colors.primary} />
-              <Text style={[styles.statTextCompact, { color: colors.textSecondary }]}>{resultsData.length} Semesters</Text>
+              <Text style={[styles.statTextCompact, { color: colors.textSecondary }]}>{regularResults.length} Semesters</Text>
             </View>
+          </View>
+
+          <View style={[styles.segmentedContainer, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={[styles.segmentItem, activeTab === 'REGULAR' && { backgroundColor: colors.card }]}
+              onPress={() => setActiveTab('REGULAR')}
+            >
+              <Text style={[styles.segmentText, { color: activeTab === 'REGULAR' ? colors.text : colors.textSecondary }]}>
+                Semester Results
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.segmentItem, activeTab === 'BACKLOG' && { backgroundColor: colors.card }]}
+              onPress={() => setActiveTab('BACKLOG')}
+            >
+              <Text style={[styles.segmentText, { color: activeTab === 'BACKLOG' ? colors.text : colors.textSecondary }]}>
+                Reappear/Backlog
+              </Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
 
         <View style={styles.list}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Semester Breakdown</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{activeTab === 'REGULAR' ? 'Semester Breakdown' : 'Reappear / Backlog History'}</Text>
           
-          {resultsData.map((sem, index) => {
+          {displayData.length === 0 ? (
+            <View style={[styles.emptyContainer, { backgroundColor: colors.background, paddingVertical: 40 }]}>
+              <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? colors.card : '#F2F2F7', width: 60, height: 60, borderRadius: 30 }]}>
+                <Award size={28} color={colors.primary} />
+              </View>
+              <Text style={[styles.emptyText, { color: colors.text, fontSize: 16 }]}>Clear Record!</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary, textAlign: 'center', marginTop: 8 }]}>
+                You have no reappear or backlog subjects.
+              </Text>
+            </View>
+          ) : null}
+
+          {displayData.map((sem, index) => {
             const isExpanded = expandedSem === sem.semester;
 
             return (
@@ -99,20 +150,24 @@ export default function ResultsScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.semInfo}>
-                      <View style={[styles.semNumberBadge, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.semNumberText}>{index + 1}</Text>
+                      <View style={[styles.semNumberBadge, { backgroundColor: activeTab === 'BACKLOG' ? colors.warning : colors.primary }]}>
+                        <Text style={styles.semNumberText}>{activeTab === 'BACKLOG' ? 'R' : (index + 1)}</Text>
                       </View>
                       <View>
-                        <Text style={[styles.semTitle, { color: colors.text }]}>{sem.semester}</Text>
+                        <Text style={[styles.semTitle, { color: colors.text }]}>
+                          {sem.semester}
+                        </Text>
                         <Text style={[styles.semSubtitle, { color: colors.textSecondary }]}>Passed All Subjects</Text>
                       </View>
                     </View>
                     
                     <View style={styles.headerRight}>
-                      <View style={[styles.sgpaBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
-                        <Text style={[styles.sgpaLabel, { color: colors.textSecondary }]}>TGPA</Text>
-                        <Text style={[styles.sgpaValue, { color: colors.primary }]}>{sem.sgpa}</Text>
-                      </View>
+                      {activeTab !== 'BACKLOG' && (
+                        <View style={[styles.sgpaBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
+                          <Text style={[styles.sgpaLabel, { color: colors.textSecondary }]}>TGPA</Text>
+                          <Text style={[styles.sgpaValue, { color: colors.primary }]}>{sem.sgpa}</Text>
+                        </View>
+                      )}
                       {isExpanded ? 
                         <ChevronUp size={20} color={colors.textSecondary} /> : 
                         <ChevronDown size={20} color={colors.textSecondary} />
@@ -122,20 +177,62 @@ export default function ResultsScreen() {
 
                   {isExpanded && (
                     <Animated.View entering={FadeInUp.duration(400)} style={[styles.expandedContent, { borderTopColor: colors.border }]}>
-                      {(sem.subjects || []).map((sub, subIndex) => (
-                        <View key={subIndex} style={styles.subjectRow}>
-                          <View style={styles.subjectMain}>
-                            <Text style={[styles.subjectName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
-                            <View style={styles.subjectMeta}>
-                              <Text style={[styles.subjectCode, { color: colors.textSecondary }]}>{sub.code}</Text>
-                            </View>
+                      {(sem.subjects || []).map((sub, subIndex) => {
+                        const isSubExpanded = expandedSubject === `${index}-${subIndex}`;
+                        return (
+                          <View key={subIndex} style={styles.subjectContainer}>
+                            <TouchableOpacity 
+                              style={styles.subjectRow}
+                              onPress={() => setExpandedSubject(isSubExpanded ? null : `${index}-${subIndex}`)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.subjectMain}>
+                                <Text style={[styles.subjectName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
+                                <View style={styles.subjectMeta}>
+                                  <Text style={[styles.subjectCode, { color: colors.textSecondary }]}>{sub.code}</Text>
+                                  {sub.marksDetails && sub.marksDetails.length > 0 && (
+                                    <>
+                                      <View style={styles.dot} />
+                                      <Text style={[styles.creditsText, { color: colors.primary }]}>View Marks</Text>
+                                    </>
+                                  )}
+                                </View>
+                              </View>
+                              {activeTab !== 'BACKLOG' && (
+                                <View style={[styles.gradeBadge, { backgroundColor: getGradeBg(sub.grade) }]}>
+                                  <Text style={[styles.gradeText, { color: getGradeColor(sub.grade) }]}>{sub.grade}</Text>
+                                </View>
+                              )}
+                            </TouchableOpacity>
+
+                            {isSubExpanded && sub.marksDetails && sub.marksDetails.length > 0 && (
+                              <Animated.View entering={FadeInUp.duration(300)} style={[styles.marksTableContainer, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F9F9FB', borderColor: colors.border }]}>
+                                <View style={styles.marksTableHeader}>
+                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, flex: 1, paddingRight: 8 }]}>Type</Text>
+                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, width: 95, textAlign: 'center' }]}>Marks</Text>
+                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, width: 95, textAlign: 'right' }]}>Weightage</Text>
+                                </View>
+                                {sub.marksDetails.map((mark, mIdx) => {
+                                  let displayType = mark.type;
+                                  const tLower = displayType.toLowerCase();
+                                  if (tLower.includes('continuous assessment')) displayType = 'CA';
+                                  else if (tLower.includes('mid term')) displayType = 'Mid Term';
+                                  else if (tLower.includes('end term')) displayType = 'End Term';
+                                  else if (tLower.includes('attendance')) displayType = 'Attendance';
+                                  
+                                  return (
+                                    <View key={mIdx} style={[styles.marksTableRow, { borderTopColor: colors.border }]}>
+                                      <Text style={[styles.marksCell, { color: colors.text, flex: 1, paddingRight: 8 }]} numberOfLines={3}>{displayType}</Text>
+                                      <Text style={[styles.marksCell, { color: colors.text, width: 95, textAlign: 'center', fontWeight: '600' }]} numberOfLines={2}>{mark.marks}</Text>
+                                      <Text style={[styles.marksCell, { color: colors.text, width: 95, textAlign: 'right', fontWeight: '600' }]} numberOfLines={2}>{mark.weightage}</Text>
+                                    </View>
+                                  );
+                                })}
+                              </Animated.View>
+                            )}
                           </View>
-                          
-                          <View style={[styles.gradeBadge, { backgroundColor: getGradeBg(sub.grade) }]}>
-                            <Text style={[styles.gradeText, { color: getGradeColor(sub.grade) }]}>{sub.grade}</Text>
-                          </View>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </Animated.View>
                   )}
                 </View>
@@ -193,6 +290,26 @@ const styles = StyleSheet.create({
   gpaTextCompact: {
     fontSize: 10,
     fontWeight: '800',
+  },
+  segmentedContainer: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    padding: 4,
+    gap: 4,
+    marginTop: 15,
+  },
+  segmentItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   heroIconCircleCompact: {
     width: 44,
@@ -322,8 +439,10 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   subjectName: {
-    ...Typography.bodyBold,
+    fontSize: 14,
+    fontWeight: '700',
     marginBottom: 2,
+    textTransform: 'capitalize',
   },
   subjectMeta: {
     flexDirection: 'row',
@@ -379,5 +498,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
     lineHeight: 22,
+  },
+  subjectContainer: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  marksTableContainer: {
+    marginTop: 0,
+    marginBottom: 12,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  marksTableHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  marksHeaderCell: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  marksTableRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  marksCell: {
+    fontSize: 13,
   },
 });

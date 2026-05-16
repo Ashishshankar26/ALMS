@@ -154,7 +154,18 @@ export default function LoginScreen() {
         <Text style={[styles.subText, { color: colors.textSecondary }]}>Please log in to sync your data.</Text>
       </View>
 
-      {Platform.OS === 'web' ? (
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Network Error connecting to UMS.</Text>
+          <Text style={{color: colors.textSecondary, textAlign: 'center', marginTop: 10}}>This is usually caused by a bad connection or a temporary issue with the UMS servers.</Text>
+          <TouchableOpacity 
+            style={[styles.loginButton, { backgroundColor: colors.primary, width: 200, marginTop: 20 }]}
+            onPress={() => setError(false)}
+          >
+            <Text style={styles.loginButtonText}>Retry Connection</Text>
+          </TouchableOpacity>
+        </View>
+      ) : Platform.OS === 'web' ? (
         <View style={styles.webContainer}>
           <Animated.View entering={FadeInDown.duration(600)} style={[styles.customLoginCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.loginIconBg, { backgroundColor: colors.primary + '15' }]}>
@@ -191,6 +202,8 @@ export default function LoginScreen() {
           sharedCookiesEnabled={true}
           thirdPartyCookiesEnabled={true}
           mixedContentMode="always"
+          cacheEnabled={false}
+          incognito={true}
           // --- Turnstile compatibility props ---
           originWhitelist={['*']}
           setSupportMultipleWindows={false}

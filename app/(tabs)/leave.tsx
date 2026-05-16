@@ -34,6 +34,47 @@ export default function LeaveScreen() {
     slipWebViewRef.current?.reload();
   };
 
+  // WEB FALLBACK: WebView is not available in the browser
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <View style={[styles.heroHeader, { backgroundColor: colors.card, width: '100%', borderRadius: 24, marginBottom: 0, padding: 24 }]}>
+          <View style={styles.heroContent}>
+            <View>
+              <Text style={[styles.heroLabel, { color: colors.textSecondary }]}>Leave Management</Text>
+              <Text style={[styles.heroValue, { color: colors.text }]}>Hostel Leave</Text>
+            </View>
+            <View style={[styles.heroIconCircle, { backgroundColor: colors.primary + '20' }]}>
+              <CalendarCheck size={32} color={colors.primary} />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.refreshFab, { backgroundColor: colors.primary, position: 'relative', bottom: 0, alignSelf: 'stretch', marginBottom: 12 }]}
+            onPress={() => (window as any).open(APPLY_URL, '_blank')}
+            activeOpacity={0.8}
+          >
+            <Send size={18} color="#fff" />
+            <Text style={styles.refreshFabText}>Open Apply Leave Portal</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.refreshFab, { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.primary, position: 'relative', bottom: 0, alignSelf: 'stretch' }]}
+            onPress={() => (window as any).open(SLIP_URL, '_blank')}
+            activeOpacity={0.8}
+          >
+            <FileText size={18} color={colors.primary} />
+            <Text style={[styles.refreshFabText, { color: colors.primary }]}>View Leave Slip</Text>
+          </TouchableOpacity>
+
+          <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 16, opacity: 0.7 }}>
+            Opens securely in a new tab. Your UMS session is shared.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Hero Header - ANIMATED */}

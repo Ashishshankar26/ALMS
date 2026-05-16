@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { useScraper } from '../../context/ScraperContext';
-import { CheckCircle, AlertTriangle, XCircle, Calculator, Plus, Minus, Calendar, Edit2, Clock, Award } from 'lucide-react-native';
+import { CheckCircle, AlertTriangle, XCircle, Calculator, Plus, Minus, Calendar, Edit2, Clock, Award, List } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -66,8 +66,9 @@ export default function AttendanceScreen() {
   // Use UMS-provided overall attendance (fetched from #AttPercent on dashboard)
   // Only calculate ourselves as fallback if UMS value is missing
   const umsOverallAttendance = data.overallAttendance && data.overallAttendance !== '0.0' ? data.overallAttendance : null;
+  const formattedUmsAttendance = umsOverallAttendance ? Math.round(parseFloat(umsOverallAttendance)).toString() : null;
   const calcOverall = totalClasses > 0 ? Math.round(((attendedClasses + dutyLeaves) / totalClasses) * 100).toString() : '0';
-  const overallAttendance = umsOverallAttendance || calcOverall;
+  const overallAttendance = formattedUmsAttendance || calcOverall;
   const rawOverallAttendance = totalClasses > 0 ? Math.round((attendedClasses / totalClasses) * 100).toString() : '0';
   
   const displayAttendance = showAggregate ? overallAttendance : rawOverallAttendance;
@@ -205,7 +206,13 @@ export default function AttendanceScreen() {
             <TouchableOpacity 
               key={index}
               style={[styles.card, { backgroundColor: colors.card, borderColor: isSelected ? colors.primary : 'transparent' }]}
-              onPress={() => setSelectedSubject(isSelected ? null : item.subjectCode)}
+              onPress={() => {
+                if (isSelected) {
+                  setSelectedSubject(null);
+                } else {
+                  setSelectedSubject(item.subjectCode);
+                }
+              }}
               activeOpacity={0.7}
             >
               <View style={[styles.percentageBadge, { backgroundColor: `${status.color}15`, position: 'absolute', top: 15, right: 15 }]}>

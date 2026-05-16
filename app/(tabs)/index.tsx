@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -631,6 +631,31 @@ export default function DashboardScreen() {
             <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(88,86,214,0.15)' : '#F2F2F7' }]}>
               <Text style={[styles.payButtonText, { color: colors.secondary }]}>View Details</Text>
               <ChevronRight size={16} color={colors.secondary} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Library Booking Card */}
+          <TouchableOpacity 
+            style={[styles.feeCard, { 
+              backgroundColor: isDark ? 'rgba(0,122,255,0.12)' : 'rgba(0,122,255,0.08)', 
+              borderColor: isDark ? 'rgba(0,122,255,0.2)' : 'rgba(0,122,255,0.1)',
+              marginTop: 12
+            }]} 
+            onPress={() => openUmsForm('https://ums.lpu.in/lpuums/frmRoomBooking.aspx', 'Room Booking')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.feeInfo}>
+              <View style={[styles.feeIconBg, { backgroundColor: isDark ? 'rgba(0,122,255,0.1)' : '#E5F1FF' }]}>
+                <BookOpen size={24} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={[styles.feeLabel, { color: colors.textSecondary }]}>Library Discussion</Text>
+                <Text style={[styles.feeValue, { color: colors.text }]}>Room Booking</Text>
+              </View>
+            </View>
+            <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(0,122,255,0.15)' : '#E5F1FF' }]}>
+              <Text style={[styles.payButtonText, { color: colors.primary }]}>Book Now</Text>
+              <ChevronRight size={16} color={colors.primary} />
             </View>
           </TouchableOpacity>
 
