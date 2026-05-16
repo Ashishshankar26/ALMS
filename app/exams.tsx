@@ -92,10 +92,10 @@ export default function ExamsScreen() {
           ))}
           
           <TouchableOpacity 
-            style={[styles.webFallbackBtn, { borderColor: colors.border }]} 
+            style={[styles.webFallbackBtn, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '10' }]} 
             onPress={() => setShowWebView(true)}
           >
-            <Text style={{ color: colors.textSecondary }}>View Original Date Sheet</Text>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>View Date Sheet on UMS</Text>
           </TouchableOpacity>
         </ScrollView>
       ) : (
@@ -264,8 +264,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 15,
     borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    borderWidth: 1.5,
     alignItems: 'center',
     marginBottom: 30,
   },

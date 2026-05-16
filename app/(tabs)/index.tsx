@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -16,11 +16,309 @@ import Constants from 'expo-constants';
 import { updateStickyClassNotification } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
+const CARD_HEIGHT = 200;
+const SWIPE_THRESHOLD = 25;
+
+// ── Swipeable Utility Card Stack ──
+function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onLibraryPress, onExamsPress, onScrollToggle }: any) {
+  const { isScraping, refreshData } = useScraper();
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const activeIndexRef = useRef(0);
+  const translateY = useRef(new RNAnimated.Value(0)).current;
+  const cardCount = 4;
+  
+  React.useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderGrant: () => {
+        if (onScrollToggle) onScrollToggle(false);
+      },
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderMove: (_, gestureState) => {
+        translateY.setValue(gestureState.dy);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (onScrollToggle) onScrollToggle(true);
+        
+        const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
+        
+        if (isTap) {
+          // Use the live ref to get the actual current index
+          const currentIdx = activeIndexRef.current;
+          const activeCard = cards[currentIdx];
+          
+          if (activeCard.key === 'fee') onFeePress();
+          else if (activeCard.key === 'exams') onExamsPress();
+          else if (activeCard.key === 'attendance') router.push('/attendance' as any);
+          else if (activeCard.key === 'library') onLibraryPress();
+        } else if (gestureState.dy < -SWIPE_THRESHOLD) {
+          setActiveIndex((prev: number) => (prev + 1) % cardCount);
+        } else if (gestureState.dy > SWIPE_THRESHOLD) {
+          setActiveIndex((prev: number) => (prev - 1 + cardCount) % cardCount);
+        }
+        
+        RNAnimated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        if (onScrollToggle) onScrollToggle(true);
+        RNAnimated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  const getCardOrder = () => {
+    const order = [];
+    for (let i = 0; i < cardCount; i++) {
+      order.push((activeIndex + i) % cardCount);
+    }
+    return order.reverse();
+  };
+
+  const cards = [
+    {
+      key: 'fee',
+      color: '#1A1110',
+      render: () => {
+        const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
+        const isClear = feeVal === 0;
+        const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
+        return (
+          <View style={styles.stackCardInner}>
+            <View style={[styles.cardDecorCircle, { top: -20, right: -20, backgroundColor: '#FFFFFF10' }]} />
+            <View style={[styles.cardDecorCircle, { bottom: -40, left: -20, backgroundColor: '#FFFFFF05', width: 120, height: 120 }]} />
+            <View style={styles.stackHandle} />
+            <TouchableOpacity style={styles.stackFab} onPress={onFeePress}>
+              <ChevronRight size={18} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.stackContentLeft}>
+              <View style={styles.stackBadgeRow}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 69, 58, 0.15)' }]}>
+                  <Text style={[styles.miniStatusText, { color: isClear ? '#34C759' : '#FF453A' }]}>{isClear ? 'CLEAR' : 'DUE'}</Text>
+                </View>
+                <Text style={styles.stackLabelWhite}>FINANCIAL SUMMARY</Text>
+              </View>
+              <Text style={[styles.stackBigValue, { fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
+              <View style={styles.stackFooterRow}>
+                <View style={styles.footerInfoItem}>
+                  <FileText size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{isClear ? 'All Clear' : 'Balance'}</Text>
+                </View>
+                <View style={styles.footerInfoSeparator} />
+                <View style={styles.footerInfoItem}>
+                  <Wifi size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>Live</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      key: 'library',
+      color: '#FFFFFF',
+      render: () => {
+        const booking = data.roomBooking;
+        const hour = new Date().getHours();
+        const isOpen = hour >= 8 && hour < 21;
+        return (
+          <View style={styles.stackCardInner}>
+            <View style={[styles.cardDecorCircle, { top: -30, left: -30, backgroundColor: '#00000005', width: 150, height: 150 }]} />
+            <View style={styles.stackHandleLight} />
+            <TouchableOpacity style={[styles.stackFab, { borderColor: 'rgba(0,0,0,0.1)', backgroundColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
+              <ChevronRight size={18} color="#000" />
+            </TouchableOpacity>
+            <View style={styles.stackContentLeft}>
+              <View style={styles.stackBadgeRow}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(88, 86, 214, 0.1)' : (isOpen ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 69, 58, 0.1)') }]}>
+                  <Text style={[styles.miniStatusText, { color: booking ? '#5856D6' : (isOpen ? '#34C759' : '#FF453A') }]}>
+                    {booking ? 'BOOKED' : (isOpen ? 'OPEN' : 'CLOSED')}
+                  </Text>
+                </View>
+                <Text style={[styles.stackLabelWhite, { color: 'rgba(0,0,0,0.4)' }]}>ROOM & LIBRARY</Text>
+              </View>
+              <Text style={[styles.stackBigValue, { color: '#000', fontSize: booking ? 24 : 32 }]}>
+                {booking ? booking.room : 'Library Booking'}
+              </Text>
+              <View style={styles.stackFooterRow}>
+                <View style={styles.footerInfoItem}>
+                  <Clock size={11} color="#000" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
+                </View>
+                <View style={styles.footerInfoSeparatorBlack} />
+                <View style={styles.footerInfoItem}>
+                  <Calendar size={11} color="#000" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.date : 'Standard'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      key: 'exams',
+      color: '#D61F69',
+      render: () => {
+        const subjectName = nextExam ? (data.attendance.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
+        return (
+          <View style={styles.stackCardInner}>
+            <View style={[styles.cardDecorCircle, { top: -10, right: -40, backgroundColor: '#FFFFFF15', width: 100, height: 100 }]} />
+            <View style={styles.stackHandle} />
+            <TouchableOpacity style={styles.stackFab} onPress={onExamsPress}>
+              <ChevronRight size={18} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.stackContentLeft}>
+              <View style={styles.stackBadgeRow}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Clock size={10} color="#FFFFFF" />
+                  <Text style={[styles.miniStatusText, { color: '#FFFFFF' }]}>{nextExam ? 'UPCOMING' : 'SYNC'}</Text>
+                </View>
+                <Text style={styles.stackLabelWhite}>EXAMINATION HUB</Text>
+              </View>
+              {nextExam?.subjectCode && (
+                <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                  {nextExam.subjectCode}
+                </Text>
+              )}
+              <Text style={[styles.stackBigValue, { fontSize: subjectName.length > 15 ? 24 : 32 }]}>{subjectName}</Text>
+              <View style={styles.stackFooterRow}>
+                <View style={styles.footerInfoItem}>
+                  <MapPin size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.room : 'Schedule'}</Text>
+                </View>
+                <View style={styles.footerInfoSeparator} />
+                <View style={styles.footerInfoItem}>
+                  <Layers size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.date : 'Seating'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      key: 'attendance',
+      color: '#6D28D9',
+      render: () => {
+        const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
+        const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
+        const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
+        const totalPresent = attendedClasses + dutyLeaves;
+        
+        const attVal = parseFloat(data.overallAttendance);
+        return (
+          <View style={styles.stackCardInner}>
+            <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: '#FFFFFF10', width: 140, height: 140 }]} />
+            <View style={styles.stackHandle} />
+            <TouchableOpacity style={styles.stackFab} onPress={() => router.push('/attendance' as any)}>
+              <ChevronRight size={18} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.stackContentLeft}>
+              <View style={styles.stackBadgeRow}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: attVal > 75 ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 149, 0, 0.2)' }]}>
+                  <CheckCircle2 size={10} color={attVal > 75 ? '#34C759' : '#FF9500'} />
+                  <Text style={[styles.miniStatusText, { color: attVal > 75 ? '#34C759' : '#FF9500' }]}>{attVal > 75 ? 'SAFE' : 'LOW'}</Text>
+                </View>
+                <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
+              </View>
+              <Text style={styles.stackBigValue}>{data.overallAttendance}%</Text>
+              <View style={styles.stackFooterRow}>
+                <View style={styles.footerInfoItem}>
+                  <UserCheck size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{totalPresent}/{totalClasses} Total</Text>
+                </View>
+                <View style={styles.footerInfoSeparator} />
+                <View style={styles.footerInfoItem}>
+                  <Award size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>DL: {dutyLeaves}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      },
+    },
+  ];
+
+  const cardOrder = getCardOrder();
+
+  return (
+    <View style={styles.stackContainer} {...panResponder.panHandlers}>
+      {cardOrder.map((cardIdx, stackPos) => {
+        const card = cards[cardIdx];
+        const isTop = stackPos === cardOrder.length - 1;
+        const depth = cardOrder.length - 1 - stackPos;
+
+        const scale = 1 - depth * 0.08;
+        const offsetY = depth * 34;
+
+        return (
+          <RNAnimated.View
+            key={card.key}
+            style={[
+              styles.stackCard,
+              {
+                backgroundColor: card.color,
+                zIndex: cardOrder.length - depth,
+                transform: [
+                  { scale },
+                  { translateY: isTop ? translateY : -offsetY },
+                ],
+                opacity: depth === 3 ? 0.4 : depth === 2 ? 0.6 : depth === 1 ? 0.8 : 1,
+              },
+            ]}
+          >
+            {depth > 0 && (
+              <View style={styles.stackPeekLayer}>
+                <View style={styles.stackPeekBadge}>
+                  <Lock size={12} color="#fff" />
+                  <Text style={styles.stackPeekText}>
+                    {card.key === 'fee' ? 'FEES' : card.key === 'exams' ? 'EXAMS' : card.key === 'attendance' ? 'ATTENDANCE' : 'LIBRARY'}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {isTop && (
+              <View style={{ flex: 1 }}>
+                {card.render()}
+                <View style={styles.stackDots}>
+                  {cards.map((_, i) => (
+                    <View key={i} style={[styles.stackDot, { backgroundColor: i === activeIndex ? '#fff' : 'rgba(255,255,255,0.2)' }]} />
+                  ))}
+                </View>
+              </View>
+            )}
+          </RNAnimated.View>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function DashboardScreen() {
   const { data, isScraping, refreshData, dumpHtml } = useScraper();
   const { isAuthenticated, loading, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
+  const [scrollEnabled, setScrollEnabled] = React.useState(true);
 
   // VIP PASS: On web, we don't instantly redirect to prevent the 'Invisible Guard' bug
   // This gives the AuthContext time to propagate the login state.
@@ -313,17 +611,52 @@ export default function DashboardScreen() {
   }, [nextClassInfo.status, nextClassInfo.time, nextClassInfo.subjectCode, nextClassInfo.room]);
 
   const nextExam = (() => {
-    if (!data.exams || data.exams.length === 0) return null;
+    if (!data.exams || !Array.isArray(data.exams) || data.exams.length === 0) return null;
+    
+    const parseLPUDate = (dateStr: string) => {
+      if (!dateStr) return null;
+      // Handle "25-Apr-2026" or "25 Apr 2026"
+      const parts = dateStr.split(/[- /]/);
+      if (parts.length === 3) {
+        let day = parseInt(parts[0]);
+        let month = -1;
+        let year = parseInt(parts[2]);
+
+        const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const mIdx = months.findIndex(m => parts[1].toLowerCase().startsWith(m));
+        
+        if (mIdx !== -1) {
+          month = mIdx;
+        } else {
+          // Try numeric month (handle DD/MM/YYYY)
+          const numericMonth = parseInt(parts[1]);
+          if (!isNaN(numericMonth) && numericMonth >= 1 && numericMonth <= 12) {
+            month = numericMonth - 1;
+          }
+        }
+
+        if (month !== -1 && !isNaN(day) && !isNaN(year)) {
+          // Handle YY instead of YYYY
+          if (year < 100) year += 2000;
+          return new Date(year, month, day);
+        }
+      }
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     const now = new Date();
-    // Reset time for date-only comparison
     now.setHours(0, 0, 0, 0);
-    const futureExams = data.exams.filter((ex: any) => {
-      const exDate = new Date(ex.date);
-      return exDate >= now;
-    });
-    if (futureExams.length === 0) return null;
-    futureExams.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    return futureExams[0];
+    
+    const processedExams = data.exams.map((ex: any) => ({
+      ...ex,
+      parsedDate: parseLPUDate(ex.date)
+    })).filter(ex => ex.parsedDate && ex.parsedDate >= now);
+
+    if (processedExams.length === 0) return null;
+    
+    processedExams.sort((a: any, b: any) => a.parsedDate.getTime() - b.parsedDate.getTime());
+    return processedExams[0];
   })();
 
   const [showMessages, setShowMessages] = React.useState(false);
@@ -419,6 +752,7 @@ export default function DashboardScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <ScrollView 
       style={[styles.container, { backgroundColor: colors.background }]}
+      scrollEnabled={scrollEnabled}
       refreshControl={
         <RefreshControl 
           refreshing={isScraping} 
@@ -606,82 +940,19 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
 
-        {/* Utilities Section - ANIMATED */}
+        {/* Utilities Section - Full Width Stack */}
         <Animated.View entering={FadeInDown.delay(600).duration(600).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Utilities</Text>
-          
-          {/* Fee Card */}
-          <TouchableOpacity 
-            style={[styles.feeCard, { 
-              backgroundColor: isDark ? 'rgba(88,86,214,0.12)' : 'rgba(88,86,214,0.08)', 
-              borderColor: isDark ? 'rgba(88,86,214,0.2)' : 'rgba(88,86,214,0.1)' 
-            }]} 
-            onPress={() => router.push('/fees' as any)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.feeInfo}>
-              <View style={[styles.feeIconBg, { backgroundColor: isDark ? 'rgba(88,86,214,0.1)' : '#F2F2F7' }]}>
-                <FileText size={24} color={colors.secondary} />
-              </View>
-              <View>
-                <Text style={[styles.feeLabel, { color: colors.textSecondary }]}>Outstanding Fee</Text>
-                <Text style={[styles.feeValue, { color: colors.text }]}>₹ {data.fee || '0'}/-</Text>
-              </View>
-            </View>
-            <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(88,86,214,0.15)' : '#F2F2F7' }]}>
-              <Text style={[styles.payButtonText, { color: colors.secondary }]}>View Details</Text>
-              <ChevronRight size={16} color={colors.secondary} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Library Booking Card */}
-          <TouchableOpacity 
-            style={[styles.feeCard, { 
-              backgroundColor: isDark ? 'rgba(0,122,255,0.12)' : 'rgba(0,122,255,0.08)', 
-              borderColor: isDark ? 'rgba(0,122,255,0.2)' : 'rgba(0,122,255,0.1)',
-              marginTop: 12
-            }]} 
-            onPress={() => openUmsForm('https://ums.lpu.in/lpuums/frmRoomBooking.aspx', 'Room Booking')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.feeInfo}>
-              <View style={[styles.feeIconBg, { backgroundColor: isDark ? 'rgba(0,122,255,0.1)' : '#E5F1FF' }]}>
-                <BookOpen size={24} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={[styles.feeLabel, { color: colors.textSecondary }]}>Library Discussion</Text>
-                <Text style={[styles.feeValue, { color: colors.text }]}>Room Booking</Text>
-              </View>
-            </View>
-            <View style={[styles.payButton, { backgroundColor: isDark ? 'rgba(0,122,255,0.15)' : '#E5F1FF' }]}>
-              <Text style={[styles.payButtonText, { color: colors.primary }]}>Book Now</Text>
-              <ChevronRight size={16} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Exams Banner */}
-          <TouchableOpacity 
-            style={[styles.examsBanner, { 
-              backgroundColor: isDark ? 'rgba(255,59,48,0.12)' : 'rgba(255,59,48,0.08)', 
-              borderColor: isDark ? 'rgba(255,59,48,0.2)' : 'rgba(255,59,48,0.1)',
-              marginTop: 12 
-            }]} 
-            onPress={handleExamsPress} 
-            activeOpacity={0.8}
-          >
-            <View style={[styles.examsBannerIcon, { backgroundColor: nextExam ? colors.error : colors.primary }]}>
-              <GraduationCap size={24} color="#fff" />
-            </View>
-            <View style={styles.examsBannerTextContainer}>
-              <Text style={[styles.examsBannerTitle, { color: colors.text }]}>
-                {nextExam ? `Next Exam: ${nextExam.date}` : 'Upcoming Exams'}
-              </Text>
-              <Text style={[styles.examsBannerSubtitle, { color: colors.textSecondary }]}>
-                {nextExam ? `${nextExam.subjectCode} - ${nextExam.room}` : 'View Conduct & Seating Plan'}
-              </Text>
-            </View>
-            <ChevronRight size={20} color={isDark ? colors.textSecondary : colors.primary} />
-          </TouchableOpacity>
+          <SwipeableUtilityStack
+            isDark={isDark}
+            colors={colors}
+            data={data}
+            nextExam={nextExam}
+            onFeePress={() => router.push('/fees' as any)}
+            onLibraryPress={() => openUmsForm('https://ums.lpu.in/lpuums/frmRoomBooking.aspx', 'Room Booking')}
+            onExamsPress={handleExamsPress}
+            onScrollToggle={setScrollEnabled}
+          />
         </Animated.View>
 
         {/* Pending Assignments */}
@@ -1808,6 +2079,434 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     marginTop: 12,
+  },
+  // ── Utility Grid (side-by-side square cards) ──
+  utilityGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  utilitySquareCard: {
+    flex: 1,
+    aspectRatio: 0.95,
+    borderRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  utilityCardInner: {
+    flex: 1,
+    padding: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  utilityIconContainer: {
+    position: 'relative',
+    marginBottom: 4,
+  },
+  utilityIconBg: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  utilityIconBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  utilityIconBadgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: -1,
+  },
+  utilityCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+    letterSpacing: -0.3,
+  },
+  utilityActionBtn: {
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  utilityActionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  // ── Wallet Stack (Fee Card) ──
+  utilitySquareCardWrapper: {
+    flex: 1,
+    aspectRatio: 0.95,
+    position: 'relative',
+  },
+  walletLayerBack: {
+    position: 'absolute',
+    top: 0,
+    left: 6,
+    right: 6,
+    height: 32,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    zIndex: 1,
+  },
+  walletLayerMid: {
+    position: 'absolute',
+    top: 14,
+    left: 3,
+    right: 3,
+    height: 32,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    zIndex: 2,
+  },
+  walletLayerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  walletLayerBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  walletFrontCard: {
+    position: 'absolute',
+    top: 30,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 24,
+    padding: 16,
+    zIndex: 3,
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  walletHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  walletFab: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 4,
+  },
+  walletContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  walletLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 4,
+  },
+  walletLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  walletAmount: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
+  walletSub: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  // ── Utility Grid Layout (Image Match) ──
+  utilityGridLayout: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  libGridCard: {
+    flex: 1,
+    height: CARD_HEIGHT + 60,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  stackGridCard: {
+    flex: 1,
+    height: CARD_HEIGHT + 60,
+  },
+  libTitleGrid: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  // ── Swipeable Stack Foundation ──
+  stackContainer: {
+    height: CARD_HEIGHT + 102,
+    position: 'relative',
+    marginTop: -20, // Tightened gap with title
+  },
+  stackCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: CARD_HEIGHT,
+    bottom: 0,
+    borderRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  stackCardInner: {
+    flex: 1,
+    padding: 24,
+  },
+  stackHandle: {
+    width: 32,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  stackHandleLight: {
+    width: 32,
+    height: 3,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  stackFab: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  stackContentLeft: {
+    flex: 1,
+    justifyContent: 'center', // THE FIX: Fill the empty top space
+  },
+  stackLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  stackBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  miniStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start', // THE FIX: Only wrap text
+  },
+  miniStatusText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  stackFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10,
+  },
+  footerInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerInfoSeparator: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  footerInfoSeparatorDark: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  cardDecorCircle: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    zIndex: -1,
+  },
+  stackLabelWhite: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  stackBigValue: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  stackSubWhite: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  stackSubBlack: {
+    color: 'rgba(0,0,0,0.6)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  footerInfoSeparatorBlack: {
+    width: 1,
+    height: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginHorizontal: 10,
+  },
+  // Library specific (In Stack)
+  libIconWrapper: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  libIconBg: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  libBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FF3B30',
+    borderWidth: 2,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  libBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  libTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 16,
+  },
+  libActionBtn: {
+    backgroundColor: '#000',
+    paddingHorizontal: 36,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  libActionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  // Peeking layers
+  stackPeekLayer: {
+    flex: 1,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+  },
+  stackPeekBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stackPeekText: {
+    color: '#fff',
+    fontSize: 13, // Larger for maximum visibility
+    fontWeight: '900',
+    opacity: 0.9,
+  },
+  stackDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+  },
+  stackDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   horizontalScroll: {
     marginHorizontal: -20,

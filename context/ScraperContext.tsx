@@ -34,6 +34,9 @@ export interface ScrapedData {
   overallAttendance: string;
   fee: string;
   examUrl: string;
+  exams: any[];
+  makeupClasses: any[];
+  roomBooking: any;
 }
 
 type ScraperContextType = {
@@ -63,6 +66,9 @@ const MOCK_DATA: ScrapedData = {
   overallAttendance: '0.0',
   fee: '--',
   examUrl: '',
+  exams: [],
+  makeupClasses: [],
+  roomBooking: null,
 };
 
 const ScraperContext = createContext<ScraperContextType>({
@@ -609,6 +615,97 @@ const DASHBOARD_SCRIPT = `
 })(); true;
 `;
 
+const ROOM_BOOKING_SCRIPT = `
+(function() {
+  try {
+    var log = function(msg) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
+    };
+    log('RoomBooking: Starting scraper...');
+    
+    // Look for booking tables or confirmation messages
+    var booking = null;
+    var processDoc = function(doc, name) {
+      if (!doc) return false;
+      
+      // Try ID first (most reliable)
+      var targetTable = doc.getElementById('SavedRC');
+      var allTables = targetTable ? [targetTable] : Array.from(doc.querySelectorAll('table'));
+      
+      if (allTables.length > 0) log('RoomBooking: Found ' + allTables.length + ' tables in ' + name);
+      
+      for (var i = 0; i < allTables.length; i++) {
+        var table = allTables[i];
+        var txt = (table.innerText || table.textContent || '').replace(/\\s+/g, ' ');
+        
+        // Lenient check for headers
+        if (txt.includes('Room Number') && (txt.includes('Booking Time') || txt.includes('Time'))) {
+          log('RoomBooking: Target table matched in ' + name);
+          var rows = Array.from(table.querySelectorAll('tr'));
+          for (var r = 0; r < rows.length; r++) {
+            var cells = Array.from(rows[r].querySelectorAll('td, th'));
+            if (cells.length >= 5) {
+              var cellTxt = cells.map(function(c){ return (c.innerText || c.textContent || '').trim(); });
+              
+              // Skip headers
+              if (cellTxt.join('').includes('BookingId') || cellTxt.join('').includes('RoomNumber')) continue;
+              
+              // Check if first cell is numeric (Booking ID)
+              if (/^\\d+$/.test(cellTxt[0])) {
+                 booking = {
+                   room: cellTxt[3], // 4th column
+                   date: cellTxt[1], // 2nd column
+                   slot: cellTxt[4]  // 5th column
+                 };
+                 log('RoomBooking: Extracted: ' + JSON.stringify(booking));
+                 return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    var tryScrape = function() {
+      // 1. Main doc
+      if (processDoc(document, 'main')) return finish();
+      
+      // 2. iframes and frames
+      var frames = Array.from(document.querySelectorAll('iframe, frame'));
+      for (var j = 0; j < frames.length; j++) {
+        try {
+          var frameDoc = frames[j].contentDocument || frames[j].contentWindow.document;
+          if (processDoc(frameDoc, 'frame_' + j)) return finish();
+        } catch(e) {}
+      }
+      return false;
+    };
+
+    var finish = function() {
+      log('RoomBooking: Scraped ' + (booking ? booking.room : 'None'));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ROOM_BOOKING_DATA', payload: booking }));
+      return true;
+    };
+
+    // Polling logic
+    var attempts = 0;
+    var interval = setInterval(function() {
+      attempts++;
+      if (tryScrape() || attempts > 10) {
+        clearInterval(interval);
+        // If still no booking after 10 attempts, send the "None" signal
+        if (!booking) {
+           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ROOM_BOOKING_DATA', payload: null }));
+        }
+      }
+    }, 1000);
+  } catch(e) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "RoomBooking: " + e.toString() }));
+  }
+})(); true;
+`;
+
 const TIMETABLE_SCRIPT = `
 (function() {
   try {
@@ -823,68 +920,107 @@ const EXAMS_SCRIPT = `
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
     };
-    log('Exams: Polling for seating plan...');
+    log('Exams: Starting card-based scraper...');
+    
     var e_attempts = 0;
     var e_poll = setInterval(function() {
       e_attempts++;
-      var tables = document.querySelectorAll('table');
-      var table = null;
-      for (var i = 0; i < tables.length; i++) {
-        var txt = tables[i].textContent;
-        if (txt.includes('Date') && (txt.includes('Course') || txt.includes('Subject')) && txt.includes('Seat')) {
-          table = tables[i];
-          break;
-        }
-      }
       
-      if (table || e_attempts >= 20) {
+      // Look for cards that contain exam info
+      // Based on screenshot: each exam has a subject title, date, time, and room
+      var cards = Array.from(document.querySelectorAll('.card, .card-body, .exam-card, div[class*="card"]')).filter(function(c) {
+        var txt = c.textContent;
+        return (txt.includes('2026') || txt.includes('2025')) && (txt.includes('Term') || txt.includes('Exam'));
+      });
+      
+      if (cards.length > 0 || e_attempts >= 20) {
         clearInterval(e_poll);
-        if (!table) {
-           log('Exams: Table not found');
-           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXAMS_DATA', payload: [] }));
-           return;
+        
+        if (cards.length === 0) {
+          // Fallback: try finding by text content if classes are generic
+          var allDivs = document.querySelectorAll('div');
+          cards = Array.from(allDivs).filter(function(d) {
+            return d.children.length > 3 && d.textContent.includes('2026') && d.querySelector('i, svg');
+          });
         }
-        
-        var rows = Array.from(table.querySelectorAll('tr')).filter(function(r) {
-           return r.querySelectorAll('td').length >= 4 && !r.textContent.includes('Date');
-        });
-        
-        var data = rows.map(function(row, rIdx) {
-          var cells = row.querySelectorAll('td');
-          
-          if (rIdx === 0) {
-            var cellLogs = [];
-            for(var i=0; i<cells.length; i++) cellLogs.push(i + ': ' + cells[i].textContent.trim());
-            log('Exams Row 0: ' + cellLogs.join(' | '));
-          }
-          
-          // Flexible mapping based on common LPU layouts
-          // Column 0: Exam Date, 1: Time/Session, 2: Course, 3: Room, 4: Seat...
-          var dateText = (cells[0].textContent || '').trim();
-          var timeText = (cells[1].textContent || '').trim();
-          var courseText = (cells[2].textContent || '').trim();
-          var roomText = (cells[3].textContent || '').trim();
-          var seatText = cells[4] ? (cells[4].textContent || '').trim() : '';
-          
-          var courseCode = courseText.split(':')[0] || courseText.split('-')[0] || '';
-          var courseTitle = courseText.includes(':') ? courseText.split(':')[1] : (courseText.includes('-') ? courseText.split('-')[1] : courseText);
 
-          return {
-            date: dateText,
-            time: timeText,
-            subjectCode: courseCode.trim(),
-            subject: courseTitle.trim(),
-            room: roomText,
-            seat: seatText
-          };
-        }).filter(Boolean);
+        log('Exams: Found ' + cards.length + ' potential cards');
         
-        log('Exams: Found ' + data.length + ' exams');
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXAMS_DATA', payload: data }));
+        var data = cards.map(function(card) {
+          try {
+            var txt = card.innerText || card.textContent;
+            
+            // Extract Subject/Course (usually the largest text or first heading)
+            var subject = '';
+            var titleEl = card.querySelector('h1, h2, h3, h4, h5, b, strong') || card.querySelector('div[style*="font-size"]');
+            if (titleEl) subject = titleEl.innerText.trim();
+            else {
+              var lines = txt.split('\\n').map(function(l){return l.trim();}).filter(function(l){return l.length > 5;});
+              subject = lines[0] || '';
+            }
+
+            // FILTER JUNK: Ignore page titles or summary metrics
+            if (subject.toLowerCase().includes('date sheet') || subject.toLowerCase().includes('total exam') || subject.toLowerCase().includes('today') || subject.toLowerCase().includes('upcoming exam')) {
+              return null;
+            }
+
+            // Extract Date (Look for DD Month YYYY pattern)
+            var dateMatch = txt.match(/(\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})/);
+            var date = dateMatch ? dateMatch[1] : '';
+
+            // Extract Time (Look for HH:MM pattern)
+            var timeMatch = txt.match(/(\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2})/);
+            var time = timeMatch ? timeMatch[1] : '';
+
+            // CRITICAL: Remove time from text before searching for room to avoid picking up "30-12" from "09:30-12:30"
+            var textWithoutTime = txt.replace(time, '');
+
+            // Extract Room (Look for DD-DDD or DD-DD pattern e.g. 25-801, 30-12)
+            // LPU rooms usually follow Building-Room format
+            var roomMatch = textWithoutTime.match(/(\\d{1,3}-\\d{1,4})/);
+            var room = roomMatch ? roomMatch[1] : 'TBA';
+
+            // Extract Seat
+            var seatMatch = textWithoutTime.match(/Seat\\s*[:\\s]*([A-Z0-9]+)/i);
+            var seat = seatMatch ? seatMatch[1] : '';
+
+            if (!date || !subject) return null;
+
+            // Ensure we have a valid course code pattern (e.g. MTH302)
+            var codeMatch = subject.match(/([A-Z]{2,5}\\d{3,4})/);
+            var courseCode = codeMatch ? codeMatch[1] : '';
+            if (!courseCode) return null; // If no course code, it's likely junk
+
+            var courseTitle = subject.includes('-') ? subject.split('-')[1].trim() : subject.replace(courseCode, '').trim();
+
+            return {
+              date: date,
+              time: time,
+              subjectCode: courseCode,
+              subject: courseTitle.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, ''), // Clean up non-alpha chars at edges
+              room: room,
+              seat: seat
+            };
+          } catch(e) { return null; }
+        }).filter(Boolean);
+
+        // Deduplicate cards (sometimes we catch parent and child)
+        var finalData = [];
+        var seen = {};
+        data.forEach(function(item) {
+          var key = item.date + item.subjectCode;
+          if (!seen[key]) {
+            finalData.push(item);
+            seen[key] = true;
+          }
+        });
+
+        log('Exams: Scraped ' + finalData.length + ' unique exams');
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXAMS_DATA', payload: finalData }));
       }
     }, 1000);
   } catch(e) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "Exams: " + e.toString() }));
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "Exams Card Scraper: " + e.toString() }));
   }
 })(); true;
 `;
@@ -1039,6 +1175,24 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
+    // Auto-inject scripts based on URL
+    if (url.includes('StudentDashboard.aspx')) {
+      console.log('INJECTING DASHBOARD_SCRIPT...');
+      webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
+    } else if (url.includes('frmRoomBooking.aspx')) {
+      console.log('INJECTING ROOM_BOOKING_SCRIPT...');
+      webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
+    } else if (url.includes('frmStudentTimeTable.aspx')) {
+      console.log('INJECTING TIMETABLE_SCRIPT...');
+      webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
+    } else if (url.includes('Student-MakeupAdjustment')) {
+      console.log('INJECTING MAKEUP_SCRIPT...');
+      webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
+    } else if (url.includes('seatingplan')) {
+      console.log('INJECTING EXAMS_SCRIPT...');
+      webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
+    }
+
     // Recovery Logic: If redirected to login while we should be authenticated
     if (url.includes('LoginNew.aspx') && isAuthenticated) {
       console.warn('SCRAPER: Redirected to Login! Pre-filling credentials...');
@@ -1148,14 +1302,11 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           
           // Trigger Makeup Scraping if URL found (Continues in background)
           if (p.makeupUrl) {
-            webViewRef.current?.injectJavaScript(
-               "window.location.href = '" + p.makeupUrl + "'; true;"
-            );
+            webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
+          } else if (p.examUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${p.examUrl}'; true;`);
           } else {
-             // Go directly to timetable if no makeup (Continues in background)
-             webViewRef.current?.injectJavaScript(
-                `window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`
-             );
+            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
           }
 
           merged.lastUpdated = new Date().toISOString();
@@ -1167,23 +1318,42 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const payload = msg.payload || [];
         console.log('EXAMS DATA RECEIVED:', JSON.stringify(payload));
         setData(prev => {
-          const merged = { ...prev, ...msg.payload, lastUpdated: new Date().toISOString() };
+          const merged = { ...prev, exams: payload, lastUpdated: new Date().toISOString() };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+          
+          // Continue to Room Booking
+          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/frmRoomBooking.aspx'; true;`);
+          
+          return merged;
+        });
+      } else if (msg.type === 'ROOM_BOOKING_DATA') {
+        const payload = msg.payload;
+        console.log('ROOM BOOKING DATA RECEIVED:', JSON.stringify(payload));
+        setData(prev => {
+          const merged = { ...prev, roomBooking: payload, lastUpdated: new Date().toISOString() };
+          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+          
+          // FINISH sync with timetable
+          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
+          
           return merged;
         });
       } else if (msg.type === 'MAKEUP_DATA') {
         const payload = msg.payload || [];
         console.log('MAKEUP DATA RECEIVED:', JSON.stringify(payload));
+        // Continue to Exam if exists, else Timetable
         setData(prev => {
           const merged = { ...prev, makeupClasses: payload };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+
+          if (prev.examUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${prev.examUrl}'; true;`);
+          } else {
+            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
+          }
+
           return merged;
         });
-
-        // NOW navigate to timetable (Final Step)
-        webViewRef.current?.injectJavaScript(
-          `window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`
-        );
 
       } else if (msg.type === 'RESULTS_DATA') {
         const payload = msg.payload || [];
@@ -1282,14 +1452,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         }
       } else if (msg.type === 'URL_CHANGE') {
-        const url = msg.payload;
-        if (url.includes('StudentDashboard.aspx')) {
-          webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
-        } else if (url.includes('frmStudentTimeTable.aspx')) {
-          webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
-        } else if (url.includes('Student-MakeupAdjustment')) {
-          webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
-        }
+        // Redundant - handled by handleLoadEnd
       } else if (msg.type === 'DEBUG') {
         console.log('SCRAPER DEBUG:', msg.message);
       } else if (msg.type === 'ERROR') {
