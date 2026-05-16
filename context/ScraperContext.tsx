@@ -641,17 +641,27 @@ const ROOM_BOOKING_SCRIPT = `
         // Lenient check for headers
         if (txt.includes('Room Number') && (txt.includes('Booking Time') || txt.includes('Time'))) {
           log('RoomBooking: Target table matched in ' + name);
-          var rows = Array.from(table.querySelectorAll('tr'));
+          var rows = [];
+          if (table.tBodies && table.tBodies.length > 0) {
+            rows = Array.from(table.tBodies[0].rows);
+            log('RoomBooking: Found ' + rows.length + ' rows in tbody[0]');
+          } else {
+            rows = Array.from(table.querySelectorAll('tr'));
+            log('RoomBooking: Found ' + rows.length + ' rows via querySelector');
+          }
+
           for (var r = 0; r < rows.length; r++) {
-            var cells = Array.from(rows[r].querySelectorAll('td, th'));
+            var row = rows[r];
+            var cells = Array.from(row.querySelectorAll('td, th'));
             if (cells.length >= 5) {
               var cellTxt = cells.map(function(c){ return (c.innerText || c.textContent || '').trim(); });
+              log('RoomBooking: Row ' + r + ' cells: ' + JSON.stringify(cellTxt));
               
-              // Skip headers
-              if (cellTxt.join('').includes('BookingId') || cellTxt.join('').includes('RoomNumber')) continue;
+              // Skip headers based on text content
+              if (cellTxt.join('').toLowerCase().includes('bookingid')) continue;
               
               // Check if first cell is numeric (Booking ID)
-              if (/^\\d+$/.test(cellTxt[0])) {
+              if (cellTxt[0] && /^\\d+$/.test(cellTxt[0])) {
                  booking = {
                    room: cellTxt[3], // 4th column
                    date: cellTxt[1], // 2nd column
@@ -1302,24 +1312,28 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           
           // CHECK MESSAGES FOR ROOM BOOKINGS (In case someone else booked it for the user)
           if (p.messages?.length > 0) {
-            const today = new Date().toLocaleDateString('en-US'); // MM/DD/YYYY to match portal
-            const bookingMsg = p.messages.find(m => 
-              (m.title.toLowerCase().includes('discussion room') || m.title.toLowerCase().includes('carrel')) &&
-              (m.date.toLowerCase().includes('today') || m.date.includes(today) || m.date.includes('Recently'))
-            );
+            const now = new Date();
+            const todayUS = now.toLocaleDateString('en-US'); // 5/16/2026
+            const todayIN = now.toLocaleDateString('en-GB'); // 16/05/2026
+            
+            const bookingMsg = p.messages.find(m => {
+              const t = m.title.toLowerCase();
+              const c = m.content.toLowerCase();
+              const isBooking = t.includes('discussion room') || t.includes('carrel') || c.includes('discussion room') || c.includes('room booking');
+              const isToday = m.date.toLowerCase().includes('today') || m.date.includes(todayUS) || m.date.includes(todayIN) || m.date.includes('Recently');
+              return isBooking && isToday;
+            });
             
             if (bookingMsg) {
               const content = bookingMsg.content;
-              // Extract Room No: "4D2: Discussion Room 2"
-              const roomMatch = content.match(/Room\\s*(?:No)?\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(Discussion\\s*Room\\s*\\d+)/i);
-              // Extract Slot: "5:30PM to 6:30PM"
+              const roomMatch = content.match(/Room\\s*(?:No)?\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(Discussion\\s*Room\\s*\\d+)/i) || content.match(/(Room\\s*\\d+[A-Z0-9-]*)/i);
               const slotMatch = content.match(/Time\\s*:?\\s*([^\\n,.]+)/i) || content.match(/(\\d{1,2}:\\d{2}\\s*(?:AM|PM)\\s*to\\s*(?::)?\\d{1,2}:\\d{2}\\s*(?:AM|PM))/i);
               
               if (roomMatch) {
                 merged.roomBooking = {
                   room: roomMatch[1].trim(),
-                  date: bookingMsg.date.toLowerCase().includes('today') ? today : bookingMsg.date,
-                  slot: slotMatch ? slotMatch[1].trim() : 'Booked via Message'
+                  date: bookingMsg.date.toLowerCase().includes('today') ? todayUS : bookingMsg.date,
+                  slot: slotMatch ? slotMatch[1].trim() : 'Confirmed via Message'
                 };
                 console.log('Room Booking found in messages:', JSON.stringify(merged.roomBooking));
               }
