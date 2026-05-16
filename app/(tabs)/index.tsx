@@ -612,17 +612,24 @@ export default function DashboardScreen() {
   const getProfileColor = (vid: string) => {
     if (!vid) return isDark ? '#1C1C1E' : '#FFFFFF';
     const palette = [
-      '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF9500', '#34C759'
+      '#FF3B30', // Red
+      '#FF9500', // Orange
+      '#34C759', // Green
+      '#007AFF', // Blue
+      '#5856D6', // Purple
+      '#AF52DE', // Violet
+      '#FF2D55', // Pink
+      '#E91E63', // Magenta
     ];
-    let hash = 5381; // Different salt
+    let hash = 999; // Different salt for this specific card
     for (let i = 0; i < vid.length; i++) {
       hash = ((hash << 5) + hash) + vid.charCodeAt(i);
     }
     const baseColor = palette[Math.abs(hash) % palette.length];
-    return isDark ? `${baseColor}25` : `${baseColor}10`; // Subtle glass effect
+    return baseColor; // Use full color for the card
   };
 
-  const profileColor = getProfileColor(profile.vid);
+  const infoCardColor = getProfileColor(profile.vid);
 
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
@@ -862,35 +869,35 @@ export default function DashboardScreen() {
         </View>
 
         {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: profileColor, borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <View style={[styles.premiumProfileCard, { backgroundColor: infoCardColor, borderTopColor: 'transparent', shadowColor: infoCardColor, shadowOpacity: 0.3 }]}>
             <View style={styles.profileRow}>
               <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
                 <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
-                <View style={[styles.editBadge, { backgroundColor: userColor }]}>
+                <View style={[styles.editBadge, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
                   <User size={10} color="#fff" />
                 </View>
               </TouchableOpacity>
               <View style={styles.profileDetails}>
-                <Text style={[styles.fullName, { color: colors.text }]}>{profile.name}</Text>
+                <Text style={[styles.fullName, { color: '#fff' }]}>{profile.name}</Text>
                 <View style={styles.badgeRow}>
-                  <View style={[styles.vidBadge, { backgroundColor: isDark ? 'rgba(10,132,255,0.15)' : '#E5F1FF' }]}>
-                    <Text style={[styles.vidText, { color: colors.primary }]}>{profile.vid}</Text>
+                  <View style={[styles.vidBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <Text style={[styles.vidText, { color: '#fff' }]}>{profile.vid}</Text>
                   </View>
-                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? colors.surface : '#F2F2F7' }]}>
-                    <Text style={[styles.sectionText, { color: colors.text }]}>{profile.section}</Text>
+                  <View style={[styles.sectionBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                    <Text style={[styles.sectionText, { color: '#fff' }]}>{profile.section}</Text>
                   </View>
                   {profile.rollNo && (
-                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,149,0,0.15)' : '#FFF9E5' }]}>
-                      <Text style={[styles.rollText, { color: colors.warning }]}>Roll: {profile.rollNo}</Text>
+                    <View style={[styles.rollBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                      <Text style={[styles.rollText, { color: '#fff' }]}>Roll: {profile.rollNo}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={[styles.programText, { color: colors.textSecondary }]} numberOfLines={2}>{profile.program}</Text>
+                <Text style={[styles.programText, { color: 'rgba(255,255,255,0.8)' }]} numberOfLines={2}>{profile.program}</Text>
               </View>
             </View>
-            <View style={[styles.syncRow, { borderTopColor: colors.border }]}>
-              <View style={styles.statusDot} />
-              <Text style={styles.syncText}>
+            <View style={[styles.syncRow, { borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+              <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
+              <Text style={[styles.syncText, { color: 'rgba(255,255,255,0.9)' }]}>
                 Last synced: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
               </Text>
             </View>
