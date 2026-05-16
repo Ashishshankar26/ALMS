@@ -135,42 +135,42 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'library',
-      color: '#6366F1',
-      gradient: ['#A855F7', '#6366F1'],
+      color: '#FFFFFF',
+      gradient: ['#FFFFFF', '#F9FAFB'],
       render: () => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <LinearGradient colors={['#A855F7', '#6366F1']} style={styles.stackCardInner}>
-            <View style={styles.stackHandle} />
-            <View style={styles.stackGlassIcon}>
-               <BookOpen size={20} color="#fff" />
+          <LinearGradient colors={['#FFFFFF', '#F9FAFB']} style={styles.stackCardInner}>
+            <View style={styles.stackHandleLight} />
+            <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
+               <BookOpen size={20} color="#000" />
             </View>
-            <TouchableOpacity style={styles.stackFab} onPress={onLibraryPress}>
-              <ChevronRight size={18} color="#fff" />
+            <TouchableOpacity style={[styles.stackFab, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
+              <ChevronRight size={18} color="#000" />
             </TouchableOpacity>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(255, 255, 255, 0.2)' : (isOpen ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 69, 58, 0.2)') }]}>
-                  <Text style={[styles.miniStatusText, { color: '#fff' }]}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(88, 86, 214, 0.1)' : (isOpen ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 69, 58, 0.1)') }]}>
+                  <Text style={[styles.miniStatusText, { color: booking ? '#5856D6' : (isOpen ? '#34C759' : '#FF453A') }]}>
                     {booking ? 'BOOKED' : (isOpen ? 'OPEN' : 'CLOSED')}
                   </Text>
                 </View>
-                <Text style={styles.stackLabelWhite}>ROOM & LIBRARY</Text>
+                <Text style={[styles.stackLabelWhite, { color: 'rgba(0,0,0,0.4)' }]}>ROOM & LIBRARY</Text>
               </View>
-              <Text style={[styles.stackBigValue, { color: '#fff', fontSize: booking ? 24 : 32 }]}>
+              <Text style={[styles.stackBigValue, { color: '#000', fontSize: booking ? 24 : 32 }]}>
                 {booking ? booking.room : 'Library Booking'}
               </Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <Clock size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
+                  <Clock size={11} color="#000" style={{ opacity: 0.6 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
                 </View>
-                <View style={styles.footerInfoSeparator} />
+                <View style={styles.footerInfoSeparatorBlack} />
                 <View style={styles.footerInfoItem}>
-                  <Calendar size={11} color="#fff" style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite]}>{booking ? booking.date : 'Standard'}</Text>
+                  <Calendar size={11} color="#000" style={{ opacity: 0.6 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.date : 'Standard'}</Text>
                 </View>
               </View>
             </View>
