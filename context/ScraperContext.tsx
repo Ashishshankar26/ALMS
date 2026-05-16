@@ -310,10 +310,10 @@ const ROOM_BOOKING_SCRIPT = `
     var attempts = 0;
     var interval = setInterval(function() {
       attempts++;
-      if (tryScrape() || attempts > 10) {
+      if (tryScrape() || attempts > 20) {
         clearInterval(interval);
-        // If still no booking after 10 attempts, send the "None" signal
         if (!booking) {
+           log('RoomBooking: Failed after 20 attempts.');
            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ROOM_BOOKING_DATA', payload: null }));
         }
       }
@@ -799,12 +799,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
-    // Auto-inject scripts based on URL with robust guards
-    const baseUrl = url.split('?')[0];
+    // Auto-inject scripts based on URL with robust JS-side guards
+    // We remove the TS-side refs (didDashboard etc.) because they persist through reloads,
+    // but the JS environment is wiped on reload, necessitating re-injection.
     
-    if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
-      console.log('INJECTING DASHBOARD_SCRIPT (with delay)...');
-      didDashboard.current = true;
+    if (url.includes('StudentDashboard.aspx')) {
+      console.log('INJECTING DASHBOARD_SCRIPT (conditional)...');
       setTimeout(() => {
         webViewRef.current?.injectJavaScript(`
           if (!window.__DASHBOARD_SCRIPT_INJECTED__) {
@@ -813,36 +813,32 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         `);
       }, 2000);
-    } else if (url.includes('frmRoomBooking.aspx') && !didBooking.current) {
-      console.log('INJECTING ROOM_BOOKING_SCRIPT...');
-      didBooking.current = true;
+    } else if (url.includes('frmRoomBooking.aspx')) {
+      console.log('INJECTING ROOM_BOOKING_SCRIPT (conditional)...');
       webViewRef.current?.injectJavaScript(`
         if (!window.__BOOKING_SCRIPT_INJECTED__) {
           window.__BOOKING_SCRIPT_INJECTED__ = true;
           ${ROOM_BOOKING_SCRIPT}
         }
       `);
-    } else if (url.includes('frmStudentTimeTable.aspx') && !didTimetable.current) {
-      console.log('INJECTING TIMETABLE_SCRIPT...');
-      didTimetable.current = true;
+    } else if (url.includes('frmStudentTimeTable.aspx')) {
+      console.log('INJECTING TIMETABLE_SCRIPT (conditional)...');
       webViewRef.current?.injectJavaScript(`
         if (!window.__TIMETABLE_SCRIPT_INJECTED__) {
           window.__TIMETABLE_SCRIPT_INJECTED__ = true;
           ${TIMETABLE_SCRIPT}
         }
       `);
-    } else if (url.includes('Student-MakeupAdjustment') && !didMakeup.current) {
-      console.log('INJECTING MAKEUP_SCRIPT...');
-      didMakeup.current = true;
+    } else if (url.includes('Student-MakeupAdjustment')) {
+      console.log('INJECTING MAKEUP_SCRIPT (conditional)...');
       webViewRef.current?.injectJavaScript(`
         if (!window.__MAKEUP_SCRIPT_INJECTED__) {
           window.__MAKEUP_SCRIPT_INJECTED__ = true;
           ${MAKEUP_SCRIPT}
         }
       `);
-    } else if ((url.includes('seatingplan') || url.includes('seating-plan')) && !didExams.current) {
-      console.log('INJECTING EXAMS_SCRIPT...');
-      didExams.current = true;
+    } else if (url.includes('seatingplan') || url.includes('seating-plan')) {
+      console.log('INJECTING EXAMS_SCRIPT (conditional)...');
       webViewRef.current?.injectJavaScript(`
         if (!window.__EXAMS_SCRIPT_INJECTED__) {
           window.__EXAMS_SCRIPT_INJECTED__ = true;
