@@ -606,8 +606,8 @@ export default function DashboardScreen() {
     return '#FF3B30'; // Red (Critical)
   };
 
-  const perfColor = getPerformanceColor(data.cgpa);
   const attColor = getAttendanceColor(overallAttendance);
+  const userColor = getUserColor(profile.vid);
 
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
@@ -891,7 +891,7 @@ export default function DashboardScreen() {
           style={styles.gridContainer}
         >
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: perfColor }]}
+            style={[styles.gridCard, { backgroundColor: userColor }]}
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
