@@ -12,7 +12,8 @@ import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 import { updateStickyClassNotification } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
@@ -718,6 +719,7 @@ export default function DashboardScreen() {
   React.useEffect(() => {
     async function checkUpdates() {
       try {
+        if (isExpoGo) return; // Not supported in Expo Go
         if (!Updates.isEnabled) return;
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
