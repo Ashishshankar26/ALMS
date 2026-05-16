@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -1000,8 +1000,17 @@ export default function DashboardScreen() {
             })}
           </ScrollView>
         ) : (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No pending assignments.</Text>
+          <View style={[styles.emptyCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.emptyIconBg, { backgroundColor: colors.primary + '15' }]}>
+              <Sparkles size={28} color={colors.primary} />
+            </View>
+            <View style={styles.emptyTextContainer}>
+              <Text style={[styles.emptyTitlePremium, { color: colors.text }]}>Zero Pending Tasks!</Text>
+              <Text style={[styles.emptySubPremium, { color: colors.textSecondary }]}>
+                You've completed all your assignments. Great job staying ahead!
+              </Text>
+            </View>
+            <View style={[styles.emptyGlow, { backgroundColor: colors.primary + '10' }]} />
           </View>
         )}
 
