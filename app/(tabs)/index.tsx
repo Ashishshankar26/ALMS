@@ -265,6 +265,13 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
 
   return (
     <View style={styles.stackContainer} {...panResponder.panHandlers}>
+      {cardOrder.map((cardIdx, stackPos) => {
+        const card = cards[cardIdx];
+        const isTop = stackPos === cardOrder.length - 1;
+        const depth = cardOrder.length - 1 - stackPos;
+        const scale = 1 - depth * 0.08;
+        const offsetY = depth * 34;
+
         // --- ENHANCED ANIMATIONS ---
         const rotate = translateY.interpolate({
           inputRange: [-150, 0, 150],
