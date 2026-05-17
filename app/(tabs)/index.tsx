@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
@@ -23,18 +24,14 @@ const SWIPE_THRESHOLD = 25;
 function CardGradient({ colors, style, children, id, borderStyle }: { colors: string[]; style?: any; children?: React.ReactNode; id: string; borderStyle?: any }) {
   const r = style?.borderRadius || 32;
   return (
-    <View style={[style, { overflow: 'hidden', borderRadius: r }, borderStyle]}>
-      <Svg height="100%" width="100%" style={[StyleSheet.absoluteFillObject, { borderRadius: r }]}>
-        <Defs>
-          <SvgGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={colors[0]} stopOpacity="1" />
-            <Stop offset="100%" stopColor={colors[1]} stopOpacity="1" />
-          </SvgGradient>
-        </Defs>
-        <Rect width="100%" height="100%" rx={r} ry={r} fill={`url(#${id})`} />
-      </Svg>
+    <LinearGradient
+      colors={colors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[style, { overflow: 'hidden', borderRadius: r }, borderStyle]}
+    >
       {children}
-    </View>
+    </LinearGradient>
   );
 }
 
