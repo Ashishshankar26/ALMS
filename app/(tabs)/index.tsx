@@ -268,9 +268,11 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             </TouchableOpacity>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: attVal >= 80 ? 'rgba(52, 199, 89, 0.2)' : (attVal >= 75 ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 59, 48, 0.2)') }]}>
-                  <CheckCircle2 size={10} color={attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30')} />
-                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30') }]}>{attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}</Text>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.9)', paddingHorizontal: 10, paddingVertical: 4 }]}>
+                  <CheckCircle2 size={11} color={attVal >= 80 ? '#27AE60' : (attVal >= 75 ? '#F39C12' : '#E74C3C')} />
+                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#27AE60' : (attVal >= 75 ? '#F39C12' : '#E74C3C'), fontWeight: '900' }]}>
+                    {attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}
+                  </Text>
                 </View>
                 <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
               </View>
