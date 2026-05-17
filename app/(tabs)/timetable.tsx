@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
 import { Clock, MapPin, Tag, User, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -312,60 +313,69 @@ export default function TimetableScreen() {
                   key={cls.id || index}
                   entering={FadeInDown.delay(500 + index * 50).duration(600).springify()}
                 >
-                  <View style={[styles.classCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)' }]}>
-                    <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
-                    
-                    <View style={styles.timeColumn}>
-                      <Text style={[styles.timeStart, { color: colors.text }]}>{startTime}</Text>
-                      <View style={[styles.timeLine, { backgroundColor: colors.border }]}>
-                        <View style={[styles.timeDot, { backgroundColor: accentColor }]} />
-                      </View>
-                      <View style={{ alignItems: 'center', marginTop: -2 }}>
-                        <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
-                        <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.classInfo}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <View style={[styles.courseBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F2F2F7' }]}>
-                          <Text style={[styles.courseCode, { color: accentColor }]}>{cls.subjectCode}</Text>
+                  <View style={[styles.classCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
+                    <LinearGradient
+                      colors={
+                        isClassMakeup(cls)
+                          ? ['#FFAE33', '#D35400']
+                          : (isPractical ? ['#3DBE6B', '#1E7C41'] : ['#6366F1', '#4338CA'])
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: 20, paddingLeft: 24, flex: 1, flexDirection: 'row', borderRadius: 18 }}
+                    >
+                      <View style={styles.timeColumn}>
+                        <Text style={[styles.timeStart, { color: '#ffffff', fontWeight: '800' }]}>{startTime}</Text>
+                        <View style={[styles.timeLine, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                          <View style={[styles.timeDot, { backgroundColor: '#ffffff' }]} />
                         </View>
-                        <View style={{ flexDirection: 'row', gap: 6 }}>
-                          {isClassMakeup(cls) && (
-                            <View style={[styles.practicalBadge, { backgroundColor: '#FF9500' }]}>
-                              <Text style={styles.practicalBadgeText}>MAKEUP</Text>
-                            </View>
-                          )}
-                          {isPractical && (
-                            <View style={styles.practicalBadge}>
-                              <Text style={styles.practicalBadgeText}>LAB</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                      <Text style={[styles.subjectName, { fontSize: 18, color: colors.text }]}>{cls.subject}</Text>
-
-                      <View style={[styles.badgeRow, { marginTop: 8 }]}>
-                        <View style={[styles.roomBadge, { backgroundColor: isDark ? 'rgba(255,149,0,0.15)' : '#FFF4E5' }]}>
-                          <MapPin size={12} color="#FF9500" />
-                          <Text style={[styles.roomText, { color: isDark ? '#FF9500' : '#CC7700' }]}>{cls.room || 'TBA'}</Text>
-                        </View>
-                        <View style={[styles.typeBadge, { backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : '#E8F5E9' }]}>
-                          <Tag size={12} color="#34C759" />
-                          <Text style={[styles.typeText, { color: isDark ? '#34C759' : '#2E7D32' }]}>{cls.type}</Text>
+                        <View style={{ alignItems: 'center', marginTop: -2 }}>
+                          <Text style={[styles.timeEnd, { color: 'rgba(255, 255, 255, 0.8)' }]}>{endTime}</Text>
+                          <Text style={[styles.timeAmpm, { color: 'rgba(255, 255, 255, 0.8)' }]}>{ampm}</Text>
                         </View>
                       </View>
 
-                      {cls.faculty ? (
-                        <View style={[styles.metaRow, { marginTop: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                          <User size={14} color={colors.textSecondary} />
-                          <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '500' }]} numberOfLines={1}>
-                            {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
-                          </Text>
+                      <View style={styles.classInfo}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <View style={[styles.courseBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                            <Text style={[styles.courseCode, { color: '#ffffff', fontWeight: '700' }]}>{cls.subjectCode}</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            {isClassMakeup(cls) && (
+                              <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                                <Text style={[styles.practicalBadgeText, { color: '#ffffff' }]}>MAKEUP</Text>
+                              </View>
+                            )}
+                            {isPractical && (
+                              <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                                <Text style={[styles.practicalBadgeText, { color: '#ffffff' }]}>LAB</Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
-                      ) : null}
-                    </View>
+                        <Text style={[styles.subjectName, { fontSize: 18, color: '#ffffff', fontWeight: '800' }]}>{cls.subject}</Text>
+
+                        <View style={[styles.badgeRow, { marginTop: 8 }]}>
+                          <View style={[styles.roomBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                            <MapPin size={12} color="#ffffff" />
+                            <Text style={[styles.roomText, { color: '#ffffff', fontWeight: '700' }]}>{cls.room || 'TBA'}</Text>
+                          </View>
+                          <View style={[styles.typeBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                            <Tag size={12} color="#ffffff" />
+                            <Text style={[styles.typeText, { color: '#ffffff', fontWeight: '700' }]}>{cls.type}</Text>
+                          </View>
+                        </View>
+
+                        {cls.faculty ? (
+                          <View style={[styles.metaRow, { marginTop: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+                            <User size={14} color="rgba(255,255,255,0.8)" />
+                            <Text style={[styles.metaText, { color: 'rgba(255,255,255,0.85)', fontWeight: '600' }]} numberOfLines={1}>
+                              {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </LinearGradient>
                   </View>
                 </Animated.View>
               );

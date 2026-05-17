@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
 import { ChevronDown, ChevronUp, GraduationCap, Award, BookOpen, Star } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
@@ -151,98 +152,109 @@ export default function ResultsScreen() {
                 key={index}
                 entering={FadeInDown.delay(200 + index * 100).duration(600).springify()}
               >
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-                  <TouchableOpacity 
-                    style={styles.cardHeader}
-                    onPress={() => setExpandedSem(isExpanded ? null : sem.semester)}
-                    activeOpacity={0.7}
+                <View style={[styles.card, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
+                  <LinearGradient
+                    colors={
+                      activeTab === 'BACKLOG'
+                        ? ['#FFAE33', '#D35400']
+                        : ((index % 2 === 0) ? ['#8A2BE2', '#4B0082'] : ['#007AFF', '#004499'])
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ flex: 1, borderRadius: 22 }}
                   >
-                    <View style={styles.semInfo}>
-                      <View style={[styles.semNumberBadge, { backgroundColor: activeTab === 'BACKLOG' ? colors.warning : colors.primary }]}>
-                        <Text style={styles.semNumberText}>{activeTab === 'BACKLOG' ? 'R' : (index + 1)}</Text>
-                      </View>
-                      <View>
-                        <Text style={[styles.semTitle, { color: colors.text }]}>
-                          {sem.semester}
-                        </Text>
-                        <Text style={[styles.semSubtitle, { color: colors.textSecondary }]}>Passed All Subjects</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.headerRight}>
-                      {activeTab !== 'BACKLOG' && (
-                        <View style={[styles.sgpaBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9F9' }]}>
-                          <Text style={[styles.sgpaLabel, { color: colors.textSecondary }]}>TGPA</Text>
-                          <Text style={[styles.sgpaValue, { color: colors.primary }]}>{sem.sgpa}</Text>
+                    <TouchableOpacity 
+                      style={styles.cardHeader}
+                      onPress={() => setExpandedSem(isExpanded ? null : sem.semester)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.semInfo}>
+                        <View style={[styles.semNumberBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                          <Text style={[styles.semNumberText, { color: '#ffffff' }]}>{activeTab === 'BACKLOG' ? 'R' : (index + 1)}</Text>
                         </View>
-                      )}
-                      {isExpanded ? 
-                        <ChevronUp size={20} color={colors.textSecondary} /> : 
-                        <ChevronDown size={20} color={colors.textSecondary} />
-                      }
-                    </View>
-                  </TouchableOpacity>
-
-                  {isExpanded && (
-                    <Animated.View entering={FadeInUp.duration(400)} style={[styles.expandedContent, { borderTopColor: colors.border }]}>
-                      {(sem.subjects || []).map((sub, subIndex) => {
-                        const isSubExpanded = expandedSubject === `${index}-${subIndex}`;
-                        return (
-                          <View key={subIndex} style={styles.subjectContainer}>
-                            <TouchableOpacity 
-                              style={styles.subjectRow}
-                              onPress={() => setExpandedSubject(isSubExpanded ? null : `${index}-${subIndex}`)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.subjectMain}>
-                                <Text style={[styles.subjectName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
-                                <View style={styles.subjectMeta}>
-                                  <Text style={[styles.subjectCode, { color: colors.textSecondary }]}>{sub.code}</Text>
-                                  {sub.marksDetails && sub.marksDetails.length > 0 && (
-                                    <>
-                                      <View style={styles.dot} />
-                                      <Text style={[styles.creditsText, { color: colors.primary }]}>View Marks</Text>
-                                    </>
-                                  )}
-                                </View>
-                              </View>
-                              {activeTab !== 'BACKLOG' && (
-                                <View style={[styles.gradeBadge, { backgroundColor: getGradeBg(sub.grade) }]}>
-                                  <Text style={[styles.gradeText, { color: getGradeColor(sub.grade) }]}>{sub.grade}</Text>
-                                </View>
-                              )}
-                            </TouchableOpacity>
-
-                            {isSubExpanded && sub.marksDetails && sub.marksDetails.length > 0 && (
-                              <Animated.View entering={FadeInUp.duration(300)} style={[styles.marksTableContainer, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#F9F9FB', borderColor: colors.border }]}>
-                                <View style={styles.marksTableHeader}>
-                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, flex: 1, paddingRight: 8 }]}>Type</Text>
-                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, width: 95, textAlign: 'center' }]}>Marks</Text>
-                                  <Text style={[styles.marksHeaderCell, { color: colors.textSecondary, width: 95, textAlign: 'right' }]}>Weightage</Text>
-                                </View>
-                                {sub.marksDetails.map((mark, mIdx) => {
-                                  let displayType = mark.type;
-                                  const tLower = displayType.toLowerCase();
-                                  if (tLower.includes('continuous assessment')) displayType = 'CA';
-                                  else if (tLower.includes('mid term')) displayType = 'Mid Term';
-                                  else if (tLower.includes('end term')) displayType = 'End Term';
-                                  else if (tLower.includes('attendance')) displayType = 'Attendance';
-                                  
-                                  return (
-                                    <View key={mIdx} style={[styles.marksTableRow, { borderTopColor: colors.border }]}>
-                                      <Text style={[styles.marksCell, { color: colors.text, flex: 1, paddingRight: 8 }]} numberOfLines={3}>{displayType}</Text>
-                                      <Text style={[styles.marksCell, { color: colors.text, width: 95, textAlign: 'center', fontWeight: '600' }]} numberOfLines={2}>{mark.marks}</Text>
-                                      <Text style={[styles.marksCell, { color: colors.text, width: 95, textAlign: 'right', fontWeight: '600' }]} numberOfLines={2}>{mark.weightage}</Text>
-                                    </View>
-                                  );
-                                })}
-                              </Animated.View>
-                            )}
+                        <View>
+                          <Text style={[styles.semTitle, { color: '#ffffff', fontWeight: '800' }]}>
+                            {sem.semester}
+                          </Text>
+                          <Text style={[styles.semSubtitle, { color: 'rgba(255, 255, 255, 0.8)' }]}>Passed All Subjects</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.headerRight}>
+                        {activeTab !== 'BACKLOG' && (
+                          <View style={[styles.sgpaBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                            <Text style={[styles.sgpaLabel, { color: 'rgba(255, 255, 255, 0.75)', fontWeight: '700' }]}>TGPA</Text>
+                            <Text style={[styles.sgpaValue, { color: '#ffffff', fontWeight: '800' }]}>{sem.sgpa}</Text>
                           </View>
-                        );
-                      })}
-                    </Animated.View>
-                  )}
+                        )}
+                        {isExpanded ? 
+                          <ChevronUp size={20} color="#ffffff" /> : 
+                          <ChevronDown size={20} color="#ffffff" />
+                        }
+                      </View>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <Animated.View entering={FadeInUp.duration(400)} style={[styles.expandedContent, { borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+                        {(sem.subjects || []).map((sub, subIndex) => {
+                          const isSubExpanded = expandedSubject === `${index}-${subIndex}`;
+                          return (
+                            <View key={subIndex} style={[styles.subjectContainer, { borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
+                              <TouchableOpacity 
+                                style={styles.subjectRow}
+                                onPress={() => setExpandedSubject(isSubExpanded ? null : `${index}-${subIndex}`)}
+                                activeOpacity={0.7}
+                              >
+                                <View style={styles.subjectMain}>
+                                  <Text style={[styles.subjectName, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={1}>{sub.name}</Text>
+                                  <View style={styles.subjectMeta}>
+                                    <Text style={[styles.subjectCode, { color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600' }]}>{sub.code}</Text>
+                                    {sub.marksDetails && sub.marksDetails.length > 0 && (
+                                      <>
+                                        <View style={[styles.dot, { backgroundColor: 'rgba(255,255,255,0.4)' }]} />
+                                        <Text style={[styles.creditsText, { color: '#ffffff', textDecorationLine: 'underline', fontWeight: '600' }]}>View Marks</Text>
+                                      </>
+                                    )}
+                                  </View>
+                                </View>
+                                {activeTab !== 'BACKLOG' && (
+                                  <View style={[styles.gradeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                                    <Text style={[styles.gradeText, { color: '#ffffff', fontWeight: '800' }]}>{sub.grade}</Text>
+                                  </View>
+                                )}
+                              </TouchableOpacity>
+
+                              {isSubExpanded && sub.marksDetails && sub.marksDetails.length > 0 && (
+                                <Animated.View entering={FadeInUp.duration(300)} style={[styles.marksTableContainer, { backgroundColor: 'rgba(0, 0, 0, 0.25)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
+                                  <View style={[styles.marksTableHeader, { backgroundColor: 'rgba(0,0,0,0.15)' }]}>
+                                    <Text style={[styles.marksHeaderCell, { color: 'rgba(255, 255, 255, 0.7)', flex: 1, paddingRight: 8 }]}>Type</Text>
+                                    <Text style={[styles.marksHeaderCell, { color: 'rgba(255, 255, 255, 0.7)', width: 95, textAlign: 'center' }]}>Marks</Text>
+                                    <Text style={[styles.marksHeaderCell, { color: 'rgba(255, 255, 255, 0.7)', width: 95, textAlign: 'right' }]}>Weightage</Text>
+                                  </View>
+                                  {sub.marksDetails.map((mark: any, mIdx: number) => {
+                                    let displayType = mark.type;
+                                    const tLower = displayType.toLowerCase();
+                                    if (tLower.includes('continuous assessment')) displayType = 'CA';
+                                    else if (tLower.includes('mid term')) displayType = 'Mid Term';
+                                    else if (tLower.includes('end term')) displayType = 'End Term';
+                                    else if (tLower.includes('attendance')) displayType = 'Attendance';
+                                    
+                                    return (
+                                      <View key={mIdx} style={[styles.marksTableRow, { borderTopColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                                        <Text style={[styles.marksCell, { color: '#ffffff', flex: 1, paddingRight: 8 }]} numberOfLines={3}>{displayType}</Text>
+                                        <Text style={[styles.marksCell, { color: '#ffffff', width: 95, textAlign: 'center', fontWeight: '700' }]} numberOfLines={2}>{mark.marks}</Text>
+                                        <Text style={[styles.marksCell, { color: '#ffffff', width: 95, textAlign: 'right', fontWeight: '700' }]} numberOfLines={2}>{mark.weightage}</Text>
+                                      </View>
+                                    );
+                                  })}
+                                </Animated.View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </Animated.View>
+                    )}
+                  </LinearGradient>
                 </View>
               </Animated.View>
             );

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, 
 import { WebView } from 'react-native-webview';
 import { router } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, MapPin, User } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useScraper } from '../context/ScraperContext';
@@ -61,33 +62,40 @@ export default function ExamsScreen() {
       {exams.length > 0 && !showWebView ? (
         <ScrollView style={styles.examList} contentContainerStyle={{ padding: 20 }}>
           {exams.map((exam: any, index: number) => (
-            <View key={index} style={[styles.examCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-              <View style={styles.examHeader}>
-                <View style={[styles.dateBadge, { backgroundColor: isDark ? 'rgba(255,59,48,0.1)' : '#FFF2F2' }]}>
-                  <Calendar size={14} color={colors.error} />
-                  <Text style={[styles.dateText, { color: colors.error }]}>{exam.date}</Text>
-                </View>
-                <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(10,132,255,0.1)' : '#E5F1FF' }]}>
-                  <Clock size={14} color={colors.primary} />
-                  <Text style={[styles.timeText, { color: colors.primary }]}>{exam.time}</Text>
-                </View>
-              </View>
-
-              <Text style={[styles.courseCode, { color: colors.primary }]}>{exam.subjectCode}</Text>
-              <Text style={[styles.subjectName, { color: colors.text }]}>{exam.subject}</Text>
-
-              <View style={styles.footerRow}>
-                <View style={styles.metaItem}>
-                  <MapPin size={16} color={colors.textSecondary} />
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>Room: {exam.room}</Text>
-                </View>
-                {exam.seat && (
-                  <View style={styles.metaItem}>
-                    <User size={16} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary }]}>Seat: {exam.seat}</Text>
+            <View key={index} style={[styles.examCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
+              <LinearGradient
+                colors={['#FF6259', '#B71C1C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ padding: 18, borderRadius: 14 }}
+              >
+                <View style={styles.examHeader}>
+                  <View style={[styles.dateBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                    <Calendar size={14} color="#ffffff" />
+                    <Text style={[styles.dateText, { color: '#ffffff' }]}>{exam.date}</Text>
                   </View>
-                )}
-              </View>
+                  <View style={[styles.timeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <Clock size={14} color="#ffffff" />
+                    <Text style={[styles.timeText, { color: '#ffffff' }]}>{exam.time}</Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.courseCode, { color: '#ffffff', fontWeight: '800' }]}>{exam.subjectCode}</Text>
+                <Text style={[styles.subjectName, { color: '#ffffff', fontWeight: '800' }]}>{exam.subject}</Text>
+
+                <View style={[styles.footerRow, { borderTopColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                  <View style={styles.metaItem}>
+                    <MapPin size={16} color="#ffffff" />
+                    <Text style={[styles.metaText, { color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }]}>Room: {exam.room}</Text>
+                  </View>
+                  {exam.seat && (
+                    <View style={styles.metaItem}>
+                      <User size={16} color="#ffffff" />
+                      <Text style={[styles.metaText, { color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }]}>Seat: {exam.seat}</Text>
+                    </View>
+                  )}
+                </View>
+              </LinearGradient>
             </View>
           ))}
           

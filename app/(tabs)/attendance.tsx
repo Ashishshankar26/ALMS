@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
 import { CheckCircle, AlertTriangle, XCircle, Calculator, Plus, Minus, Calendar, Edit2, Clock, Award, List } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
@@ -213,7 +214,7 @@ export default function AttendanceScreen() {
           return (
             <TouchableOpacity 
               key={index}
-              style={[styles.card, { backgroundColor: colors.card, borderColor: isSelected ? colors.primary : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)') }]}
+              style={[styles.card, { padding: 0, borderColor: isSelected ? '#ffffff' : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)'), borderWidth: 1.5 }]}
               onPress={() => {
                 if (isSelected) {
                   setSelectedSubject(null);
@@ -223,124 +224,135 @@ export default function AttendanceScreen() {
               }}
               activeOpacity={0.7}
             >
-              <View style={[styles.percentageBadge, { backgroundColor: `${status.color}15`, position: 'absolute', top: 15, right: 15 }]}>
-                <Text style={[styles.percentageText, { color: status.color }]}>{effectivePct}%</Text>
-              </View>
+              <LinearGradient
+                colors={
+                  effectivePct >= targetPct + 10 
+                    ? ['#3DBE6B', '#1E7C41'] 
+                    : (effectivePct >= targetPct ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ padding: 18, flex: 1, width: '100%', borderRadius: 22 }}
+              >
+                <View style={[styles.percentageBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', position: 'absolute', top: 15, right: 15, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
+                  <Text style={[styles.percentageText, { color: '#ffffff', fontWeight: '800' }]}>{effectivePct}%</Text>
+                </View>
 
-              <View style={styles.cardHeader}>
-                <View style={styles.cardInfo}>
-                  <View style={[styles.subjectCodeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0' }]}>
-                    <Text style={[styles.subjectCode, { color: colors.primary }]}>{item.subjectCode}</Text>
-                  </View>
-                  <Text style={[styles.subjectName, { color: colors.text, paddingRight: 60 }]}>{item.subjectName}</Text>
-                  
-                  {/* Progress Bar - KEPT */}
-                  <View style={styles.progressContainer}>
-                    <View style={[styles.miniProgressBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-                      <View style={[styles.miniProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: status.color }]} />
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardInfo}>
+                    <View style={[styles.subjectCodeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <Text style={[styles.subjectCode, { color: '#ffffff' }]}>{item.subjectCode}</Text>
+                    </View>
+                    <Text style={[styles.subjectName, { color: '#ffffff', paddingRight: 60, fontWeight: '800' }]}>{item.subjectName}</Text>
+                    
+                    {/* Progress Bar - KEPT */}
+                    <View style={styles.progressContainer}>
+                      <View style={[styles.miniProgressBar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                        <View style={[styles.miniProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: '#ffffff' }]} />
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
 
-              <View style={[styles.statsRow, { backgroundColor: colors.surface }]}>
-                <View style={styles.stat}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Attended</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{item.attendedClasses}</Text>
+                <View style={[styles.statsRow, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 16 }]}>
+                  <View style={styles.stat}>
+                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Attended</Text>
+                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.attendedClasses}</Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Total</Text>
+                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.totalClasses}</Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Leaves</Text>
+                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.dutyLeaves || 0}</Text>
+                  </View>
+                  <View style={[styles.statStatus, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    {React.cloneElement(status.icon, { color: '#ffffff' })}
+                    <Text style={[styles.statusText, { color: '#ffffff', fontWeight: '700' }]}>{status.text}</Text>
+                  </View>
                 </View>
-                <View style={styles.stat}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{item.totalClasses}</Text>
-                </View>
-                <View style={styles.stat}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Leaves</Text>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{item.dutyLeaves || 0}</Text>
-                </View>
-                <View style={[styles.statStatus, { backgroundColor: colors.card }]}>
-                  {status.icon}
-                  <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
-                </View>
-              </View>
 
-              {isSelected && (
-                <Animated.View 
-                  entering={FadeInUp.duration(400)} 
-                  style={[styles.calculatorBox, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}
-                >
-                  {/* Calculator Header */}
-                  <View style={styles.calcHeader}>
-                    <View style={[styles.calcIconBg, { backgroundColor: colors.primary + '20' }]}>
-                      <Calculator size={14} color={colors.primary} />
+                {isSelected && (
+                  <Animated.View 
+                    entering={FadeInUp.duration(400)} 
+                    style={[styles.calculatorBox, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: 'rgba(255, 255, 255, 0.25)', borderWidth: 1.5, marginTop: 12 }]}
+                  >
+                    {/* Calculator Header */}
+                    <View style={styles.calcHeader}>
+                      <View style={[styles.calcIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                        <Calculator size={14} color="#ffffff" />
+                      </View>
+                      <Text style={[styles.calcTitle, { color: 'rgba(255,255,255,0.9)' }]}>Smart Forecast Panel</Text>
                     </View>
-                    <Text style={[styles.calcTitle, { color: colors.textSecondary }]}>Smart Forecast Panel</Text>
-                  </View>
 
-                  {/* Main Metrics Grid */}
-                  <View style={styles.projectionGrid}>
-                    {/* TERM SAFE MARGIN */}
-                    {(() => {
-                      const proj = calculateMissable(item);
-                      return (
-                        <>
-                          <View style={styles.projectionCol}>
-                            <View style={styles.metricIconHeader}>
-                              <CheckCircle size={10} color={proj.isSafe ? '#34C759' : colors.error} />
-                              <Text style={[styles.projectionLabel, { color: colors.textSecondary }]}>Safe Margin</Text>
-                            </View>
-                            <Text style={[styles.projectionValue, { color: proj.isSafe ? '#34C759' : colors.error }]}>
-                              {proj.value} 
-                              <Text style={{ fontSize: 10, fontWeight: '600' }}> {proj.value === 1 ? 'Class' : 'Classes'}</Text>
-                            </Text>
-                            <Text style={[styles.projectionHint, { color: colors.textSecondary }]}>Total for term</Text>
-                          </View>
-
-                          <View style={[styles.projectionDivider, { backgroundColor: colors.border }]} />
-
-                          {/* SKIP 1 TODAY IMPACT */}
-                          <View style={styles.projectionCol}>
-                            <View style={styles.metricIconHeader}>
-                              <AlertTriangle size={10} color={((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? colors.error : '#34C759'} />
-                              <Text style={[styles.projectionLabel, { color: colors.textSecondary }]}>Skip Today</Text>
-                            </View>
-                            <Text style={[
-                              styles.projectionValue, 
-                              { color: ((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? colors.error : '#34C759' }
-                            ]}>
-                              {Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) * 100)}%
-                            </Text>
-                            <Text style={[styles.projectionHint, { color: colors.textSecondary }]}>If you miss 1</Text>
-                          </View>
-
-                          <View style={[styles.projectionDivider, { backgroundColor: colors.border }]} />
-
-                          {/* FINAL FORECAST */}
-                          <View style={styles.projectionCol}>
-                            <View style={styles.metricIconHeader}>
-                              <Award size={10} color={proj.forecast < targetPct ? colors.error : '#34C759'} />
-                              <Text style={[styles.projectionLabel, { color: colors.textSecondary }]}>Final Aim</Text>
-                            </View>
-                            <Text style={[styles.projectionValue, { color: proj.forecast < targetPct ? colors.error : '#34C759' }]}>
-                              {proj.forecast}%
-                            </Text>
-                            <Text style={[styles.projectionHint, { color: colors.textSecondary }]}>Term End</Text>
-                          </View>
-                        </>
-                      );
-                    })()}
-                  </View>
-
-                  {/* Summary Footer */}
-                  <View style={[styles.calcAdvice, { backgroundColor: colors.surface }]}>
-                    <Clock size={12} color={colors.primary} />
-                    <Text style={[styles.calcAdviceText, { color: colors.textSecondary }]}>
+                    {/* Main Metrics Grid */}
+                    <View style={styles.projectionGrid}>
+                      {/* TERM SAFE MARGIN */}
                       {(() => {
                         const proj = calculateMissable(item);
-                        return `Final prediction: ${proj.forecast}% based on ${proj.remaining} remaining classes. Target is ${targetPct}%.`;
+                        return (
+                          <>
+                            <View style={styles.projectionCol}>
+                              <View style={styles.metricIconHeader}>
+                                <CheckCircle size={10} color={proj.isSafe ? '#4CD964' : '#FF453A'} />
+                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Safe Margin</Text>
+                              </View>
+                              <Text style={[styles.projectionValue, { color: proj.isSafe ? '#4CD964' : '#FF453A' }]}>
+                                {proj.value} 
+                                <Text style={{ fontSize: 10, fontWeight: '600' }}> {proj.value === 1 ? 'Class' : 'Classes'}</Text>
+                              </Text>
+                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>Total for term</Text>
+                            </View>
+
+                            <View style={[styles.projectionDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
+
+                            {/* SKIP 1 TODAY IMPACT */}
+                            <View style={styles.projectionCol}>
+                              <View style={styles.metricIconHeader}>
+                                <AlertTriangle size={10} color={((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? '#FF453A' : '#4CD964'} />
+                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Skip Today</Text>
+                              </View>
+                              <Text style={[
+                                styles.projectionValue, 
+                                { color: ((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? '#FF453A' : '#4CD964' }
+                              ]}>
+                                {Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) * 100)}%
+                              </Text>
+                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>If you miss 1</Text>
+                            </View>
+
+                            <View style={[styles.projectionDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
+
+                            {/* FINAL FORECAST */}
+                            <View style={styles.projectionCol}>
+                              <View style={styles.metricIconHeader}>
+                                <Award size={10} color={proj.forecast < targetPct ? '#FF453A' : '#4CD964'} />
+                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Final Aim</Text>
+                              </View>
+                              <Text style={[styles.projectionValue, { color: proj.forecast < targetPct ? '#FF453A' : '#4CD964' }]}>
+                                {proj.forecast}%
+                              </Text>
+                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>Term End</Text>
+                            </View>
+                          </>
+                        );
                       })()}
-                    </Text>
-                  </View>
-                </Animated.View>
-              )}
+                    </View>
+
+                    {/* Summary Footer */}
+                    <View style={[styles.calcAdvice, { backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 12 }]}>
+                      <Clock size={12} color="#ffffff" />
+                      <Text style={[styles.calcAdviceText, { color: 'rgba(255,255,255,0.9)' }]}>
+                        {(() => {
+                          const proj = calculateMissable(item);
+                          return `Final prediction: ${proj.forecast}% based on ${proj.remaining} remaining classes. Target is ${targetPct}%.`;
+                        })()}
+                      </Text>
+                    </View>
+                  </Animated.View>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           );
         })}
@@ -348,30 +360,37 @@ export default function AttendanceScreen() {
         {/* Aggregate Summary Section at the Bottom - ANIMATED */}
         <Animated.View entering={FadeInDown.delay(400).duration(800)}>
           <Text style={[styles.sectionTitle, { marginTop: 30, marginBottom: 10, color: colors.text }]}>Summary Report</Text>
-          <View style={[styles.aggregateCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-            <Text style={[styles.aggregateTitle, { color: colors.text }]}>Aggregate Attendance Details</Text>
-            <View style={[styles.aggregateDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.aggregateRow}>
-              <View style={styles.aggregateStat}>
-                <Text style={[styles.aggregateLabel, { color: colors.textSecondary }]}>Total</Text>
-                <Text style={[styles.aggregateValue, { color: colors.text }]}>{totalClasses}</Text>
+          <View style={[styles.aggregateCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
+            <LinearGradient
+              colors={['#4A1D5B', '#2D1237']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 20, borderRadius: 22 }}
+            >
+              <Text style={[styles.aggregateTitle, { color: '#ffffff', fontWeight: '800' }]}>Aggregate Attendance Details</Text>
+              <View style={[styles.aggregateDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
+              <View style={styles.aggregateRow}>
+                <View style={styles.aggregateStat}>
+                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total</Text>
+                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{totalClasses}</Text>
+                </View>
+                <View style={styles.aggregateStat}>
+                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Attended</Text>
+                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{attendedClasses}</Text>
+                </View>
+                <View style={styles.aggregateStat}>
+                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Duty Leave</Text>
+                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{dutyLeaves}</Text>
+                </View>
               </View>
-              <View style={styles.aggregateStat}>
-                <Text style={[styles.aggregateLabel, { color: colors.textSecondary }]}>Attended</Text>
-                <Text style={[styles.aggregateValue, { color: colors.text }]}>{attendedClasses}</Text>
+              <View style={[styles.finalPercentageBox, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 14 }]}>
+                <View>
+                  <Text style={[styles.finalPercentageLabel, { color: '#ffffff', fontWeight: '800' }]}>Aggregate Attendance</Text>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '700' }}>Including Duty Leaves</Text>
+                </View>
+                <Text style={[styles.finalPercentageValue, { color: '#ffffff', fontWeight: '800' }]}>{overallAttendance}%</Text>
               </View>
-              <View style={styles.aggregateStat}>
-                <Text style={[styles.aggregateLabel, { color: colors.textSecondary }]}>Duty Leave</Text>
-                <Text style={[styles.aggregateValue, { color: colors.text }]}>{dutyLeaves}</Text>
-              </View>
-            </View>
-            <View style={[styles.finalPercentageBox, { backgroundColor: isDark ? 'rgba(52, 199, 89, 0.15)' : 'rgba(52, 199, 89, 0.1)' }]}>
-              <View>
-                <Text style={[styles.finalPercentageLabel, { color: '#34C759' }]}>Aggregate Attendance</Text>
-                <Text style={{ color: isDark ? '#34C759' : 'rgba(52, 199, 89, 0.8)', fontSize: 11, fontWeight: '700' }}>Including Duty Leaves</Text>
-              </View>
-              <Text style={[styles.finalPercentageValue, { color: '#34C759' }]}>{overallAttendance}%</Text>
-            </View>
+            </LinearGradient>
           </View>
         </Animated.View>
       </View>
