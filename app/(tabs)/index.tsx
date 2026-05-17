@@ -189,7 +189,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       color: '#3DBE6B',
       gradient: ['#3DBE6B', '#27AE60'],
       render: () => {
-        const subjectName = nextExam ? (data.attendance.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
+        const subjectName = nextExam ? (data.attendance?.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
         return (
           <LinearGradient colors={['#3DBE6B', '#27AE60']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
