@@ -621,14 +621,16 @@ export default function DashboardScreen() {
     return '#FF3B30'; // Red
   };
 
-  const getAttendanceColor = (att: number) => {
-    if (att >= 80) return '#34C759'; // Green (Safe)
-    if (att >= 75) return '#FF9500'; // Orange (Warning)
+  const getAttendanceColor = (att: any) => {
+    const val = parseFloat(att);
+    if (isNaN(val) || val <= 0) return colors.primary; // Safe neutral color (Electric Blue/Indigo) when loading or no attendance data
+    if (val >= 80) return '#34C759'; // Green (Safe)
+    if (val >= 75) return '#FF9500'; // Orange (Warning)
     return '#FF3B30'; // Red (Critical)
   };
 
   const attColor = getAttendanceColor(overallAttendance);
-  const userColor = getUserColor(profile.vid);
+  const userColor = getUserColor(profile?.vid || '');
 
   // SMART SELF-SYNC FOR PWA
   React.useEffect(() => {
