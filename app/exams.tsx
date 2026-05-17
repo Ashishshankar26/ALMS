@@ -61,7 +61,7 @@ export default function ExamsScreen() {
       {exams.length > 0 && !showWebView ? (
         <ScrollView style={styles.examList} contentContainerStyle={{ padding: 20 }}>
           {exams.map((exam: any, index: number) => (
-            <View key={index} style={[styles.examCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View key={index} style={[styles.examCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
               <View style={styles.examHeader}>
                 <View style={[styles.dateBadge, { backgroundColor: isDark ? 'rgba(255,59,48,0.1)' : '#FFF2F2' }]}>
                   <Calendar size={14} color={colors.error} />
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   examCard: {
     padding: 16,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginBottom: 16,
     backgroundColor: '#fff',
     shadowColor: '#000',

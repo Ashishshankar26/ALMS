@@ -213,7 +213,7 @@ export default function AttendanceScreen() {
           return (
             <TouchableOpacity 
               key={index}
-              style={[styles.card, { backgroundColor: colors.card, borderColor: isSelected ? colors.primary : 'transparent' }]}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: isSelected ? colors.primary : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)') }]}
               onPress={() => {
                 if (isSelected) {
                   setSelectedSubject(null);
@@ -265,7 +265,7 @@ export default function AttendanceScreen() {
               {isSelected && (
                 <Animated.View 
                   entering={FadeInUp.duration(400)} 
-                  style={[styles.calculatorBox, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderColor: colors.border }]}
+                  style={[styles.calculatorBox, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}
                 >
                   {/* Calculator Header */}
                   <View style={styles.calcHeader}>
@@ -348,7 +348,7 @@ export default function AttendanceScreen() {
         {/* Aggregate Summary Section at the Bottom - ANIMATED */}
         <Animated.View entering={FadeInDown.delay(400).duration(800)}>
           <Text style={[styles.sectionTitle, { marginTop: 30, marginBottom: 10, color: colors.text }]}>Summary Report</Text>
-          <View style={[styles.aggregateCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+          <View style={[styles.aggregateCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
             <Text style={[styles.aggregateTitle, { color: colors.text }]}>Aggregate Attendance Details</Text>
             <View style={[styles.aggregateDivider, { backgroundColor: colors.border }]} />
             <View style={styles.aggregateRow}>
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 16,
     minHeight: 180,
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,

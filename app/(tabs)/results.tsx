@@ -151,7 +151,7 @@ export default function ResultsScreen() {
                 key={index}
                 entering={FadeInDown.delay(200 + index * 100).duration(600).springify()}
               >
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
                   <TouchableOpacity 
                     style={styles.cardHeader}
                     onPress={() => setExpandedSem(isExpanded ? null : sem.semester)}
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     marginBottom: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,

@@ -312,7 +312,7 @@ export default function TimetableScreen() {
                   key={cls.id || index}
                   entering={FadeInDown.delay(500 + index * 50).duration(600).springify()}
                 >
-                  <View style={[styles.classCard, { backgroundColor: colors.card }]}>
+                  <View style={[styles.classCard, { backgroundColor: colors.card, borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)' }]}>
                     <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
                     
                     <View style={styles.timeColumn}>
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginBottom: 5,
   },
   makeupHeaderLeft: {
@@ -625,6 +625,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingLeft: 24,
     marginBottom: 15,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
