@@ -966,7 +966,7 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end' }}>
                   <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ACADEMIC SUMMARY</Text>
-                  <Text style={[styles.stackBigValue, { fontSize: 28, marginBottom: 8, lineHeight: 32 }]}>{data.cgpa || '0.00'}</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{data.cgpa || '0.00'}</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
                   </View>
@@ -1003,7 +1003,7 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end' }}>
                   <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE RATE</Text>
-                  <Text style={[styles.stackBigValue, { fontSize: 28, marginBottom: 8, lineHeight: 32 }]}>{overallAttendance}%</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{overallAttendance}%</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
                   </View>
