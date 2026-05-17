@@ -956,8 +956,7 @@ export default function DashboardScreen() {
           >
             <View style={[styles.gridCardShadow, { backgroundColor: getUserGradient(userColor)[0] }]}>
               <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={styles.gridCardInner} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
-                <View style={styles.stackHandle} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 12 }}>
                   <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
                      <Award size={16} color="#fff" />
                   </View>
@@ -966,8 +965,8 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                  <Text style={[styles.stackLabelWhite, { fontSize: 9, opacity: 0.75, letterSpacing: 0.5, marginBottom: 1 }]}>ACADEMIC SUMMARY</Text>
-                  <Text style={[styles.stackBigValue, { fontSize: 24, marginBottom: 6, lineHeight: 28 }]}>{data.cgpa || '0.00'}</Text>
+                  <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ACADEMIC SUMMARY</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 28, marginBottom: 8, lineHeight: 32 }]}>{data.cgpa || '0.00'}</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
                   </View>
@@ -992,8 +991,7 @@ export default function DashboardScreen() {
                 style={styles.gridCardInner}
                 borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
               >
-                <View style={styles.stackHandle} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 12 }}>
                   <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
                      <CheckCircle2 size={16} color="#fff" />
                   </View>
@@ -1004,8 +1002,8 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                  <Text style={[styles.stackLabelWhite, { fontSize: 9, opacity: 0.75, letterSpacing: 0.5, marginBottom: 1 }]}>ATTENDANCE RATE</Text>
-                  <Text style={[styles.stackBigValue, { fontSize: 24, marginBottom: 6, lineHeight: 28 }]}>{overallAttendance}%</Text>
+                  <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE RATE</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 28, marginBottom: 8, lineHeight: 32 }]}>{overallAttendance}%</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
                   </View>
