@@ -2171,11 +2171,11 @@ const styles = StyleSheet.create({
   gridCardShadow: {
     flex: 1,
     borderRadius: 28,
-    elevation: 8,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
   },
   gridCardInner: {
     flex: 1,
