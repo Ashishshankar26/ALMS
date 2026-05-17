@@ -21,16 +21,17 @@ const CARD_HEIGHT = 200;
 const SWIPE_THRESHOLD = 25;
 
 function CardGradient({ colors, style, children, id, borderStyle }: { colors: string[]; style?: any; children?: React.ReactNode; id: string; borderStyle?: any }) {
+  const r = style?.borderRadius || 32;
   return (
-    <View style={[style, { overflow: 'hidden', borderRadius: 32 }, borderStyle]}>
-      <Svg height="100%" width="100%" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]}>
+    <View style={[style, { overflow: 'hidden', borderRadius: r }, borderStyle]}>
+      <Svg height="100%" width="100%" style={[StyleSheet.absoluteFillObject, { borderRadius: r }]}>
         <Defs>
           <SvgGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%">
             <Stop offset="0%" stopColor={colors[0]} stopOpacity="1" />
             <Stop offset="100%" stopColor={colors[1]} stopOpacity="1" />
           </SvgGradient>
         </Defs>
-        <Rect width="100%" height="100%" rx={32} ry={32} fill={`url(#${id})`} />
+        <Rect width="100%" height="100%" rx={r} ry={r} fill={`url(#${id})`} />
       </Svg>
       {children}
     </View>
@@ -956,24 +957,26 @@ export default function DashboardScreen() {
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
-            <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={styles.gridCard} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
-              <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
-              <View style={styles.cardHeader}>
-                <Award size={20} color="rgba(255,255,255,0.85)" />
-                <Text style={styles.gridCardLabel}>Academic Performance</Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
-                <View style={styles.glassBadge}>
-                  <Text style={styles.glassBadgeText}>CGPA</Text>
+            <View style={[styles.gridCardShadow, { backgroundColor: getUserGradient(userColor)[0] }]}>
+              <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={styles.gridCardInner} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
+                <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
+                <View style={styles.cardHeader}>
+                  <Award size={20} color="rgba(255,255,255,0.85)" />
+                  <Text style={styles.gridCardLabel}>Academic Performance</Text>
                 </View>
-              </View>
-              <View style={styles.cardFooter}>
-                <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
+                <View style={styles.valueContainer}>
+                  <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
+                  <View style={styles.glassBadge}>
+                    <Text style={styles.glassBadgeText}>CGPA</Text>
+                  </View>
                 </View>
-              </View>
-            </CardGradient>
+                <View style={styles.cardFooter}>
+                  <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
+                  </View>
+                </View>
+              </CardGradient>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -981,33 +984,35 @@ export default function DashboardScreen() {
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
-            <CardGradient 
-              id="grad_grid_att" 
-              colors={
-                parseFloat(overallAttendance) >= 80 
-                  ? ['#3DBE6B', '#1E7C41'] 
-                  : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
-              } 
-              style={styles.gridCard}
-              borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
-            >
-              <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
-              <View style={styles.cardHeader}>
-                <CheckCircle2 size={20} color="rgba(255,255,255,0.85)" />
-                <Text style={styles.gridCardLabel}>Class Attendance</Text>
-              </View>
-              <View style={styles.valueContainer}>
-                <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
-                <View style={styles.glassBadge}>
-                  <Text style={styles.glassBadgeText}>TOTAL</Text>
+            <View style={[styles.gridCardShadow, { backgroundColor: parseFloat(overallAttendance) >= 80 ? '#3DBE6B' : (parseFloat(overallAttendance) >= 75 ? '#FFAE33' : '#FF6259') }]}>
+              <CardGradient 
+                id="grad_grid_att" 
+                colors={
+                  parseFloat(overallAttendance) >= 80 
+                    ? ['#3DBE6B', '#1E7C41'] 
+                    : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
+                } 
+                style={styles.gridCardInner}
+                borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
+              >
+                <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
+                <View style={styles.cardHeader}>
+                  <CheckCircle2 size={20} color="rgba(255,255,255,0.85)" />
+                  <Text style={styles.gridCardLabel}>Class Attendance</Text>
                 </View>
-              </View>
-              <View style={styles.cardFooter}>
-                <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                <View style={styles.valueContainer}>
+                  <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
+                  <View style={styles.glassBadge}>
+                    <Text style={styles.glassBadgeText}>TOTAL</Text>
+                  </View>
                 </View>
-              </View>
-            </CardGradient>
+                <View style={styles.cardFooter}>
+                  <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                  </View>
+                </View>
+              </CardGradient>
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
@@ -1015,40 +1020,42 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
           {nextClassInfo.status === 'upcoming' ? (
-            <CardGradient 
-              id="grad_next_class" 
-              colors={isDark ? ['#1A2536', '#0E1724'] : ['#E8F2FF', '#D0E5FF']} 
-              style={styles.nextClassCard} 
-              borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(10,132,255,0.25)' : 'rgba(0,122,255,0.18)' }}
-            >
-              <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', width: 120, height: 120, borderRadius: 60 }]} />
-              <View style={styles.nextClassHeader}>
-                <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.12)' : 'rgba(255,149,0,0.12)', flexDirection: 'row', alignItems: 'center' }]}>
-                  <Clock size={12} color={colors.warning} />
-                  <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={[styles.pulseDot, { backgroundColor: '#34C759' }]} />
-                  <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(46,125,50,0.12)' }]}>
-                    <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+            <View style={[styles.nextClassCardShadow, { backgroundColor: isDark ? '#1A2536' : '#E8F2FF' }]}>
+              <CardGradient 
+                id="grad_next_class" 
+                colors={isDark ? ['#1A2536', '#0E1724'] : ['#E8F2FF', '#D0E5FF']} 
+                style={styles.nextClassCardInner} 
+                borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(10,132,255,0.25)' : 'rgba(0,122,255,0.18)' }}
+              >
+                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', width: 120, height: 120, borderRadius: 60 }]} />
+                <View style={styles.nextClassHeader}>
+                  <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.12)' : 'rgba(255,149,0,0.12)', flexDirection: 'row', alignItems: 'center' }]}>
+                    <Clock size={12} color={colors.warning} />
+                    <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.pulseDot, { backgroundColor: '#34C759' }]} />
+                    <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(46,125,50,0.12)' }]}>
+                      <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              
-              <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
-              
-              <View style={styles.nextClassFooter}>
-                <View style={styles.footerItem}>
-                  <Tag size={12} color={colors.textSecondary} />
-                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.subjectCode}</Text>
+                
+                <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
+                
+                <View style={styles.nextClassFooter}>
+                  <View style={styles.footerItem}>
+                    <Tag size={12} color={colors.textSecondary} />
+                    <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.subjectCode}</Text>
+                  </View>
+                  <View style={[styles.footerDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+                  <View style={styles.footerItem}>
+                    <MapPin size={12} color={colors.textSecondary} />
+                    <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.room}</Text>
+                  </View>
                 </View>
-                <View style={[styles.footerDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
-                <View style={styles.footerItem}>
-                  <MapPin size={12} color={colors.textSecondary} />
-                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.room}</Text>
-                </View>
-              </View>
-            </CardGradient>
+              </CardGradient>
+            </View>
           ) : (
             <View style={[styles.emptyCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.emptyIconBg, { backgroundColor: '#34C75915' }]}>
@@ -1803,6 +1810,19 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
+  nextClassCardShadow: {
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    marginBottom: 25,
+  },
+  nextClassCardInner: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
   nextClassCard: {
     padding: 20,
     borderRadius: 24,
@@ -2147,6 +2167,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 0,
+  },
+  gridCardShadow: {
+    flex: 1,
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  gridCardInner: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 28,
+    minHeight: 140,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   gridCard: {
     flex: 1,
