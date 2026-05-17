@@ -111,14 +111,14 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const cards = [
     {
       key: 'fee',
-      color: '#1E293B',
-      gradient: ['#1E293B', '#0F172A'],
+      color: '#4A1D5B',
+      gradient: ['#4A1D5B', '#2D1237'],
       render: () => {
         const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
         return (
-          <CardGradient id="grad_fee" colors={['#1E293B', '#0F172A']} style={styles.stackCardInner}>
+          <CardGradient id="grad_fee" colors={['#4A1D5B', '#2D1237']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <FileText size={20} color="#fff" />
