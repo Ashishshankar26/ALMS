@@ -3,7 +3,6 @@ import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, D
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
@@ -101,7 +100,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
         return (
-          <LinearGradient colors={['#1E293B', '#0F172A']} style={styles.stackCardInner}>
+          <View style={[styles.stackCardInner, { backgroundColor: '#1E293B' }]}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <FileText size={20} color="#fff" />
@@ -132,7 +131,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         );
       },
     },
@@ -145,7 +144,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <LinearGradient colors={['#F7CE5B', '#F1C40F']} style={styles.stackCardInner}>
+          <View style={[styles.stackCardInner, { backgroundColor: '#F7CE5B' }]}>
             <View style={styles.stackHandleLight} />
             <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
                <BookOpen size={20} color="#000" />
@@ -180,7 +179,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         );
       },
     },
@@ -191,7 +190,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       render: () => {
         const subjectName = nextExam ? (data.attendance?.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
         return (
-          <LinearGradient colors={['#3DBE6B', '#27AE60']} style={styles.stackCardInner}>
+          <View style={[styles.stackCardInner, { backgroundColor: '#3DBE6B' }]}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <Award size={20} color="#fff" />
@@ -225,7 +224,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         );
       },
     },
@@ -241,7 +240,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         
         const attVal = parseFloat(data.overallAttendance);
         return (
-          <LinearGradient colors={['#70A1FF', '#1E90FF']} style={styles.stackCardInner}>
+          <View style={[styles.stackCardInner, { backgroundColor: '#70A1FF' }]}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <UserCheck size={20} color="#fff" />
@@ -273,7 +272,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 </View>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         );
       },
     },
