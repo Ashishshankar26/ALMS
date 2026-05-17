@@ -637,6 +637,20 @@ export default function DashboardScreen() {
     return color;
   };
 
+  const getUserGradient = (color: string) => {
+    const map: { [key: string]: string[] } = {
+      '#5856D6': ['#7A78E2', '#403DB5'], // Royal Purple
+      '#FF2D55': ['#FF5277', '#C21335'], // Vivid Pink
+      '#FF9500': ['#FFAE33', '#B85B00'], // Sunset Orange
+      '#007AFF': ['#3395FF', '#0055B3'], // Electric Blue
+      '#AF52DE': ['#C57CEE', '#7F2BB5'], // Deep Violet
+      '#5AC8FA': ['#80D6FC', '#1F99D4'], // Sky Blue
+      '#FF3B30': ['#FF6259', '#C61E15'], // Vibrant Red
+      '#E91E63': ['#EE4A82', '#A90C3F'], // Magenta Pink
+    };
+    return map[color] || [color, '#1C1C1E'];
+  };
+
   const getPerformanceColor = (cgpa: string) => {
     const val = parseFloat(cgpa || '0');
     if (val >= 9.0) return '#FF9500'; // Gold/Orange
@@ -938,49 +952,62 @@ export default function DashboardScreen() {
           style={styles.gridContainer}
         >
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: userColor }]}
+            style={styles.gridCardWrapper}
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
-            <View style={styles.cardGlow} />
-            <View style={styles.cardHeader}>
-              <Award size={20} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.gridCardLabel}>Academic Performance</Text>
-            </View>
-            <View style={styles.valueContainer}>
-              <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
-              <View style={styles.glassBadge}>
-                <Text style={styles.glassBadgeText}>CGPA</Text>
+            <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={styles.gridCard} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
+              <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
+              <View style={styles.cardHeader}>
+                <Award size={20} color="rgba(255,255,255,0.85)" />
+                <Text style={styles.gridCardLabel}>Academic Performance</Text>
               </View>
-            </View>
-            <View style={styles.cardFooter}>
-              <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
+              <View style={styles.valueContainer}>
+                <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
+                <View style={styles.glassBadge}>
+                  <Text style={styles.glassBadgeText}>CGPA</Text>
+                </View>
               </View>
-            </View>
+              <View style={styles.cardFooter}>
+                <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                  <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
+                </View>
+              </View>
+            </CardGradient>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.gridCard, { backgroundColor: attColor }]} 
+            style={styles.gridCardWrapper} 
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
-            <View style={styles.cardGlow} />
-            <View style={styles.cardHeader}>
-              <CheckCircle2 size={20} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.gridCardLabel}>Class Attendance</Text>
-            </View>
-            <View style={styles.valueContainer}>
-              <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
-              <View style={styles.glassBadge}>
-                <Text style={styles.glassBadgeText}>TOTAL</Text>
+            <CardGradient 
+              id="grad_grid_att" 
+              colors={
+                parseFloat(overallAttendance) >= 80 
+                  ? ['#3DBE6B', '#1E7C41'] 
+                  : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
+              } 
+              style={styles.gridCard}
+              borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
+            >
+              <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
+              <View style={styles.cardHeader}>
+                <CheckCircle2 size={20} color="rgba(255,255,255,0.85)" />
+                <Text style={styles.gridCardLabel}>Class Attendance</Text>
               </View>
-            </View>
-            <View style={styles.cardFooter}>
-              <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+              <View style={styles.valueContainer}>
+                <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
+                <View style={styles.glassBadge}>
+                  <Text style={styles.glassBadgeText}>TOTAL</Text>
+                </View>
               </View>
-            </View>
+              <View style={styles.cardFooter}>
+                <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                  <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                </View>
+              </View>
+            </CardGradient>
           </TouchableOpacity>
         </Animated.View>
 
@@ -988,17 +1015,23 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
           {nextClassInfo.status === 'upcoming' ? (
-            <View style={[styles.nextClassCard, { 
-              backgroundColor: isDark ? 'rgba(10,132,255,0.12)' : 'rgba(0,122,255,0.08)', 
-              borderColor: isDark ? 'rgba(10,132,255,0.2)' : 'rgba(0,122,255,0.1)' 
-            }]}>
+            <CardGradient 
+              id="grad_next_class" 
+              colors={isDark ? ['#1A2536', '#0E1724'] : ['#E8F2FF', '#D0E5FF']} 
+              style={styles.nextClassCard} 
+              borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(10,132,255,0.25)' : 'rgba(0,122,255,0.18)' }}
+            >
+              <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', width: 120, height: 120, borderRadius: 60 }]} />
               <View style={styles.nextClassHeader}>
-                <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.1)' : 'rgba(255,149,0,0.1)' }]}>
+                <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.12)' : 'rgba(255,149,0,0.12)', flexDirection: 'row', alignItems: 'center' }]}>
                   <Clock size={12} color={colors.warning} />
                   <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
                 </View>
-                <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.1)' : 'rgba(46,125,50,0.1)' }]}>
-                  <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={[styles.pulseDot, { backgroundColor: '#34C759' }]} />
+                  <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(46,125,50,0.12)' }]}>
+                    <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                  </View>
                 </View>
               </View>
               
@@ -1009,13 +1042,13 @@ export default function DashboardScreen() {
                   <Tag size={12} color={colors.textSecondary} />
                   <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.subjectCode}</Text>
                 </View>
-                <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+                <View style={[styles.footerDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
                 <View style={styles.footerItem}>
                   <MapPin size={12} color={colors.textSecondary} />
                   <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.room}</Text>
                 </View>
               </View>
-            </View>
+            </CardGradient>
           ) : (
             <View style={[styles.emptyCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.emptyIconBg, { backgroundColor: '#34C75915' }]}>
@@ -1058,9 +1091,18 @@ export default function DashboardScreen() {
               const isCA = assignment.type?.toLowerCase().includes('ca') || assignment.type?.toLowerCase().includes('continuous');
               
               return (
-                <View key={index} style={[styles.assignmentCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View key={index} style={[styles.assignmentCardPremium, { 
+                  backgroundColor: isDark ? '#1A1A1C' : '#FFFFFF', 
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+                  borderWidth: 1.5,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: isDark ? 0.15 : 0.04,
+                  shadowRadius: 16,
+                  elevation: 4
+                }]}>
                   <View style={styles.assignmentHeaderRow}>
-                    <View style={[styles.typeIconBg, { backgroundColor: isPractical ? '#FF950015' : isCA ? '#5856D615' : '#007AFF15' }]}>
+                    <View style={[styles.typeIconBg, { backgroundColor: isPractical ? 'rgba(255,149,0,0.12)' : isCA ? 'rgba(88,86,214,0.12)' : 'rgba(0,122,255,0.12)' }]}>
                       {isPractical ? (
                         <Lock size={16} color="#FF9500" />
                       ) : isCA ? (
@@ -1075,7 +1117,7 @@ export default function DashboardScreen() {
                     </View>
                   </View>
 
-                  <View style={[styles.dueBadge, { backgroundColor: colors.surface }]}>
+                  <View style={[styles.dueBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
                     <Clock size={12} color={colors.error} />
                     <Text style={[styles.dueText, { color: colors.text }]}>Due: {assignment.lastDate}</Text>
                   </View>
@@ -1088,7 +1130,7 @@ export default function DashboardScreen() {
                     <ChevronRight size={14} color="#fff" />
                   </TouchableOpacity>
 
-                  <View style={[styles.assignmentGlow, { backgroundColor: isPractical ? '#FF950010' : '#007AFF10' }]} />
+                  <View style={[styles.assignmentGlow, { backgroundColor: isPractical ? 'rgba(255,149,0,0.08)' : 'rgba(0,122,255,0.08)' }]} />
                 </View>
               );
             })}
@@ -1111,15 +1153,22 @@ export default function DashboardScreen() {
         {/* Announcements */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
         <View style={[styles.announcementContainer, { 
-          backgroundColor: isDark ? 'rgba(142,142,147,0.08)' : 'rgba(142,142,147,0.04)', 
-          borderColor: isDark ? 'rgba(142,142,147,0.2)' : 'rgba(142,142,147,0.1)',
+          backgroundColor: isDark ? '#1A1A1C' : '#FFFFFF', 
+          borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+          borderWidth: 1.5,
+          borderRadius: 24,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: isDark ? 0.15 : 0.04,
+          shadowRadius: 16,
+          elevation: 4,
           maxHeight: 280, // Show roughly 3.5 items
           padding: 0, // Remove padding to allow ScrollView to fill
         }]}>
           {data.announcements && data.announcements.length > 0 ? (
             <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
               {data.announcements.map((item: any, index: number) => (
-                <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: colors.border, width: '100%', marginRight: 0 }]}>
+                <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', width: '100%', marginRight: 0 }]}>
                   <View style={styles.announcementInner}>
                     <View style={[styles.announcementIndicator, { backgroundColor: colors.primary }]} />
                     <View style={styles.announcementContent}>
@@ -2845,5 +2894,18 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  gridCardWrapper: {
+    flex: 1,
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
