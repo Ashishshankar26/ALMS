@@ -248,8 +248,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'attendance',
-      color: '#4FC3F7',
-      gradient: ['#4FC3F7', '#0288D1'],
+      color: '#FF7E82',
+      gradient: ['#FF7E82', '#F43F5E'],
       render: () => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
@@ -258,7 +258,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         
         const attVal = parseFloat(data.overallAttendance);
         return (
-          <CardGradient id="grad_att" colors={['#4FC3F7', '#0288D1']} style={styles.stackCardInner}>
+          <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <UserCheck size={20} color="#fff" />
