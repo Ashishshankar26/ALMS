@@ -956,19 +956,19 @@ export default function DashboardScreen() {
           >
             <View style={[styles.gridCardShadow, { backgroundColor: getUserGradient(userColor)[0] }]}>
               <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={styles.gridCardInner} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
-                <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
-                <View style={styles.cardHeader}>
-                  <Award size={20} color="rgba(255,255,255,0.85)" />
-                  <Text style={styles.gridCardLabel}>Academic Performance</Text>
-                </View>
-                <View style={styles.valueContainer}>
-                  <Text style={styles.gridCardValue}>{data.cgpa || '0.00'}</Text>
-                  <View style={styles.glassBadge}>
-                    <Text style={styles.glassBadgeText}>CGPA</Text>
+                <View style={styles.stackHandle} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                  <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
+                     <Award size={16} color="#fff" />
+                  </View>
+                  <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                    <Text style={[styles.miniStatusText, { color: '#fff', fontSize: 9, fontWeight: '900' }]}>CGPA</Text>
                   </View>
                 </View>
-                <View style={styles.cardFooter}>
-                  <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                  <Text style={[styles.stackLabelWhite, { fontSize: 9, opacity: 0.75, letterSpacing: 0.5, marginBottom: 1 }]}>ACADEMIC SUMMARY</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 24, marginBottom: 6, lineHeight: 28 }]}>{data.cgpa || '0.00'}</Text>
+                  <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
                   </View>
                 </View>
@@ -992,19 +992,21 @@ export default function DashboardScreen() {
                 style={styles.gridCardInner}
                 borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
               >
-                <View style={[styles.cardDecorCircle, { bottom: -20, right: -20, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 100, height: 100, borderRadius: 50 }]} />
-                <View style={styles.cardHeader}>
-                  <CheckCircle2 size={20} color="rgba(255,255,255,0.85)" />
-                  <Text style={styles.gridCardLabel}>Class Attendance</Text>
-                </View>
-                <View style={styles.valueContainer}>
-                  <Text style={styles.gridCardValue}>{overallAttendance}%</Text>
-                  <View style={styles.glassBadge}>
-                    <Text style={styles.glassBadgeText}>TOTAL</Text>
+                <View style={styles.stackHandle} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                  <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
+                     <CheckCircle2 size={16} color="#fff" />
+                  </View>
+                  <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                    <Text style={[styles.miniStatusText, { color: parseFloat(overallAttendance) >= 80 ? '#27AE60' : (parseFloat(overallAttendance) >= 75 ? '#F39C12' : '#E74C3C'), fontSize: 9, fontWeight: '900' }]}>
+                      {parseFloat(overallAttendance) >= 80 ? 'SAFE' : (parseFloat(overallAttendance) >= 75 ? 'WARNING' : 'CRITICAL')}
+                    </Text>
                   </View>
                 </View>
-                <View style={styles.cardFooter}>
-                  <View style={[styles.miniProgress, { width: '85%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                  <Text style={[styles.stackLabelWhite, { fontSize: 9, opacity: 0.75, letterSpacing: 0.5, marginBottom: 1 }]}>ATTENDANCE RATE</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 24, marginBottom: 6, lineHeight: 28 }]}>{overallAttendance}%</Text>
+                  <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                     <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
                   </View>
                 </View>
@@ -2167,7 +2169,7 @@ const styles = StyleSheet.create({
   },
   gridCardShadow: {
     flex: 1,
-    borderRadius: 28,
+    borderRadius: 32,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -2177,7 +2179,7 @@ const styles = StyleSheet.create({
   gridCardInner: {
     flex: 1,
     padding: 16,
-    borderRadius: 28,
+    borderRadius: 32,
     minHeight: 140,
     justifyContent: 'space-between',
     overflow: 'hidden',
