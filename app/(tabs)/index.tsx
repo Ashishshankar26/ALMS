@@ -111,14 +111,14 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const cards = [
     {
       key: 'fee',
-      color: '#1E293B',
-      gradient: ['#1E293B', '#0F172A'],
+      color: '#FF7E82',
+      gradient: ['#FF7E82', '#E15D61'],
       render: () => {
         const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
         return (
-          <CardGradient id="grad_fee" colors={['#1E293B', '#0F172A']} style={styles.stackCardInner}>
+          <CardGradient id="grad_fee" colors={['#FF7E82', '#E15D61']} style={styles.stackCardInner}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <FileText size={20} color="#fff" />
@@ -155,45 +155,45 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'library',
-      color: '#F7CE5B',
-      gradient: ['#F7CE5B', '#F1C40F'],
+      color: '#9D4EDD',
+      gradient: ['#9D4EDD', '#7B2CBF'],
       render: () => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <CardGradient id="grad_lib" colors={['#F7CE5B', '#F1C40F']} style={styles.stackCardInner}>
-            <View style={styles.stackHandleLight} />
-            <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
-               <BookOpen size={20} color="#000" />
+          <CardGradient id="grad_lib" colors={['#9D4EDD', '#7B2CBF']} style={styles.stackCardInner}>
+            <View style={styles.stackHandle} />
+            <View style={styles.stackGlassIcon}>
+               <BookOpen size={20} color="#fff" />
             </View>
-            <TouchableOpacity style={[styles.stackFab, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
-              <ChevronRight size={18} color="#000" />
+            <TouchableOpacity style={styles.stackFab} onPress={onLibraryPress}>
+              <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(0, 0, 0, 0.1)' : (isOpen ? 'rgba(39, 174, 96, 0.15)' : 'rgba(231, 76, 60, 0.15)') }]}>
-                  <Text style={[styles.miniStatusText, { color: booking ? '#000' : (isOpen ? '#1E8449' : '#C0392B') }]}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Text style={[styles.miniStatusText, { color: '#fff' }]}>
                     {booking ? 'BOOKED' : (isOpen ? 'OPEN' : 'CLOSED')}
                   </Text>
                 </View>
-                <Text style={[styles.stackLabelWhite, { color: 'rgba(0,0,0,0.5)' }]}>ROOM & LIBRARY</Text>
+                <Text style={styles.stackLabelWhite}>ROOM & LIBRARY</Text>
               </View>
-              <Text style={[styles.stackSubWhite, { color: 'rgba(0,0,0,0.7)', fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                 {booking ? 'Active Reservation' : 'Resource Hub Availability'}
               </Text>
-              <Text style={[styles.stackBigValue, { color: '#000', fontSize: (booking?.room || 'Library Booking').length > 15 ? 24 : 32 }]}>
+              <Text style={[styles.stackBigValue, { fontSize: (booking?.room || 'Library Booking').length > 15 ? 24 : 32 }]}>
                 {booking ? booking.room : 'Library Booking'}
               </Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <Clock size={11} color="#000" style={{ opacity: 0.6 }} />
-                  <Text style={[styles.stackSubBlack]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
+                  <Clock size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
                 </View>
-                <View style={styles.footerInfoSeparatorBlack} />
+                <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
-                  <Calendar size={11} color="#000" style={{ opacity: 0.6 }} />
-                  <Text style={[styles.stackSubBlack]}>{booking ? booking.date : 'Standard Access'}</Text>
+                  <Calendar size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{booking ? booking.date : 'Standard Access'}</Text>
                 </View>
               </View>
             </View>
@@ -268,9 +268,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             </TouchableOpacity>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)', paddingHorizontal: 12, paddingVertical: 4 }]}>
-                  <CheckCircle2 size={12} color={attVal >= 80 ? '#1B5E20' : (attVal >= 75 ? '#EF6C00' : '#C62828')} />
-                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#1B5E20' : (attVal >= 75 ? '#EF6C00' : '#C62828'), fontWeight: '900' }]}>{attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}</Text>
+                <View style={[styles.miniStatusBadge, { backgroundColor: attVal >= 80 ? 'rgba(52, 199, 89, 0.2)' : (attVal >= 75 ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 59, 48, 0.2)') }]}>
+                  <CheckCircle2 size={10} color={attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30')} />
+                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30') }]}>{attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}</Text>
                 </View>
                 <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
               </View>
