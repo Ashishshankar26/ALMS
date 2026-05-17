@@ -248,8 +248,14 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'attendance',
-      color: '#FF7E82',
-      gradient: ['#FF7E82', '#F43F5E'],
+      get color() {
+        const attVal = parseFloat(data.overallAttendance);
+        return attVal >= 80 ? '#27AE60' : (attVal >= 75 ? '#EF6C00' : '#C62828');
+      },
+      get gradient() {
+        const attVal = parseFloat(data.overallAttendance);
+        return attVal >= 80 ? ['#3DBE6B', '#27AE60'] : (attVal >= 75 ? ['#FF9500', '#EF6C00'] : ['#FF3B30', '#C62828']);
+      },
       render: (borderStyle?: any) => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
@@ -257,8 +263,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const totalPresent = attendedClasses + dutyLeaves;
         
         const attVal = parseFloat(data.overallAttendance);
+        const cardGradient = attVal >= 80 ? ['#3DBE6B', '#27AE60'] : (attVal >= 75 ? ['#FF9500', '#EF6C00'] : ['#FF3B30', '#C62828']);
         return (
-          <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
+          <CardGradient id="grad_att" colors={cardGradient} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <UserCheck size={20} color="#fff" />
