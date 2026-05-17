@@ -955,7 +955,7 @@ export default function DashboardScreen() {
             activeOpacity={0.9}
           >
             <View style={[styles.gridCardShadow, { backgroundColor: getUserGradient(userColor)[0] }]}>
-              <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={[styles.gridCardInner, { height: 140 }]} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
+              <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={[styles.gridCardInner, { height: 154 }]} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                   <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
                      <Award size={16} color="#fff" />
@@ -980,7 +980,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
-            <View style={[styles.gridCardShadow, { backgroundColor: parseFloat(overallAttendance) >= 80 ? '#3DBE6B' : (parseFloat(overallAttendance) >= 75 ? '#FFAE33' : '#FF6259'), height: 140 }]}>
+            <View style={[styles.gridCardShadow, { backgroundColor: parseFloat(overallAttendance) >= 80 ? '#3DBE6B' : (parseFloat(overallAttendance) >= 75 ? '#FFAE33' : '#FF6259'), height: 154 }]}>
               <CardGradient 
                 id="grad_grid_att" 
                 colors={
@@ -988,7 +988,7 @@ export default function DashboardScreen() {
                     ? ['#3DBE6B', '#1E7C41'] 
                     : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
                 } 
-                style={[styles.gridCardInner, { height: 140 }]}
+                style={[styles.gridCardInner, { height: 154 }]}
                 borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -2178,7 +2178,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     borderRadius: 32,
-    minHeight: 140,
+    minHeight: 154,
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
