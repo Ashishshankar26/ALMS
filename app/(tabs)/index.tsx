@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,7 +42,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const activeIndexRef = useRef(0);
   const translateY = useRef(new RNAnimated.Value(0)).current;
   const cardCount = 4;
-  
+
   React.useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
@@ -60,9 +60,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       },
       onPanResponderRelease: (_, gestureState) => {
         if (onScrollToggle) onScrollToggle(true);
-        
+
         const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
-        
+
         if (isTap) {
           const currentIdx = activeIndexRef.current;
           const activeCard = cards[currentIdx];
@@ -75,7 +75,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         } else if (gestureState.dy > SWIPE_THRESHOLD) {
           setActiveIndex((prev: number) => (prev - 1 + cardCount) % cardCount);
         }
-        
+
         RNAnimated.spring(translateY, {
           toValue: 0,
           useNativeDriver: true,
@@ -253,7 +253,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
         const totalPresent = attendedClasses + dutyLeaves;
-        
+
         const attVal = parseFloat(data.overallAttendance);
         return (
           <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
@@ -404,7 +404,7 @@ export default function DashboardScreen() {
   const totalClasses = data.attendance?.reduce((acc, curr) => acc + (curr.totalClasses || 0), 0) || 0;
   const attendedClasses = data.attendance?.reduce((acc, curr) => acc + (curr.attendedClasses || 0), 0) || 0;
   const dutyLeaves = data.attendance?.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0) || 0;
-  
+
   const calculatedAttendance = totalClasses > 0 ? Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100) : 0;
   const overallAttendance = data.overallAttendance ? Math.ceil(parseFloat(data.overallAttendance)).toString() : calculatedAttendance.toString();
 
@@ -412,15 +412,15 @@ export default function DashboardScreen() {
   const getNextClass = () => {
     const timetable = data.timetable || {};
     const makeupClasses = data.makeupClasses || [];
-    
+
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const now = new Date();
     const currentDay = days[now.getDay()];
     // Get date in DD-MMM-YYYY or DD MMM YYYY format to match makeup classes
     const todayStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    
+
     const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-    
+
     const parseTimeTo24h = (timeStr: string) => {
       if (!timeStr) return null;
       const match = timeStr.match(/(\d{1,2}):(\d{2})/);
@@ -437,11 +437,11 @@ export default function DashboardScreen() {
     const isClassMakeup = (cls: any) => {
       const type = (cls.type || "").toLowerCase();
       const subject = (cls.subject || "").toLowerCase();
-      
-      const hasMakeupKeyword = 
-        cls.isMakeup || 
-        cls.date || 
-        type.includes('makeup') || 
+
+      const hasMakeupKeyword =
+        cls.isMakeup ||
+        cls.date ||
+        type.includes('makeup') ||
         type.includes('adjustment') ||
         type.includes('special') ||
         subject.includes('(makeup)') ||
@@ -450,8 +450,8 @@ export default function DashboardScreen() {
       if (hasMakeupKeyword) return true;
 
       // Cross-reference with the dedicated makeup classes list
-      const isMatchedInMakeupList = data.makeupClasses?.some((m: any) => 
-        m.subjectCode === cls.subjectCode && 
+      const isMatchedInMakeupList = data.makeupClasses?.some((m: any) =>
+        m.subjectCode === cls.subjectCode &&
         (m.time === cls.time || m.time?.includes(cls.time?.split(' ')[0]))
       );
 
@@ -460,12 +460,12 @@ export default function DashboardScreen() {
 
     // 1. Combine regular classes for today and makeup classes for today
     let candidates: any[] = [];
-    
+
     // Regular classes
     if (timetable[currentDay]) {
       timetable[currentDay].forEach((c: any) => candidates.push({ ...c, isMakeup: isClassMakeup(c) }));
     }
-    
+
     // Saturday Filtering Logic
     if (currentDay === 'Saturday') {
       candidates = candidates.filter((cls: any) => {
@@ -485,18 +485,18 @@ export default function DashboardScreen() {
           if (dateParts.length === 3) {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const classDate = new Date(
-              parseInt(dateParts[2]), 
-              months.indexOf(dateParts[1]), 
+              parseInt(dateParts[2]),
+              months.indexOf(dateParts[1]),
               parseInt(dateParts[0])
             );
             if (classDate.toDateString() === now.toDateString()) {
-              candidates.push({ 
-                time: c.time, 
-                subject: c.subject, 
+              candidates.push({
+                time: c.time,
+                subject: c.subject,
                 subjectCode: c.subjectCode,
                 room: c.room,
                 type: c.type || 'Makeup',
-                isMakeup: true 
+                isMakeup: true
               });
             }
           }
@@ -517,7 +517,7 @@ export default function DashboardScreen() {
         const tB = parseTimeTo24h(b.time) || '';
         return tA.localeCompare(tB);
       });
-      
+
       // If requested all candidates (for notification pre-scheduling)
       if (arguments[0] === true) {
         return upcoming.map(c => {
@@ -530,7 +530,7 @@ export default function DashboardScreen() {
       }
 
       const next = upcoming[0];
-      
+
       // Prioritize structured data if available (from new Scraper logic)
       if (next.subjectCode || next.subject) {
         return {
@@ -588,17 +588,17 @@ export default function DashboardScreen() {
 
   const getMessageConfig = (title: string) => {
     const t = (title || "").toLowerCase();
-    if (t.includes('result') || t.includes('mark') || t.includes('grade')) 
+    if (t.includes('result') || t.includes('mark') || t.includes('grade'))
       return { color: '#34C759', label: 'ACADEMIC', icon: GraduationCap };
-    if (t.includes('attendance') || t.includes('shortage') || t.includes('presents')) 
+    if (t.includes('attendance') || t.includes('shortage') || t.includes('presents'))
       return { color: '#FF9500', label: 'ATTENDANCE', icon: UserCheck };
-    if (t.includes('exam') || t.includes('date sheet') || t.includes('ca ') || t.includes('ete')) 
+    if (t.includes('exam') || t.includes('date sheet') || t.includes('ca ') || t.includes('ete'))
       return { color: '#FF3B30', label: 'EXAMINATIONS', icon: FileText };
-    if (t.includes('fee') || t.includes('payment') || t.includes('due') || t.includes('fines')) 
+    if (t.includes('fee') || t.includes('payment') || t.includes('due') || t.includes('fines'))
       return { color: '#5856D6', label: 'FINANCIAL', icon: Tag };
-    if (t.includes('placement') || t.includes('job') || t.includes('interview') || t.includes('drive')) 
+    if (t.includes('placement') || t.includes('job') || t.includes('interview') || t.includes('drive'))
       return { color: '#007AFF', label: 'PLACEMENT', icon: Award };
-    if (t.includes('leave') || t.includes('duty') || t.includes('od')) 
+    if (t.includes('leave') || t.includes('duty') || t.includes('od'))
       return { color: '#AF52DE', label: 'LEAVE/OD', icon: MapPin };
     return { color: colors.primary, label: 'ANNOUNCEMENT', icon: Bell };
   };
@@ -606,7 +606,7 @@ export default function DashboardScreen() {
   // Dynamic User Color based on VID - Curated Eye-Catchy Palette
   const getUserColor = (vid: string) => {
     if (!vid) return colors.primary;
-    
+
     // Curated list of 'Positive & Eye-Catchy' premium colors
     const vibrant_palette = [
       '#5856D6', // Royal Purple
@@ -623,15 +623,15 @@ export default function DashboardScreen() {
     for (let i = 0; i < vid.length; i++) {
       hash = vid.charCodeAt(i) + ((hash << 5) - hash);
     }
-    
+
     // Map hash to the curated palette
     let color = vibrant_palette[Math.abs(hash) % vibrant_palette.length];
-    
+
     // User Exception: For VID 12405540, pick a specifically positive non-pink color
     if (vid === '12405540') {
       color = '#007AFF'; // Electric Blue
     }
-    
+
     return color;
   };
 
@@ -687,7 +687,7 @@ export default function DashboardScreen() {
 
         // 2. Get all candidates for the next 24 hours
         const candidates = getNextClass(true); // Call with flag to get ALL upcoming
-        
+
         if (Array.isArray(candidates)) {
           // 3. Schedule each one with the same ID but different triggers
           for (const item of candidates) {
@@ -710,13 +710,13 @@ export default function DashboardScreen() {
         updateStickyClassNotification('', '', '');
       }
     }
-    
+
     syncNotifications();
   }, [nextClassInfo.status, nextClassInfo.time, nextClassInfo.subjectCode, nextClassInfo.room]);
 
   const nextExam = (() => {
     if (!data.exams || !Array.isArray(data.exams) || data.exams.length === 0) return null;
-    
+
     const parseLPUDate = (dateStr: string) => {
       if (!dateStr) return null;
       // Handle "25-Apr-2026" or "25 Apr 2026"
@@ -728,7 +728,7 @@ export default function DashboardScreen() {
 
         const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
         const mIdx = months.findIndex(m => parts[1].toLowerCase().startsWith(m));
-        
+
         if (mIdx !== -1) {
           month = mIdx;
         } else {
@@ -751,14 +751,14 @@ export default function DashboardScreen() {
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     const processedExams = data.exams.map((ex: any) => ({
       ...ex,
       parsedDate: parseLPUDate(ex.date)
     })).filter(ex => ex.parsedDate && ex.parsedDate >= now);
 
     if (processedExams.length === 0) return null;
-    
+
     processedExams.sort((a: any, b: any) => a.parsedDate.getTime() - b.parsedDate.getTime());
     return processedExams[0];
   })();
@@ -769,7 +769,83 @@ export default function DashboardScreen() {
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
   const [showWhatsNew, setShowWhatsNew] = React.useState(false);
+  const [profileCardIndex, setProfileCardIndex] = React.useState(0);
+  const [profileCardLocked, setProfileCardLocked] = React.useState(false);
+  const profileCardIndexRef = React.useRef(0);
+  const profileCardLockedRef = React.useRef(false);
   const version = Constants.expoConfig?.version || '1.0.2';
+
+  const allThemePool = [
+    { key: 'cream', colors: ['#F2EEE5', '#DFD9CE'], accent: '#EF442E', text: '#111111', layers: ['#EFFF5B', '#86DFA5', '#AEBBFF'] },
+    { key: 'graphite', colors: ['#1E222B', '#090B10'], accent: '#5AF2B5', text: '#FFFFFF', layers: ['#A8FF60', '#6AD7FF', '#8B7CFF'] },
+    { key: 'sage', colors: ['#E2E8D8', '#C5D5B7'], accent: '#8FA87A', text: '#1E2B18', layers: ['#D4E2C9', '#B8CBA5', '#EAF0E3'] },
+    { key: 'rose', colors: ['#FFD1DC', '#FB7185'], accent: '#111111', text: '#FFFFFF', layers: ['#F4FF62', '#92D980', '#AAB9FF'] },
+    { key: 'ocean', colors: ['#C8E6F5', '#5BA3D9'], accent: '#1E4D7A', text: '#0A1F33', layers: ['#B8DCF0', '#7BBDE6', '#E1F0FA'] },
+    { key: 'mauve', colors: ['#EDE0F5', '#C9A8E0'], accent: '#6B3FA0', text: '#1C0F2B', layers: ['#DCC8EE', '#B48DD4', '#F5EEFA'] },
+    { key: 'peach', colors: ['#FFE8D6', '#FFB58A'], accent: '#C45A2C', text: '#2A1408', layers: ['#FFDCC0', '#FFC4A0', '#FFF0E6'] },
+    { key: 'emerald', colors: ['#D4EDDA', '#7BC47F'], accent: '#1C6B2F', text: '#0A1F0E', layers: ['#B8E0C0', '#8FD495', '#E8F5EC'] },
+    { key: 'twilight', colors: ['#D9D0F0', '#8B7FC7'], accent: '#3C2E6B', text: '#0F0824', layers: ['#C4B8E8', '#A094D8', '#EDE8F8'] },
+    { key: 'sienna', colors: ['#F5DDD0', '#DBA885'], accent: '#8B4A2B', text: '#1E0D05', layers: ['#ECCBB8', '#C89B78', '#F5E8E0'] },
+  ];
+
+  const getProfileCardThemes = (seed: string) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    const shuffled = [...allThemePool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.abs(hash + i * 7) % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const profileCardThemes = React.useMemo(() => getProfileCardThemes(profile?.vid || profile?.name || 'student'), [profile?.vid, profile?.name]);
+
+  React.useEffect(() => {
+    profileCardIndexRef.current = profileCardIndex;
+    profileCardLockedRef.current = profileCardLocked;
+  }, [profileCardIndex, profileCardLocked]);
+
+  React.useEffect(() => {
+    const loadProfileCard = async () => {
+      try {
+        const storedIndex = await AsyncStorage.getItem('@profile_card_index');
+        const storedLock = await AsyncStorage.getItem('@profile_card_locked');
+        if (storedIndex) setProfileCardIndex(Math.max(0, Math.min(parseInt(storedIndex, 10) || 0, profileCardThemes.length - 1)));
+        setProfileCardLocked(storedLock === 'true');
+      } catch (e) {}
+    };
+    loadProfileCard();
+  }, []);
+
+  const saveProfileCard = async (nextIndex: number, locked = profileCardLocked) => {
+    setProfileCardIndex(nextIndex);
+    try {
+      await AsyncStorage.setItem('@profile_card_index', String(nextIndex));
+      await AsyncStorage.setItem('@profile_card_locked', String(locked));
+    } catch (e) {}
+  };
+
+  const toggleProfileCardLock = async () => {
+    const nextLocked = !profileCardLocked;
+    setProfileCardLocked(nextLocked);
+    try {
+      await AsyncStorage.setItem('@profile_card_index', String(profileCardIndex));
+      await AsyncStorage.setItem('@profile_card_locked', String(nextLocked));
+    } catch (e) {}
+  };
+
+  const profileCardPanResponder = React.useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onPanResponderRelease: (_, gesture) => {
+        if (profileCardLockedRef.current || Math.abs(gesture.dx) < SWIPE_THRESHOLD) return;
+        const direction = gesture.dx < 0 ? 1 : -1;
+        const nextIndex = (profileCardIndexRef.current + direction + profileCardThemes.length) % profileCardThemes.length;
+        saveProfileCard(nextIndex);
+      },
+    })
+  ).current;
 
   React.useEffect(() => {
     const checkWhatsNew = async () => {
@@ -854,16 +930,16 @@ export default function DashboardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       scrollEnabled={scrollEnabled}
       refreshControl={
-        <RefreshControl 
-          refreshing={isScraping} 
+        <RefreshControl
+          refreshing={isScraping}
           onRefresh={() => {
             console.log('PULL TO REFRESH TRIGGERED');
             refreshData();
-          }} 
+          }}
           tintColor="#007AFF"
           progressViewOffset={Platform.OS === 'android' ? 30 : 0}
         />
@@ -878,15 +954,15 @@ export default function DashboardScreen() {
             <Text style={[styles.nameLarge, { color: colors.text }]}>{profile?.name?.split(' ')[0] || 'Student'}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <TouchableOpacity 
-              style={[styles.headerIconBtn]} 
+            <TouchableOpacity
+              style={[styles.headerIconBtn]}
               onPress={toggleTheme}
             >
               {isDark ? <Sun size={22} color={colors.warning} /> : <Moon size={22} color={colors.primary} />}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.headerIconBtn]} 
+            <TouchableOpacity
+              style={[styles.headerIconBtn]}
               onPress={() => setShowMessages(true)}
             >
               <Bell size={22} color={colors.primary} />
@@ -897,8 +973,8 @@ export default function DashboardScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              onPress={logout} 
+            <TouchableOpacity
+              onPress={logout}
               style={[styles.headerIconBtn]}
             >
               <LogOut size={22} color={colors.error} />
@@ -907,49 +983,92 @@ export default function DashboardScreen() {
         </View>
 
         {profile && (
-          <View style={[styles.premiumProfileCard, { backgroundColor: isDark ? '#2C2C2E' : '#FAFAFA', borderColor: colors.border }]}>
-            <View style={styles.profileRow}>
-              <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.7}>
-                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarLarge} />
-                <View style={[styles.editBadge, { backgroundColor: userColor }]}>
-                  <User size={10} color="#fff" />
-                </View>
-              </TouchableOpacity>
-              <View style={styles.profileDetails}>
-                <Text style={[styles.fullName, { color: colors.text }]}>{profile.name}</Text>
-                <View style={styles.badgeRow}>
-                  <View style={[styles.vidBadge, { backgroundColor: isDark ? 'rgba(10,132,255,0.15)' : '#E5F1FF' }]}>
-                    <Text style={[styles.vidText, { color: colors.primary }]}>{profile.vid}</Text>
+          <View style={styles.profileWalletShell} {...profileCardPanResponder.panHandlers}>
+            {profileCardThemes.map((theme, idx) => {
+              const isTop = idx === profileCardIndex;
+              if (!isTop) return null;
+
+              return (
+                <Animated.View
+                  key={theme.key}
+                  entering={FadeInRight.duration(300).springify()}
+                  layout={Layout.duration(260)}
+                  style={[
+                    styles.profileStackCard,
+                  ]}
+                >
+                  <View style={[styles.profileCardGlow, { backgroundColor: theme.accent, opacity: isTop ? 0.18 : 0 }]} />
+                  <View style={[styles.premiumProfileCard, { padding: 0, overflow: 'hidden', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 }]}>
+                    <LinearGradient colors={theme.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
+                      <View style={[styles.profileCardHandle, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.24)' : 'rgba(17,17,17,0.12)' }]} />
+                      <View style={[styles.masterShapeLeft, { backgroundColor: theme.accent }]} />
+                      <View style={[styles.masterShapeMid, { backgroundColor: theme.accent }]} />
+                      <View style={[styles.masterShapeRight, { backgroundColor: theme.accent }]} />
+                      <View style={styles.profileTopLine}>
+                        <Text style={[styles.profileEyebrow, { color: theme.text }]}>StudentCard</Text>
+                        <TouchableOpacity
+                          activeOpacity={0.82}
+                          onPress={toggleProfileCardLock}
+                          style={[
+                            styles.profileLockToggle,
+                            {
+                              backgroundColor: profileCardLocked && isTop ? theme.accent : 'rgba(255,255,255,0.24)',
+                              borderColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.22)' : 'rgba(17,17,17,0.12)',
+                            },
+                          ]}
+                        >
+                          <View style={[styles.profileLockKnob, { transform: [{ translateX: profileCardLocked && isTop ? 17 : 0 }], backgroundColor: profileCardLocked && isTop ? '#FFFFFF' : theme.text }]} />
+                        </TouchableOpacity>
+                      </View>
+                      <TouchableOpacity onPress={() => setShowProfileMenu(true)} activeOpacity={0.78} style={[styles.avatarButton, { borderColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.28)' : 'rgba(17,17,17,0.14)' }]}>
+                        <Image source={{ uri: profile.avatarUrl }} style={styles.avatarNew} />
+                      </TouchableOpacity>
+                      <View style={[styles.cardChip, { borderColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.22)' : 'rgba(17,17,17,0.12)' }]}>
+                        <View style={[styles.cardChipLine, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.42)' : 'rgba(17,17,17,0.35)' }]} />
+                        <View style={[styles.cardChipLineShort, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.3)' : 'rgba(17,17,17,0.24)' }]} />
+                      </View>
+                      <View style={styles.profileCardBottomNew}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text style={[styles.profileNameNew, { color: theme.text }]} numberOfLines={1}>{profile.name}</Text>
+                          <Text style={[styles.profileProgramNew, { color: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.66)' : 'rgba(17,17,17,0.62)' }]} numberOfLines={1}>{profile.vid}</Text>
+                        </View>
+                        <View style={styles.profileMiniMeta}>
+                          <Text style={[styles.profileFooterCode, { color: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.76)' : 'rgba(17,17,17,0.64)' }]}>{profile.section}</Text>
+                          <Text style={[styles.profileVidDigits, { color: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.72)' : 'rgba(17,17,17,0.55)' }]}>SECTION</Text>
+                        </View>
+                      </View>
+                      {isTop && (
+                        <View style={styles.profileStackDots}>
+                          {profileCardThemes.map((_, dotIndex) => (
+                            <View
+                              key={dotIndex}
+                              style={[
+                                styles.profileStackDot,
+                                {
+                                  backgroundColor: dotIndex === profileCardIndex ? theme.text : (theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.28)' : 'rgba(17,17,17,0.18)'),
+                                  width: dotIndex === profileCardIndex ? 18 : 5,
+                                },
+                              ]}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </LinearGradient>
                   </View>
-                  <View style={[styles.sectionBadge, { backgroundColor: isDark ? colors.surface : '#F2F2F7' }]}>
-                    <Text style={[styles.sectionText, { color: colors.text }]}>{profile.section}</Text>
-                  </View>
-                  {profile.rollNo && (
-                    <View style={[styles.rollBadge, { backgroundColor: isDark ? 'rgba(255,149,0,0.15)' : '#FFF9E5' }]}>
-                      <Text style={[styles.rollText, { color: colors.warning }]}>Roll: {profile.rollNo}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.programText, { color: colors.textSecondary }]} numberOfLines={2}>{profile.program}</Text>
-              </View>
-            </View>
-            <View style={[styles.syncRow, { borderTopColor: colors.border }]}>
-              <View style={styles.statusDot} />
-              <Text style={styles.syncText}>
-                Last synced: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
-              </Text>
-            </View>
+                </Animated.View>
+              );
+            })}
           </View>
         )}
       </View>
 
       <View style={styles.content}>
         {/* CGPA & Attendance Grid - ANIMATED */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInDown.delay(200).duration(600).springify()}
           style={styles.gridContainer}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.gridCardWrapper}
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
@@ -975,19 +1094,19 @@ export default function DashboardScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.gridCardWrapper} 
+          <TouchableOpacity
+            style={styles.gridCardWrapper}
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
             <View style={[styles.gridCardShadow, { backgroundColor: parseFloat(overallAttendance) >= 80 ? '#3DBE6B' : (parseFloat(overallAttendance) >= 75 ? '#FFAE33' : '#FF6259'), height: 154 }]}>
-              <CardGradient 
-                id="grad_grid_att" 
+              <CardGradient
+                id="grad_grid_att"
                 colors={
-                  parseFloat(overallAttendance) >= 80 
-                    ? ['#3DBE6B', '#1E7C41'] 
+                  parseFloat(overallAttendance) >= 80
+                    ? ['#3DBE6B', '#1E7C41']
                     : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
-                } 
+                }
                 style={[styles.gridCardInner, { height: 154 }]}
                 borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
               >
@@ -1017,38 +1136,38 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
           {nextClassInfo.status === 'upcoming' ? (
-            <View style={[styles.nextClassCardShadow, { backgroundColor: isDark ? '#1A2536' : '#E8F2FF' }]}>
-              <CardGradient 
-                id="grad_next_class" 
-                colors={isDark ? ['#1A2536', '#0E1724'] : ['#E8F2FF', '#D0E5FF']} 
-                style={styles.nextClassCardInner} 
-                borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(10,132,255,0.25)' : 'rgba(0,122,255,0.18)' }}
+            <View style={[styles.nextClassCardShadow, { backgroundColor: '#1D4ED8', borderRadius: 24, overflow: 'hidden' }]}>
+              <CardGradient
+                id="grad_next_class"
+                colors={['#1D4ED8', '#6D28D9']}
+                style={styles.nextClassCardInner}
+                borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)' }}
               >
-                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: isDark ? 'rgba(10, 132, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', width: 120, height: 120, borderRadius: 60 }]} />
+                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 120, height: 120, borderRadius: 60 }]} />
                 <View style={styles.nextClassHeader}>
-                  <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255,159,10,0.12)' : 'rgba(255,149,0,0.12)', flexDirection: 'row', alignItems: 'center' }]}>
-                    <Clock size={12} color={colors.warning} />
-                    <Text style={[styles.timeText, { color: colors.warning }]}>{nextClassInfo.time}</Text>
+                  <View style={[styles.timeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', flexDirection: 'row', alignItems: 'center' }]}>
+                    <Clock size={12} color="#ffffff" />
+                    <Text style={[styles.timeText, { color: '#ffffff' }]}>{nextClassInfo.time}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={[styles.pulseDot, { backgroundColor: '#34C759' }]} />
-                    <View style={[styles.typeBadgeWidget, { backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(46,125,50,0.12)' }]}>
-                      <Text style={[styles.typeTextWidget, { color: isDark ? '#34C759' : '#2E7D32' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                    <View style={[styles.pulseDot, { backgroundColor: '#ffffff' }]} />
+                    <View style={[styles.typeBadgeWidget, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <Text style={[styles.typeTextWidget, { color: '#ffffff', fontWeight: '800' }]}>{nextClassInfo.type.toUpperCase()}</Text>
                     </View>
                   </View>
                 </View>
-                
-                <Text style={[styles.subjectText, { color: colors.text }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
-                
-                <View style={styles.nextClassFooter}>
+
+                <Text style={[styles.subjectText, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
+
+                <View style={[styles.nextClassFooter, { borderTopColor: 'rgba(255, 255, 255, 0.2)' }]}>
                   <View style={styles.footerItem}>
-                    <Tag size={12} color={colors.textSecondary} />
-                    <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.subjectCode}</Text>
+                    <Tag size={12} color="rgba(255, 255, 255, 0.85)" />
+                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.subjectCode}</Text>
                   </View>
-                  <View style={[styles.footerDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]} />
+                  <View style={[styles.footerDivider, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]} />
                   <View style={styles.footerItem}>
-                    <MapPin size={12} color={colors.textSecondary} />
-                    <Text style={[styles.footerText, { color: colors.textSecondary }]}>{nextClassInfo.room}</Text>
+                    <MapPin size={12} color="rgba(255, 255, 255, 0.85)" />
+                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.room}</Text>
                   </View>
                 </View>
               </CardGradient>
@@ -1069,7 +1188,7 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
 
-        <Animated.View 
+        <Animated.View
           entering={FadeInDown.delay(600).duration(600).springify()}
           style={{ marginBottom: 25 }} // Add space before Pending Assignments
         >
@@ -1093,48 +1212,56 @@ export default function DashboardScreen() {
             {data.assignments.map((assignment, index) => {
               const isPractical = assignment.type?.toLowerCase().includes('practical');
               const isCA = assignment.type?.toLowerCase().includes('ca') || assignment.type?.toLowerCase().includes('continuous');
-              
+
               return (
-                <View key={index} style={[styles.assignmentCardPremium, { 
-                  backgroundColor: isDark ? '#1A1A1C' : '#FFFFFF', 
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+                <View key={index} style={[styles.assignmentCardPremium, {
+                  padding: 0,
+                  overflow: 'hidden',
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
                   borderWidth: 1.5,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: isDark ? 0.15 : 0.04,
+                  shadowOpacity: 0.1,
                   shadowRadius: 16,
                   elevation: 4
                 }]}>
-                  <View style={styles.assignmentHeaderRow}>
-                    <View style={[styles.typeIconBg, { backgroundColor: isPractical ? 'rgba(255,149,0,0.12)' : isCA ? 'rgba(88,86,214,0.12)' : 'rgba(0,122,255,0.12)' }]}>
-                      {isPractical ? (
-                        <Lock size={16} color="#FF9500" />
-                      ) : isCA ? (
-                        <Award size={16} color="#5856D6" />
-                      ) : (
-                        <FileText size={16} color="#007AFF" />
-                      )}
-                    </View>
-                    <View style={styles.courseCol}>
-                      <Text style={[styles.courseCodeText, { color: colors.text }]}>{assignment.courseCode}</Text>
-                      <Text style={[styles.typeLabel, { color: colors.textSecondary }]}>{assignment.type}</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.dueBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
-                    <Clock size={12} color={colors.error} />
-                    <Text style={[styles.dueText, { color: colors.text }]}>Due: {assignment.lastDate}</Text>
-                  </View>
-
-                  <TouchableOpacity 
-                    style={[styles.submitBtn, { backgroundColor: colors.primary }]}
-                    onPress={() => router.push('/assignments_upload' as any)}
+                  <LinearGradient
+                    colors={['#0E7490', '#1D4ED8']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ padding: 20, flex: 1, justifyContent: 'space-between' }}
                   >
-                    <Text style={styles.submitBtnText}>Submit Task</Text>
-                    <ChevronRight size={14} color="#fff" />
-                  </TouchableOpacity>
+                    <View style={styles.assignmentHeaderRow}>
+                      <View style={[styles.typeIconBg, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                        {isPractical ? (
+                          <Lock size={16} color="#ffffff" />
+                        ) : isCA ? (
+                          <Award size={16} color="#ffffff" />
+                        ) : (
+                          <FileText size={16} color="#ffffff" />
+                        )}
+                      </View>
+                      <View style={styles.courseCol}>
+                        <Text style={[styles.courseCodeText, { color: '#ffffff', fontWeight: '800' }]}>{assignment.courseCode}</Text>
+                        <Text style={[styles.typeLabel, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{assignment.type}</Text>
+                      </View>
+                    </View>
 
-                  <View style={[styles.assignmentGlow, { backgroundColor: isPractical ? 'rgba(255,149,0,0.08)' : 'rgba(0,122,255,0.08)' }]} />
+                    <View style={[styles.dueBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <Clock size={12} color="#ffffff" />
+                      <Text style={[styles.dueText, { color: '#ffffff', fontWeight: '700' }]}>Due: {assignment.lastDate}</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.submitBtn, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}
+                      onPress={() => router.push('/assignments_upload' as any)}
+                    >
+                      <Text style={[styles.submitBtnText, { color: '#ffffff', fontWeight: '800' }]}>Submit Task</Text>
+                      <ChevronRight size={14} color="#fff" />
+                    </TouchableOpacity>
+
+                    <View style={[styles.assignmentGlow, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
+                  </LinearGradient>
                 </View>
               );
             })}
@@ -1156,81 +1283,95 @@ export default function DashboardScreen() {
 
         {/* Announcements */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
-        <View style={[styles.announcementContainer, { 
-          backgroundColor: isDark ? '#1A1A1C' : '#FFFFFF', 
-          borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+        <View style={[styles.announcementContainer, {
+          padding: 0,
+          overflow: 'hidden',
+          borderColor: 'rgba(255, 255, 255, 0.15)',
           borderWidth: 1.5,
           borderRadius: 24,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDark ? 0.15 : 0.04,
+          shadowOpacity: 0.1,
           shadowRadius: 16,
           elevation: 4,
           maxHeight: 280, // Show roughly 3.5 items
-          padding: 0, // Remove padding to allow ScrollView to fill
         }]}>
-          {data.announcements && data.announcements.length > 0 ? (
-            <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-              {data.announcements.map((item: any, index: number) => (
-                <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', width: '100%', marginRight: 0 }]}>
-                  <View style={styles.announcementInner}>
-                    <View style={[styles.announcementIndicator, { backgroundColor: colors.primary }]} />
-                    <View style={styles.announcementContent}>
-                      <Text style={[styles.announcementTitle, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
-                      <Text style={[styles.announcementDate, { color: colors.textSecondary }]}>{item.date}</Text>
+          <LinearGradient
+            colors={['#4A1D5B', '#2D1237']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ flex: 1 }}
+          >
+            {data.announcements && data.announcements.length > 0 ? (
+              <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                {data.announcements.map((item: any, index: number) => (
+                  <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: 'rgba(255, 255, 255, 0.15)', width: '100%', marginRight: 0 }]}>
+                    <View style={styles.announcementInner}>
+                      <View style={[styles.announcementIndicator, { backgroundColor: 'rgba(255, 255, 255, 0.45)' }]} />
+                      <View style={styles.announcementContent}>
+                        <Text style={[styles.announcementTitle, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={2}>{item.title}</Text>
+                        <Text style={[styles.announcementDate, { color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600' }]}>{item.date}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <ChevronRight size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border, margin: 15 }]}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No new announcements.</Text>
-            </View>
-          )}
+                    <ChevronRight size={18} color="#ffffff" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={[styles.emptyCard, { backgroundColor: 'transparent', margin: 15 }]}>
+                <Text style={[styles.emptyText, { color: 'rgba(255, 255, 255, 0.8)' }]}>No new announcements.</Text>
+              </View>
+            )}
+          </LinearGradient>
         </View>
           {/* Update Manager */}
-        <View style={[styles.updateCard, { backgroundColor: isDark ? 'rgba(10,132,255,0.05)' : '#F0F7FF', borderColor: colors.primary + '30', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }]}>
-          <View style={[styles.updateInfo, { marginBottom: 15, flexDirection: 'column', alignItems: 'center' }]}>
-            <View style={[styles.versionBadge, { backgroundColor: colors.primary, marginBottom: 8 }]}>
-              <Text style={styles.versionText}>v{version}</Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={[styles.updateTitle, { color: colors.text, textAlign: 'center' }]}>
-                {updateAvailable ? 'New Update Ready! 🚀' : 'App is up to date'}
-              </Text>
-              <Text style={[styles.updateSub, { color: colors.textSecondary, textAlign: 'center' }]}>
-                {updateAvailable ? 'Restart to apply fixes' : 'Check GitHub for releases'}
-              </Text>
-            </View>
-          </View>
-          
-          <View style={{ flexDirection: 'row', gap: 10, width: '100%', paddingHorizontal: 10 }}>
-            <TouchableOpacity 
-              onPress={updateAvailable ? handleUpdate : forceUpdate}
-              style={[styles.updateBtn, { backgroundColor: colors.primary, flex: 1, opacity: isUpdating ? 0.7 : 1 }]}
-              disabled={isUpdating}
+          <View style={[styles.updateCard, { padding: 0, overflow: 'hidden', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1.5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, marginTop: 20 }]}>
+            <LinearGradient
+              colors={['#6366F1', '#4338CA']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 18, width: '100%', flexDirection: 'column', alignItems: 'center' }}
             >
-              {isUpdating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.updateBtnText}>
-                  {updateAvailable ? 'Update Now' : 'Check Updates'}
-                </Text>
-              )}
-            </TouchableOpacity>
+              <View style={[styles.updateInfo, { marginBottom: 15, flexDirection: 'column', alignItems: 'center' }]}>
+                <View style={[styles.versionBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', marginBottom: 8 }]}>
+                  <Text style={[styles.versionText, { color: '#ffffff', fontWeight: '800' }]}>v{version}</Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={[styles.updateTitle, { color: '#ffffff', textAlign: 'center', fontWeight: '800' }]}>
+                    {updateAvailable ? 'New Update Ready! 🚀' : 'App is up to date'}
+                  </Text>
+                  <Text style={[styles.updateSub, { color: 'rgba(255, 255, 255, 0.85)', textAlign: 'center', fontWeight: '600' }]}>
+                    {updateAvailable ? 'Restart to apply fixes' : 'Check GitHub for releases'}
+                  </Text>
+                </View>
+              </View>
 
-            <TouchableOpacity 
-              onPress={() => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases')}
-              style={[styles.updateBtn, { backgroundColor: 'transparent', borderColor: colors.primary, borderWidth: 1, flex: 1 }]}
-            >
-              <Text style={[styles.updateBtnText, { color: colors.primary }]}>
-                Download APK
-              </Text>
-            </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%', paddingHorizontal: 10 }}>
+                <TouchableOpacity
+                  onPress={updateAvailable ? handleUpdate : forceUpdate}
+                  style={[styles.updateBtn, { backgroundColor: 'rgba(255, 255, 255, 0.25)', flex: 1, opacity: isUpdating ? 0.7 : 1 }]}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={[styles.updateBtnText, { color: '#ffffff', fontWeight: '800' }]}>
+                      {updateAvailable ? 'Update Now' : 'Check Updates'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases')}
+                  style={[styles.updateBtn, { backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.35)', borderWidth: 1, flex: 1 }]}
+                >
+                  <Text style={[styles.updateBtnText, { color: '#ffffff', fontWeight: '800' }]}>
+                    Download APK
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
           </View>
-        </View>
 
       </View>
     </ScrollView>
@@ -1238,10 +1379,10 @@ export default function DashboardScreen() {
       <Modal visible={showMessages} animationType="slide" transparent={true}>
         <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.6)' }]}>
           <BlurView intensity={20} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
-          
+
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHandle} />
-            
+
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <View>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>My Messages</Text>
@@ -1251,65 +1392,95 @@ export default function DashboardScreen() {
                 <Text style={[styles.closeBtnTextCompact, { color: colors.primary }]}>Done</Text>
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.messagesList} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 20 }}>
               {data.messages && data.messages.length > 0 ? (
                 data.messages.map((item, idx) => {
                   const isExpanded = expandedMessageIdx === idx;
                   const config = getMessageConfig(item.title);
                   const Icon = config.icon;
-                  
+
                   return (
-                    <Animated.View 
-                      key={item.id || idx} 
+                    <Animated.View
+                      key={item.id || idx}
                       layout={Layout.springify()}
                       entering={FadeInDown.delay(idx * 50)}
                     >
-                      <TouchableOpacity 
+                    <Animated.View
+                      key={item.id || idx}
+                      layout={Layout.springify()}
+                      entering={FadeInDown.delay(idx * 50)}
+                    >
+                      <TouchableOpacity
                         onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
                         activeOpacity={0.8}
-                        style={[styles.messageCardEnhanced, { 
-                          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', 
-                          borderColor: isExpanded ? config.color + '40' : colors.border,
+                        style={[styles.messageCardEnhanced, {
+                          padding: 0,
+                          overflow: 'hidden',
+                          borderColor: 'rgba(255, 255, 255, 0.15)',
+                          borderWidth: 1.5,
+                          borderRadius: 20,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 10,
+                          elevation: 3,
+                          marginBottom: 12
                         }]}
                       >
-                        <View style={styles.messageHeaderRow}>
-                          <View style={[styles.categoryIconBg, { backgroundColor: config.color + '15' }]}>
-                            <Icon size={14} color={config.color} />
-                          </View>
-                          
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                              <Text style={[styles.categoryBadgeText, { color: config.color }]}>{config.label}</Text>
-                              <View style={[styles.messageIndicatorGlow, { backgroundColor: config.color }]} />
+                        <LinearGradient
+                          colors={
+                            config.label === 'ACADEMIC' ? ['#3DBE6B', '#1E7C41'] :
+                            config.label === 'ATTENDANCE' ? ['#FFAE33', '#D35400'] :
+                            config.label === 'EXAMINATIONS' ? ['#FF6259', '#B71C1C'] :
+                            config.label === 'FINANCIAL' ? ['#6366F1', '#4338CA'] :
+                            config.label === 'PLACEMENT' ? ['#007AFF', '#004499'] :
+                            ['#AF52DE', '#7F2BB5']
+                          }
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={{ padding: 16, borderRadius: 20 }}
+                        >
+                          <View style={styles.messageHeaderRow}>
+                            <View style={[styles.categoryIconBg, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                              <Icon size={14} color="#ffffff" />
                             </View>
-                            <Text style={[styles.messageTitleEnhanced, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 1}>
-                              {item.title}
-                            </Text>
+
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                <Text style={[styles.categoryBadgeText, { color: '#ffffff', fontWeight: '800' }]}>{config.label}</Text>
+                                <View style={[styles.messageIndicatorGlow, { backgroundColor: '#ffffff' }]} />
+                              </View>
+                              <Text style={[styles.messageTitleEnhanced, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={isExpanded ? undefined : 1}>
+                                {item.title}
+                              </Text>
+                            </View>
+
+                            <View style={[styles.expandIconCircle, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                              <ChevronRight
+                                size={12}
+                                color="#ffffff"
+                                style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
+                              />
+                            </View>
                           </View>
-                          
-                          <View style={[styles.expandIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F2F2F7' }]}>
-                            <ChevronRight 
-                              size={12} 
-                              color={colors.primary} 
-                              style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }} 
-                            />
-                          </View>
-                        </View>
-                        
-                        {(isExpanded || item.content) && (
-                          <Animated.View entering={FadeInUp.duration(300)}>
-                            <Text 
-                              style={[styles.messageContentEnhanced, { 
-                                color: isDark ? colors.textSecondary : '#444',
-                              }]}
-                              numberOfLines={isExpanded ? undefined : 2}
-                            >
-                              {item.content}
-                            </Text>
-                          </Animated.View>
-                        )}
+
+                          {(isExpanded || item.content) && (
+                            <Animated.View entering={FadeInUp.duration(300)}>
+                              <Text
+                                style={[styles.messageContentEnhanced, {
+                                  color: 'rgba(255, 255, 255, 0.95)',
+                                  borderTopColor: 'rgba(255, 255, 255, 0.2)'
+                                }]}
+                                numberOfLines={isExpanded ? undefined : 2}
+                              >
+                                {item.content}
+                              </Text>
+                            </Animated.View>
+                          )}
+                        </LinearGradient>
                       </TouchableOpacity>
+                    </Animated.View>
                     </Animated.View>
                   );
                 })
@@ -1334,7 +1505,7 @@ export default function DashboardScreen() {
               <Text style={styles.whatsNewTitle}>What's New in v{version}</Text>
               <Text style={styles.whatsNewSubtitle}>We've made ALMS even better for you!</Text>
             </View>
-            
+
             <ScrollView style={styles.whatsNewScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.whatsNewItem}>
                 <View style={[styles.whatsNewIcon, { backgroundColor: colors.primary + '15' }]}>
@@ -1387,9 +1558,9 @@ export default function DashboardScreen() {
 
       {/* Modal for Profile Options */}
       <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
-        <TouchableOpacity 
-          style={styles.profileModalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.profileModalOverlay}
+          activeOpacity={1}
           onPress={() => setShowProfileMenu(false)}
         >
           <View style={[styles.profileMenuContent, { backgroundColor: colors.card }]}>
@@ -1501,25 +1672,291 @@ const styles = StyleSheet.create({
   },
   premiumProfileCard: {
     backgroundColor: '#FAFAFA',
-    borderRadius: 28,
+    borderRadius: 32,
     padding: 20,
     borderWidth: 1,
     borderColor: '#F2F2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.18,
+    shadowRadius: 30,
+    elevation: 12,
   },
-  profileRow: {
+  profileCardShell: {
+    position: 'relative',
+    marginTop: 4,
+  },
+  profileWalletShell: {
+    position: 'relative',
+    marginTop: 10,
+    height: 208,
+  },
+  profileStackCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+  },
+  profileStackLayer: {
+    position: 'absolute',
+    left: 42,
+    right: 42,
+    height: 58,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(17,17,17,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  profileStackLayerOne: {
+    top: 0,
+    backgroundColor: '#EFFF5B',
+  },
+  profileStackLayerTwo: {
+    top: 14,
+    backgroundColor: '#86DFA5',
+  },
+  profileStackLayerThree: {
+    top: 28,
+    backgroundColor: '#AEBBFF',
+  },
+  profileCardGlow: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 16,
+    bottom: -16,
+    borderRadius: 36,
+  },
+  headerCardGlow: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 8,
+    bottom: -8,
+    borderRadius: 24,
+  },
+  profileCardGradient: {
+    height: 188,
+    padding: 16,
+    borderRadius: 28,
+  },
+  profileCardHandle: {
+    position: 'absolute',
+    top: 10,
+    alignSelf: 'center',
+    width: 34,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17,17,17,0.12)',
+  },
+  profileCardOrb: {
+    position: 'absolute',
+    right: -44,
+    bottom: -52,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+  },
+  masterShapeLeft: {
+    position: 'absolute',
+    left: 22,
+    top: 58,
+    width: 74,
+    height: 82,
+    borderTopLeftRadius: 42,
+    borderBottomLeftRadius: 42,
+  },
+  masterShapeMid: {
+    position: 'absolute',
+    left: 72,
+    top: 58,
+    width: 78,
+    height: 82,
+    borderTopLeftRadius: 42,
+    borderBottomLeftRadius: 42,
+  },
+  masterShapeRight: {
+    position: 'absolute',
+    right: 28,
+    top: 58,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+  },
+  profileContactless: {
+    position: 'absolute',
+    right: 18,
+    bottom: 38,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactlessArc: {
+    width: 14,
+    height: 14,
+    borderRightWidth: 3,
+    borderColor: '#111111',
+    borderRadius: 8,
+  },
+  contactlessArcTwo: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderRadius: 12,
+    opacity: 0.6,
+  },
+  profileTopLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    marginTop: 0,
+    paddingLeft: 62,
+    paddingRight: 54,
+  },
+  profileTitleBlock: {
+    flex: 1,
+    paddingRight: 14,
+  },
+  profileEyebrow: {
+    color: '#111111',
+    fontSize: 17,
+    fontWeight: '500',
+    letterSpacing: -0.4,
+    marginBottom: 5,
+  },
+  profileNameNew: {
+    color: '#111111',
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  avatarButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(17,17,17,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  avatarNew: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 15,
+  },
+  avatarEditMark: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileProgramNew: {
+    color: 'rgba(17,17,17,0.62)',
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '800',
+    marginTop: 3,
+    maxWidth: 190,
+  },
+  profileCardBottomNew: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  profileLockToggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  profileLockKnob: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  profileMiniMeta: {
+    alignItems: 'flex-end',
+  },
+  profileFooterCode: {
+    color: 'rgba(17,17,17,0.5)',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  profileVidDigits: {
+    color: 'rgba(17,17,17,0.55)',
+    fontSize: 8,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+  cardChip: {
+    position: 'absolute',
+    left: 16,
+    top: 76,
+    width: 44,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.34)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,17,17,0.12)',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    gap: 5,
+  },
+  cardChipLine: {
+    height: 3,
+    width: 24,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17,17,17,0.35)',
+  },
+  cardChipLineShort: {
+    height: 3,
+    width: 16,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17,17,17,0.24)',
+  },
+  profileStackDots: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  profileStackDot: {
+    height: 5,
+    borderRadius: 3,
   },
   avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     marginRight: 18,
     borderWidth: 4,
     borderColor: '#fff',
@@ -1529,27 +1966,32 @@ const styles = StyleSheet.create({
   },
   fullName: {
     color: '#000',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 23,
+    fontWeight: '900',
     marginBottom: 6,
-    letterSpacing: -0.5,
+    letterSpacing: -0.7,
   },
   badgeRow: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
     marginBottom: 10,
   },
   vidBadge: {
     backgroundColor: '#E5F1FF',
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   sectionBadge: {
     backgroundColor: '#F2F2F7',
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   vidText: {
     color: '#007AFF',
@@ -1563,14 +2005,14 @@ const styles = StyleSheet.create({
   },
   programText: {
     color: '#8E8E93',
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 18,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
   },
   syncRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 15,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F2F2F7',
   },

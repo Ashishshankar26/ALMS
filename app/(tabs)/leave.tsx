@@ -38,7 +38,7 @@ export default function LeaveScreen() {
   if (Platform.OS === 'web') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <View style={[styles.heroHeader, { backgroundColor: colors.card, width: '100%', borderRadius: 24, marginBottom: 0, padding: 24 }]}>
+        <View style={[styles.heroHeader, { backgroundColor: colors.card, width: '100%', borderRadius: 24, marginBottom: 0, padding: 24, borderColor: colors.border }]}>
           <View style={styles.heroContent}>
             <View>
               <Text style={[styles.heroLabel, { color: colors.textSecondary }]}>Leave Management</Text>
@@ -59,7 +59,7 @@ export default function LeaveScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.refreshFab, { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.primary, position: 'relative', bottom: 0, alignSelf: 'stretch' }]}
+            style={[styles.refreshFab, { backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.primary, position: 'relative', bottom: 0, alignSelf: 'stretch' }]}
             onPress={() => (window as any).open(SLIP_URL, '_blank')}
             activeOpacity={0.8}
           >
@@ -80,7 +80,7 @@ export default function LeaveScreen() {
       {/* Hero Header - ANIMATED */}
       <Animated.View 
         entering={FadeInUp.delay(100).duration(800).springify()}
-        style={[styles.heroHeader, { backgroundColor: colors.card }]}
+        style={[styles.heroHeader, { backgroundColor: colors.card, borderColor: colors.border }]}
       >
         <View style={styles.heroContent}>
           <View>
@@ -92,7 +92,7 @@ export default function LeaveScreen() {
           </View>
         </View>
 
-        <View style={[styles.segmentedContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.segmentedContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.segmentItem, activeTab === 'APPLY' && { backgroundColor: colors.card }]}
             onPress={() => setActiveTab('APPLY')}
@@ -178,11 +178,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 5,
+    borderWidth: 1.5,
+    borderTopWidth: 0,
+    overflow: 'hidden',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 12,
     zIndex: 10,
   },
   heroContent: {
@@ -209,12 +212,26 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 6,
   },
   segmentedContainer: {
     flexDirection: 'row',
     borderRadius: 16,
     padding: 4,
     gap: 4,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 5,
   },
   segmentItem: {
     flex: 1,
@@ -224,6 +241,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   segmentText: {
     fontSize: 14,
@@ -266,11 +285,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 30,
-    shadowColor: '#000',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#5856D6',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    elevation: 10,
   },
   refreshFabText: {
     color: '#fff',

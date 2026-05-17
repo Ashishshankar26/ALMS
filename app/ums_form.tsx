@@ -8,7 +8,7 @@ import { useScraper } from '../context/ScraperContext';
 
 export default function UmsFormScreen() {
   const { url, title } = useLocalSearchParams<{ url: string; title: string }>();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [loading, setLoading] = React.useState(true);
   
   // Get the base UMS URL
@@ -28,7 +28,7 @@ export default function UmsFormScreen() {
       <View style={{ flex: 1 }}>
         {Platform.OS === 'web' ? (
           <View style={styles.webFallbackContainer}>
-            <View style={[styles.webFallbackCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.webFallbackCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
               <View style={[styles.iconBg, { backgroundColor: colors.primary + '15' }]}>
                 <Text style={{ fontSize: 32 }}>🔐</Text>
               </View>
@@ -79,7 +79,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 12,
+    zIndex: 5,
   },
   backButton: {
     padding: 8,
@@ -108,6 +117,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 30,
+    elevation: 12,
   },
   iconBg: {
     width: 64,
@@ -116,6 +131,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   fallbackTitle: {
     fontSize: 20,

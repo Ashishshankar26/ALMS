@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TimetableScreen() {
-  const { data, isScraping, refreshData } = useScraper();
+  const { data } = useScraper();
   const { colors, isDark } = useTheme();
   const timetable = data.timetable || {};
   
@@ -126,7 +126,7 @@ export default function TimetableScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View 
         entering={FadeInUp.delay(100).duration(800).springify()}
-        style={[styles.header, { backgroundColor: colors.card }]}
+        style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}
       >
         <View style={styles.headerTopCompact}>
           <View>
@@ -153,8 +153,8 @@ export default function TimetableScreen() {
               key={day}
               style={[
                 styles.dayButtonCompact, 
-                { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F7FA' }, 
-                activeDay === day && { backgroundColor: colors.primary }
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                activeDay === day && { backgroundColor: colors.primary, borderColor: colors.primary }
               ]}
               onPress={() => setActiveDay(day)}
             >
@@ -169,14 +169,6 @@ export default function TimetableScreen() {
       <ScrollView 
         style={styles.list} 
         contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={
-          <RefreshControl 
-            refreshing={isScraping} 
-            onRefresh={refreshData}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
       >
 
         {/* Makeup Classes Section - COLLAPSIBLE */}
@@ -227,7 +219,7 @@ export default function TimetableScreen() {
                         {!isGrid && (
                           <View style={styles.timeColumn}>
                             <Text style={[styles.timeStart, { color: colors.text }]}>{startTime}</Text>
-                            <div style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255,149,0,0.3)' : '#FFD60A' }]} />
+                            <View style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255,149,0,0.3)' : '#FFD60A' }]} />
                             <View style={{ alignItems: 'center', marginTop: -2 }}>
                               <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
                               <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
@@ -399,13 +391,17 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
     paddingBottom: 10,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    borderWidth: 1.5,
+    borderTopWidth: 0,
+    overflow: 'hidden',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
+    zIndex: 5,
   },
   headerTopCompact: {
     flexDirection: 'row',
@@ -437,6 +433,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   todayTextCompact: {
     fontSize: 10,
@@ -454,6 +452,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 60,
+    borderWidth: 1.5,
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
   dayTextCompact: {
     fontSize: 13,
@@ -484,6 +488,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1.5,
     marginBottom: 5,
+    overflow: 'hidden',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 22,
+    elevation: 7,
   },
   makeupHeaderLeft: {
     flexDirection: 'row',
@@ -496,6 +506,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   makeupTitle: {
     fontSize: 15,
@@ -554,6 +566,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 9,
   },
   classHeader: {
     flexDirection: 'row',
@@ -568,6 +585,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   timeTextWidget: {
     fontSize: 12,
@@ -577,6 +596,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   typeTextWidget: {
     fontSize: 10,
@@ -636,11 +657,11 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
     marginBottom: 15,
     borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 9,
     overflow: 'hidden',
   },
   cardAccent: {
@@ -732,6 +753,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   roomText: {
     fontSize: 12,
@@ -744,6 +767,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   typeText: {
     fontSize: 12,
@@ -770,6 +795,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 22,
+    elevation: 6,
   },
   emptyText: {
     fontSize: 16,

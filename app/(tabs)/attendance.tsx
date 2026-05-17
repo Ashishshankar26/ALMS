@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
-import { CheckCircle, AlertTriangle, XCircle, Calculator, Plus, Minus, Calendar, Edit2, Clock, Award, List } from 'lucide-react-native';
+import { CheckCircle, AlertTriangle, XCircle, Plus, Minus, Calendar, Award, X, Target } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 const SEMESTER_DATE_KEY = '@semester_end_date';
 
 export default function AttendanceScreen() {
-  const { data, isScraping, refreshData } = useScraper();
+  const { data, isScraping } = useScraper();
   const { colors, isDark } = useTheme();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [targetPct, setTargetPct] = useState(75);
@@ -51,6 +51,7 @@ export default function AttendanceScreen() {
 
   const [showAggregate, setShowAggregate] = useState(true);
   const attendanceData = data.attendance || [];
+  const openedSubject = selectedSubject ? attendanceData.find((item: any) => item.subjectCode === selectedSubject) : null;
 
   // Calculate Remaining Weeks
   const today = new Date();
@@ -79,6 +80,33 @@ export default function AttendanceScreen() {
     if (percentage >= targetPct)      return { text: 'Warning', color: '#FF9500', icon: <AlertTriangle size={20} color="#FF9500" /> };
     return { text: 'Critical', color: '#FF3B30', icon: <XCircle size={20} color="#FF3B30" /> };
   };
+
+  const getEffectivePct = (item: any) => (
+    item.percentage && item.percentage > 0
+      ? item.percentage
+      : (item.totalClasses > 0
+        ? Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100)
+        : 0)
+  );
+
+  const getWidgetTheme = (percentage: number): [string, string, string] => {
+    if (percentage >= targetPct + 10) return ['#F4FFF8', '#34C759', '#111111'];
+    if (percentage >= targetPct) return ['#FFF8EA', '#FF9500', '#111111'];
+    return ['#FFF1F3', '#FF3B30', '#111111'];
+  };
+
+  const widgetPalettes: [string, string, string][] = [
+    ['#0EA5E9', '#2563EB', '#FFFFFF'],
+    ['#22C55E', '#059669', '#FFFFFF'],
+    ['#A855F7', '#7C3AED', '#FFFFFF'],
+    ['#F97316', '#EA580C', '#FFFFFF'],
+    ['#14B8A6', '#0F766E', '#FFFFFF'],
+    ['#EC4899', '#BE185D', '#FFFFFF'],
+    ['#FACC15', '#F59E0B', '#111111'],
+    ['#6366F1', '#4338CA', '#FFFFFF'],
+  ];
+
+  const getWidgetPalette = (_index: number, percentage: number): [string, string, string] => getWidgetTheme(percentage);
 
   const DAYS_MAP = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -135,23 +163,14 @@ export default function AttendanceScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
-        refreshControl={
-          <RefreshControl 
-            refreshing={isScraping} 
-            onRefresh={refreshData}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
       >
-        {/* Hero Header - ANIMATED */}
         <Animated.View 
           entering={FadeInUp.delay(100).duration(800).springify()}
-          style={[styles.header, { backgroundColor: colors.card }]}
+          style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
           <View style={styles.headerTopCompact}>
             <View>
-              <Text style={[styles.headerLabel, { color: isDark ? colors.textSecondary : '#8E8E93' }]}>OVERALL STATUS</Text>
+              <Text style={[styles.headerLabel, { color: colors.textSecondary }]}>ATTENDANCE</Text>
               <View style={styles.heroValueRow}>
                 <Text style={[styles.heroValueCompact, { color: colors.text }]}>{displayAttendance}%</Text>
                 {isScraping && (
@@ -164,7 +183,7 @@ export default function AttendanceScreen() {
             
             <TouchableOpacity 
               onPress={() => setShowAggregate(!showAggregate)}
-              style={[styles.toggleBtnCompact, { backgroundColor: colors.primary + '15' }]}
+              style={[styles.toggleBtnCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
             >
               <Text style={[styles.toggleTextCompact, { color: colors.primary }]}>
                 {showAggregate ? 'Aggregate' : 'Raw'}
@@ -172,11 +191,10 @@ export default function AttendanceScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.chipSectionLabel, { color: isDark ? colors.textSecondary : '#8E8E93' }]}>PREDICTOR SETTINGS</Text>
           <View style={styles.actionRowCompact}>
             <TouchableOpacity 
               onPress={() => setShowDatePicker(true)}
-              style={[styles.chipCompact, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F7FA' }]}
+              style={[styles.chipCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1.5 }]}
             >
               <Calendar size={12} color={colors.primary} />
               <Text style={[styles.chipTextCompact, { color: colors.text }]}>
@@ -184,7 +202,7 @@ export default function AttendanceScreen() {
               </Text>
             </TouchableOpacity>
 
-            <View style={[styles.chipCompact, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F7FA' }]}>
+            <View style={[styles.chipCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1.5 }]}>
               <View style={styles.targetControlCompact}>
                 <TouchableOpacity onPress={() => changeTarget(-5)} style={styles.miniBtn}>
                   <Minus size={12} color={colors.primary} />
@@ -199,163 +217,58 @@ export default function AttendanceScreen() {
         </Animated.View>
 
       <View style={styles.list}>
-        <Text style={[styles.sectionTitleCompact, { color: colors.text }]}>COURSE ANALYTICS</Text>
+        <Text style={[styles.sectionTitleCompact, { color: colors.text }]}>COURSE WIDGETS</Text>
+        <View style={styles.widgetGrid}>
         {attendanceData.map((item, index) => {
-          // Use the ACTUAL percentage fetched from UMS (from .c100 span on dashboard)
-          // Only calculate ourselves as fallback if UMS value is 0 or missing
-          const effectivePct = (item.percentage && item.percentage > 0)
-            ? item.percentage
-            : (item.totalClasses > 0 
-              ? Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100) 
-              : 0);
+          const effectivePct = getEffectivePct(item);
           const status = getStatus(effectivePct);
-          const isSelected = selectedSubject === item.subjectCode;
+          const [base, accent, ink] = getWidgetPalette(index, effectivePct);
+          const proj = calculateMissable(item);
 
           return (
             <TouchableOpacity 
               key={index}
-              style={[styles.card, { padding: 0, borderColor: isSelected ? '#ffffff' : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)'), borderWidth: 1.5 }]}
-              onPress={() => {
-                if (isSelected) {
-                  setSelectedSubject(null);
-                } else {
-                  setSelectedSubject(item.subjectCode);
-                }
-              }}
-              activeOpacity={0.7}
+              style={[styles.widgetCardWrap, index % 2 === 0 && styles.widgetCardLeft]}
+              onPress={() => setSelectedSubject(item.subjectCode)}
+              activeOpacity={0.82}
             >
               <LinearGradient
-                colors={
-                  effectivePct >= targetPct + 10 
-                    ? ['#3DBE6B', '#1E7C41'] 
-                    : (effectivePct >= targetPct ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
-                }
+                colors={isDark ? ['rgba(26,28,32,0.92)', 'rgba(18,21,26,0.88)'] : [base, '#FFFFFF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ padding: 18, flex: 1, width: '100%', borderRadius: 22 }}
+                style={[styles.widgetCard, { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.62)' }]}
               >
-                <View style={[styles.percentageBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', position: 'absolute', top: 15, right: 15, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
-                  <Text style={[styles.percentageText, { color: '#ffffff', fontWeight: '800' }]}>{effectivePct}%</Text>
-                </View>
-
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardInfo}>
-                    <View style={[styles.subjectCodeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                      <Text style={[styles.subjectCode, { color: '#ffffff' }]}>{item.subjectCode}</Text>
-                    </View>
-                    <Text style={[styles.subjectName, { color: '#ffffff', paddingRight: 60, fontWeight: '800' }]}>{item.subjectName}</Text>
-                    
-                    {/* Progress Bar - KEPT */}
-                    <View style={styles.progressContainer}>
-                      <View style={[styles.miniProgressBar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                        <View style={[styles.miniProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: '#ffffff' }]} />
-                      </View>
-                    </View>
+                <View style={styles.widgetHandle} />
+                <View style={styles.widgetTopRow}>
+                  <View style={[styles.subjectCodeBadge, { backgroundColor: accent + '18', borderColor: accent + '30' }]}>
+                    <Text style={[styles.subjectCode, { color: isDark ? '#FFFFFF' : '#111111' }]}>{item.subjectCode}</Text>
+                  </View>
+                  <View style={[styles.widgetArrow, { backgroundColor: accent + '18', borderColor: accent + '30' }]}>
+                    {React.cloneElement(status.icon, { color: accent, size: 15 })}
                   </View>
                 </View>
 
-                <View style={[styles.statsRow, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 16 }]}>
-                  <View style={styles.stat}>
-                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Attended</Text>
-                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.attendedClasses}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Total</Text>
-                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.totalClasses}</Text>
-                  </View>
-                  <View style={styles.stat}>
-                    <Text style={[styles.statLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>Leaves</Text>
-                    <Text style={[styles.statValue, { color: '#ffffff', fontWeight: '700' }]}>{item.dutyLeaves || 0}</Text>
-                  </View>
-                  <View style={[styles.statStatus, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                    {React.cloneElement(status.icon, { color: '#ffffff' })}
-                    <Text style={[styles.statusText, { color: '#ffffff', fontWeight: '700' }]}>{status.text}</Text>
-                  </View>
+                <Text style={[styles.widgetSubject, { color: isDark ? '#FFFFFF' : '#111111' }]} numberOfLines={2}>{item.subjectName}</Text>
+                <Text style={[styles.widgetValue, { color: isDark ? '#FFFFFF' : '#111111' }]}>{effectivePct}%</Text>
+
+                <View style={[styles.widgetProgress, { backgroundColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(17,17,17,0.08)' }]}>
+                  <View style={[styles.widgetProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: accent }]} />
                 </View>
 
-                {isSelected && (
-                  <Animated.View 
-                    entering={FadeInUp.duration(400)} 
-                    style={[styles.calculatorBox, { backgroundColor: 'rgba(0,0,0,0.25)', borderColor: 'rgba(255, 255, 255, 0.25)', borderWidth: 1.5, marginTop: 12 }]}
-                  >
-                    {/* Calculator Header */}
-                    <View style={styles.calcHeader}>
-                      <View style={[styles.calcIconBg, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                        <Calculator size={14} color="#ffffff" />
-                      </View>
-                      <Text style={[styles.calcTitle, { color: 'rgba(255,255,255,0.9)' }]}>Smart Forecast Panel</Text>
-                    </View>
-
-                    {/* Main Metrics Grid */}
-                    <View style={styles.projectionGrid}>
-                      {/* TERM SAFE MARGIN */}
-                      {(() => {
-                        const proj = calculateMissable(item);
-                        return (
-                          <>
-                            <View style={styles.projectionCol}>
-                              <View style={styles.metricIconHeader}>
-                                <CheckCircle size={10} color={proj.isSafe ? '#4CD964' : '#FF453A'} />
-                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Safe Margin</Text>
-                              </View>
-                              <Text style={[styles.projectionValue, { color: proj.isSafe ? '#4CD964' : '#FF453A' }]}>
-                                {proj.value} 
-                                <Text style={{ fontSize: 10, fontWeight: '600' }}> {proj.value === 1 ? 'Class' : 'Classes'}</Text>
-                              </Text>
-                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>Total for term</Text>
-                            </View>
-
-                            <View style={[styles.projectionDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
-
-                            {/* SKIP 1 TODAY IMPACT */}
-                            <View style={styles.projectionCol}>
-                              <View style={styles.metricIconHeader}>
-                                <AlertTriangle size={10} color={((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? '#FF453A' : '#4CD964'} />
-                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Skip Today</Text>
-                              </View>
-                              <Text style={[
-                                styles.projectionValue, 
-                                { color: ((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) < (targetPct/100) ? '#FF453A' : '#4CD964' }
-                              ]}>
-                                {Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / (item.totalClasses + 1)) * 100)}%
-                              </Text>
-                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>If you miss 1</Text>
-                            </View>
-
-                            <View style={[styles.projectionDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
-
-                            {/* FINAL FORECAST */}
-                            <View style={styles.projectionCol}>
-                              <View style={styles.metricIconHeader}>
-                                <Award size={10} color={proj.forecast < targetPct ? '#FF453A' : '#4CD964'} />
-                                <Text style={[styles.projectionLabel, { color: 'rgba(255,255,255,0.7)' }]}>Final Aim</Text>
-                              </View>
-                              <Text style={[styles.projectionValue, { color: proj.forecast < targetPct ? '#FF453A' : '#4CD964' }]}>
-                                {proj.forecast}%
-                              </Text>
-                              <Text style={[styles.projectionHint, { color: 'rgba(255,255,255,0.5)' }]}>Term End</Text>
-                            </View>
-                          </>
-                        );
-                      })()}
-                    </View>
-
-                    {/* Summary Footer */}
-                    <View style={[styles.calcAdvice, { backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 12 }]}>
-                      <Clock size={12} color="#ffffff" />
-                      <Text style={[styles.calcAdviceText, { color: 'rgba(255,255,255,0.9)' }]}>
-                        {(() => {
-                          const proj = calculateMissable(item);
-                          return `Final prediction: ${proj.forecast}% based on ${proj.remaining} remaining classes. Target is ${targetPct}%.`;
-                        })()}
-                      </Text>
-                    </View>
-                  </Animated.View>
-                )}
+                <View style={styles.widgetFooterRow}>
+                  <View style={styles.widgetFooterItem}>
+                    <Text style={[styles.widgetMiniValue, { color: isDark ? '#FFFFFF' : '#111111' }]}>{item.attendedClasses}/{item.totalClasses}</Text>
+                  </View>
+                  <View style={[styles.widgetFooterDivider, { backgroundColor: isDark ? '#FFFFFF' : '#111111' }]} />
+                  <View style={styles.widgetFooterItem}>
+                    <Text style={[styles.widgetMiniValue, { color: isDark ? '#FFFFFF' : '#111111', textAlign: 'right' }]}>DL {item.dutyLeaves || 0}</Text>
+                  </View>
+                </View>
               </LinearGradient>
             </TouchableOpacity>
           );
         })}
+        </View>
 
         {/* Aggregate Summary Section at the Bottom - ANIMATED */}
         <Animated.View entering={FadeInDown.delay(400).duration(800)}>
@@ -396,10 +309,82 @@ export default function AttendanceScreen() {
       </View>
     </ScrollView>
 
+      <Modal visible={!!openedSubject} transparent animationType="fade" onRequestClose={() => setSelectedSubject(null)}>
+        <View style={styles.modalOverlay}>
+          {openedSubject ? (() => {
+            const effectivePct = getEffectivePct(openedSubject);
+            const status = getStatus(effectivePct);
+            const proj = calculateMissable(openedSubject);
+            const [base, accent, ink] = getWidgetTheme(effectivePct);
+            const skipTodayPct = Math.round(((openedSubject.attendedClasses + (openedSubject.dutyLeaves || 0)) / (openedSubject.totalClasses + 1)) * 100);
+
+            return (
+              <Animated.View entering={FadeInUp.duration(280)} style={[styles.attendanceWindow, { backgroundColor: isDark ? '#171A20' : '#FFFFFF', borderColor: colors.border }]}>
+                <LinearGradient colors={isDark ? ['rgba(26,28,32,0.96)', 'rgba(18,21,26,0.94)'] : [base, '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.windowHero}>
+                  <View style={styles.windowTop}>
+                    <View style={[styles.subjectCodeBadge, { backgroundColor: accent + '18', borderColor: accent + '30' }]}>
+                      <Text style={[styles.subjectCode, { color: isDark ? '#FFFFFF' : '#111111' }]}>{openedSubject.subjectCode}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setSelectedSubject(null)} activeOpacity={0.8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
+                      <X size={17} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.windowHeroRow}>
+                    <View style={styles.windowHeroCopy}>
+                      <Text style={[styles.windowSubject, { color: colors.text }]} numberOfLines={2}>{openedSubject.subjectName}</Text>
+                      <Text style={[styles.windowStatusText, { color: accent }]}>{status.text}</Text>
+                    </View>
+                    <Text style={[styles.windowPercent, { color: colors.text }]}>{effectivePct}%</Text>
+                  </View>
+                  <View style={[styles.windowProgress, { backgroundColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(17,17,17,0.08)' }]}>
+                    <View style={[styles.widgetProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: accent }]} />
+                  </View>
+                </LinearGradient>
+
+                <View style={styles.windowBody}>
+                  <View style={styles.windowMetricGrid}>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.attendedClasses}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Attended</Text>
+                    </View>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.totalClasses}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Total</Text>
+                    </View>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.dutyLeaves || 0}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Leaves</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.compactForecastGrid}>
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <Target size={15} color={proj.isSafe ? '#34C759' : '#FF3B30'} />
+                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{proj.value}</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Missable</Text>
+                    </View>
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <AlertTriangle size={15} color={skipTodayPct < targetPct ? '#FF3B30' : '#34C759'} />
+                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{skipTodayPct}%</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Skip 1</Text>
+                    </View>
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
+                      <Award size={15} color={proj.forecast < targetPct ? '#FF3B30' : '#34C759'} />
+                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{proj.forecast}%</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Forecast</Text>
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            );
+          })() : null}
+        </View>
+      </Modal>
+
       {/* Simple Date Picker Modal */}
       <Modal visible={showDatePicker} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInUp} style={[styles.dateModal, { backgroundColor: colors.card }]}>
+          <Animated.View entering={FadeInUp} style={[styles.dateModal, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Set Semester End Date</Text>
             <Text style={[styles.modalSub, { color: colors.textSecondary }]}>This helps predict your final attendance.</Text>
             
@@ -409,7 +394,7 @@ export default function AttendanceScreen() {
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Day</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setDate(d.getDate() - 1);
@@ -420,7 +405,7 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.getDate()}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setDate(d.getDate() + 1);
@@ -437,7 +422,7 @@ export default function AttendanceScreen() {
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Month</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setMonth(d.getMonth() - 1);
@@ -448,7 +433,7 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.toLocaleDateString('en-US', { month: 'short' })}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setMonth(d.getMonth() + 1);
@@ -465,7 +450,7 @@ export default function AttendanceScreen() {
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Year</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setFullYear(d.getFullYear() - 1);
@@ -476,7 +461,7 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.getFullYear()}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface }]}
+                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setFullYear(d.getFullYear() + 1);
@@ -507,22 +492,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    marginTop: Platform.OS === 'ios' ? 54 : 34,
+    marginHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 18,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
+    zIndex: 5,
   },
   headerTopCompact: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   chipSectionLabel: {
     fontSize: 9,
@@ -536,9 +525,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1,
-    marginBottom: 12,
-    marginTop: 10,
-    paddingHorizontal: 5,
+    marginBottom: 14,
+    marginTop: 4,
+    paddingHorizontal: 2,
     opacity: 0.8,
   },
   headerLabel: {
@@ -552,13 +541,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroValueCompact: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   toggleBtnCompact: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 18,
   },
   toggleTextCompact: {
     fontSize: 12,
@@ -573,12 +564,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   chipTextCompact: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   syncingBadge: {
@@ -717,11 +713,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 4,
   },
   syncingBadge: {
     paddingHorizontal: 6,
@@ -790,11 +788,128 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  attendanceWindow: {
+    width: '100%',
+    maxWidth: 350,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.24,
+    shadowRadius: 36,
+    elevation: 16,
+  },
+  windowHero: {
+    padding: 14,
+    minHeight: 122,
+  },
+  windowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  windowPercent: {
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: '900',
+    letterSpacing: -1,
+    marginLeft: 10,
+  },
+  windowHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 10,
+  },
+  windowHeroCopy: {
+    flex: 1,
+  },
+  windowSubject: {
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '900',
+    opacity: 0.92,
+  },
+  windowStatusText: {
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 5,
+    textTransform: 'uppercase',
+  },
+  windowProgress: {
+    height: 6,
+    borderRadius: 4,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  windowBody: {
+    padding: 12,
+  },
+  windowMetricGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  windowMetric: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 17,
+    borderWidth: 1,
+    padding: 9,
+    justifyContent: 'space-between',
+  },
+  windowMetricValue: {
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  windowMetricLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  compactForecastGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  compactForecastTile: {
+    flex: 1,
+    minHeight: 76,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 9,
+    justifyContent: 'space-between',
+  },
+  compactForecastValue: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  compactForecastLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
   dateModal: {
     width: '100%',
     padding: 24,
     borderRadius: 28,
     alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 22 },
+    shadowOpacity: 0.22,
+    shadowRadius: 34,
+    elevation: 14,
   },
   modalTitle: {
     fontSize: 20,
@@ -815,7 +930,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(0,0,0,0.02)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     padding: 12,
     borderRadius: 16,
   },
@@ -835,6 +950,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 3,
   },
   dateSegmentValue: {
     fontSize: 16,
@@ -854,8 +974,110 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   list: {
-    padding: 20,
-    marginTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginTop: 6,
+  },
+  widgetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+  },
+  widgetCardWrap: {
+    width: (width - 64) / 2,
+    height: (width - 64) / 2,
+    borderRadius: 30,
+    marginBottom: 18,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+    elevation: 10,
+  },
+  widgetCardLeft: {
+    marginRight: 12,
+  },
+  widgetCard: {
+    flex: 1,
+    height: '100%',
+    borderRadius: 30,
+    borderWidth: 1.5,
+    padding: 13,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  widgetHandle: {
+    position: 'absolute',
+    top: 10,
+    alignSelf: 'center',
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17,17,17,0.12)',
+  },
+  widgetTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  widgetArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  widgetValue: {
+    fontSize: 30,
+    lineHeight: 32,
+    fontWeight: '900',
+    letterSpacing: -1.2,
+  },
+  widgetSubject: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '900',
+    minHeight: 24,
+    marginTop: 2,
+    opacity: 0.96,
+    textTransform: 'uppercase',
+  },
+  widgetProgress: {
+    height: 4,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  widgetProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  widgetFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 0,
+  },
+  widgetFooterItem: {
+    flex: 1,
+  },
+  widgetFooterDivider: {
+    width: 1,
+    height: 14,
+    opacity: 0.22,
+  },
+  widgetMiniLabel: {
+    fontSize: 8,
+    fontWeight: '900',
+    opacity: 0.65,
+    textTransform: 'uppercase',
+  },
+  widgetMiniValue: {
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 1,
   },
   sectionTitle: {
     fontSize: 18,
@@ -869,11 +1091,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     minHeight: 180,
     borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.2,
+    shadowRadius: 26,
+    elevation: 10,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -921,18 +1143,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subjectCodeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 8,
     alignSelf: 'flex-start',
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   cardInfo: {
     flex: 1,
     paddingRight: 20,
   },
   subjectCode: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -962,6 +1186,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     minWidth: 85,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   percentageText: {
     fontSize: 22,
@@ -979,6 +1205,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   stat: {
     flex: 1,
@@ -1010,6 +1238,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   calcHeader: {
     flexDirection: 'row',
@@ -1079,11 +1308,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 25,
     marginTop: 10,
-    shadowColor: '#000',
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 10,
   },
   aggregateTitle: {
     fontSize: 18,

@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 const FEES_URL = 'https://ums.lpu.in/lpuums/Reports/frmStatementofAccounts.aspx';
 
 export default function FeesScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
 
   return (
@@ -87,8 +87,17 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1.5,
     borderBottomColor: '#C7C7CC',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#AF52DE',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 12,
+    zIndex: 5,
   },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: '#000' },

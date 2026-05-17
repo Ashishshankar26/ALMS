@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 export default function LoginScreen() {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
   const { isScraping } = useScraper();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -167,7 +167,7 @@ export default function LoginScreen() {
         </View>
       ) : Platform.OS === 'web' ? (
         <View style={styles.webContainer}>
-          <Animated.View entering={FadeInDown.duration(600)} style={[styles.customLoginCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Animated.View entering={FadeInDown.duration(600)} style={[styles.customLoginCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
             <View style={[styles.loginIconBg, { backgroundColor: colors.primary + '15' }]}>
               <GraduationCap size={40} color={colors.primary} />
             </View>
@@ -226,8 +226,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: '#f8f9fa',
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     borderBottomColor: '#dee2e6',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 12,
+    zIndex: 5,
   },
   headerText: {
     fontSize: 24,
@@ -275,11 +284,12 @@ const styles = StyleSheet.create({
     padding: 35,
     borderRadius: 32,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.15,
-    shadowRadius: 30,
-    elevation: 10,
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.24,
+    shadowRadius: 34,
+    elevation: 14,
     alignItems: 'center',
   },
   loginIconBg: {
@@ -289,6 +299,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   loginTitle: {
     fontSize: 24,
@@ -321,6 +333,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     fontSize: 16,
     borderWidth: 1,
+    shadowColor: '#0A84FF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
   },
   loginButton: {
     width: '100%',
@@ -329,11 +346,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#0A84FF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
   },
   loginButtonText: {
     color: '#fff',

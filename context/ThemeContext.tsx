@@ -23,8 +23,8 @@ export const Typography = {
 };
 
 const LightColors = {
-  background: '#F8F9FB',
-  card: '#FFFFFF',
+  background: '#F4F6FA',
+  card: 'rgba(255, 255, 255, 0.72)',
   text: '#1C1C1E',
   textSecondary: '#8E8E93',
   primary: '#007AFF',
@@ -32,14 +32,14 @@ const LightColors = {
   success: '#34C759',
   warning: '#FF9500',
   error: '#FF3B30',
-  border: '#E5E5EA',
-  surface: '#F2F2F7',
+  border: 'rgba(255, 255, 255, 0.72)',
+  surface: 'rgba(255, 255, 255, 0.36)',
   white: '#FFFFFF',
 };
 
 const DarkColors = {
-  background: '#0F1115', // Rich charcoal black
-  card: '#1A1C20',       // Slightly lighter card background
+  background: '#0C0F14', // Rich charcoal black
+  card: 'rgba(24, 28, 35, 0.72)', // Premium translucent card background
   text: '#F5F5F7',       // Soft off-white for main text
   textSecondary: '#9DA3AE', // Muted gray for secondary info
   primary: '#0A84FF',
@@ -47,8 +47,8 @@ const DarkColors = {
   success: '#30D158',
   warning: '#FF9F0A',
   error: '#FF453A',
-  border: '#2C2E33',     // Subtle border
-  surface: '#24272D',    // Inset surface color
+  border: 'rgba(255, 255, 255, 0.18)', // Glass border
+  surface: 'rgba(255, 255, 255, 0.08)', // Inset glass surface
   white: '#FFFFFF',
 };
 
