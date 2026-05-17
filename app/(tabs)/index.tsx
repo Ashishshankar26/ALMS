@@ -20,17 +20,17 @@ const { width } = Dimensions.get('window');
 const CARD_HEIGHT = 200;
 const SWIPE_THRESHOLD = 25;
 
-function CardGradient({ colors, style, children, id }: { colors: string[]; style?: any; children?: React.ReactNode; id: string }) {
+function CardGradient({ colors, style, children, id, borderStyle }: { colors: string[]; style?: any; children?: React.ReactNode; id: string; borderStyle?: any }) {
   return (
-    <View style={[style, { overflow: 'hidden' }]}>
-      <Svg height="100%" width="100%" style={StyleSheet.absoluteFillObject}>
+    <View style={[style, { overflow: 'hidden', borderRadius: 32 }, borderStyle]}>
+      <Svg height="100%" width="100%" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]}>
         <Defs>
           <SvgGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%">
             <Stop offset="0%" stopColor={colors[0]} stopOpacity="1" />
             <Stop offset="100%" stopColor={colors[1]} stopOpacity="1" />
           </SvgGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${id})`} />
+        <Rect width="100%" height="100%" rx={32} ry={32} fill={`url(#${id})`} />
       </Svg>
       {children}
     </View>
@@ -113,12 +113,12 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       key: 'fee',
       color: '#4A1D5B',
       gradient: ['#4A1D5B', '#2D1237'],
-      render: () => {
+      render: (borderStyle?: any) => {
         const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
         return (
-          <CardGradient id="grad_fee" colors={['#4A1D5B', '#2D1237']} style={styles.stackCardInner}>
+          <CardGradient id="grad_fee" colors={['#4A1D5B', '#2D1237']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <FileText size={20} color="#fff" />
@@ -157,12 +157,12 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       key: 'library',
       color: '#F7CE5B',
       gradient: ['#F7CE5B', '#F1C40F'],
-      render: () => {
+      render: (borderStyle?: any) => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
         return (
-          <CardGradient id="grad_lib" colors={['#F7CE5B', '#F1C40F']} style={styles.stackCardInner}>
+          <CardGradient id="grad_lib" colors={['#F7CE5B', '#F1C40F']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandleLight} />
             <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
                <BookOpen size={20} color="#000" />
@@ -205,10 +205,10 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       key: 'exams',
       color: '#3DBE6B',
       gradient: ['#3DBE6B', '#27AE60'],
-      render: () => {
+      render: (borderStyle?: any) => {
         const subjectName = nextExam ? (data.attendance?.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
         return (
-          <CardGradient id="grad_exams" colors={['#3DBE6B', '#27AE60']} style={styles.stackCardInner}>
+          <CardGradient id="grad_exams" colors={['#3DBE6B', '#27AE60']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <Award size={20} color="#fff" />
@@ -250,7 +250,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       key: 'attendance',
       color: '#FF7E82',
       gradient: ['#FF7E82', '#F43F5E'],
-      render: () => {
+      render: (borderStyle?: any) => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
@@ -258,7 +258,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         
         const attVal = parseFloat(data.overallAttendance);
         return (
-          <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner}>
+          <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
             <View style={styles.stackGlassIcon}>
                <UserCheck size={20} color="#fff" />
@@ -329,6 +329,12 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
           extrapolate: 'clamp',
         });
 
+        const borderStyle = {
+          borderColor: card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
+          borderWidth: 1.5,
+          borderRadius: 32,
+        };
+
         return (
           <RNAnimated.View
             key={card.key}
@@ -342,8 +348,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                   { translateY: isTop ? translateY : RNAnimated.add(-offsetY, backCardShift) },
                   { rotateZ: isTop ? rotate : '0deg' },
                 ],
-                borderColor: card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
-                borderWidth: 1.5,
+                borderColor: isTop ? 'transparent' : (card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)'),
+                borderWidth: isTop ? 0 : 1.5,
                 opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
                 // Add a dynamic shadow for the top card
                 shadowOpacity: isTop ? translateY.interpolate({
@@ -366,7 +372,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
 
             {isTop && (
               <View style={{ flex: 1 }}>
-                {card.render()}
+                {card.render(borderStyle)}
                 <View style={styles.stackDots}>
                   {cards.map((_, i) => (
                     <View key={i} style={[styles.stackDot, { backgroundColor: i === activeIndex ? '#fff' : 'rgba(255,255,255,0.2)' }]} />
