@@ -315,7 +315,7 @@ export default function TimetableScreen() {
                           style={{ 
                             ...StyleSheet.absoluteFillObject, 
                             backgroundColor: accentColor, 
-                            opacity: isDark ? 0.05 : 0.03,
+                            opacity: isDark ? 0.08 : 0.05,
                             zIndex: -1 
                           }} 
                         />
@@ -413,7 +413,7 @@ export default function TimetableScreen() {
                       style={{ 
                         ...StyleSheet.absoluteFillObject, 
                         backgroundColor: accentColor, 
-                        opacity: isDark ? 0.05 : 0.03,
+                        opacity: isDark ? 0.08 : 0.05,
                         zIndex: -1 
                       }} 
                     />
