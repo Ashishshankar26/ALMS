@@ -112,17 +112,30 @@ export default function TimetableScreen() {
   }
 
   // INJECT DUMMY MAKEUP CLASS FOR PREVIEW
-  makeupClasses.push({
-    id: "m1",
-    subjectCode: "MTH101",
-    subject: "ADVANCED CALCULUS AND DIFFERENTIAL EQUATIONS",
-    time: "10:00 AM - 11:50 AM",
-    type: "Makeup",
-    room: "28-101",
-    faculty: "Dr. Singh",
-    isMakeup: true,
-    date: "19-May-2026"
-  });
+  makeupClasses.push(
+    {
+      id: "m1",
+      subjectCode: "MTH101",
+      subject: "ADVANCED CALCULUS AND DIFFERENTIAL EQUATIONS",
+      time: "10:00 AM - 11:50 AM",
+      type: "Makeup",
+      room: "28-101",
+      faculty: "Dr. Singh",
+      isMakeup: true,
+      date: "19-May-2026"
+    },
+    {
+      id: "m2",
+      subjectCode: "PHY105",
+      subject: "MODERN PHYSICS AND QUANTUM MECHANICS",
+      time: "12:00 PM - 01:50 PM",
+      type: "Makeup",
+      room: "34-402",
+      faculty: "Dr. Sharma",
+      isMakeup: true,
+      date: "19-May-2026"
+    }
+  );
 
   let classesForDay = timetable[activeDay] || [];
 
@@ -277,7 +290,14 @@ export default function TimetableScreen() {
                 entering={FadeInUp.duration(400)}
                 style={styles.makeupContent}
               >
-                <View style={{ paddingHorizontal: 4, paddingVertical: 8, gap: 12 }}>
+                <View style={{ 
+                  paddingHorizontal: 4, 
+                  paddingVertical: 8, 
+                  gap: 12,
+                  flexDirection: makeupClasses.length > 1 ? 'row' : 'column',
+                  flexWrap: makeupClasses.length > 1 ? 'wrap' : 'nowrap',
+                  justifyContent: makeupClasses.length > 1 ? 'space-between' : 'flex-start'
+                }}>
                   {makeupClasses.map((cls: any, index: number) => {
                     const timeParts = (cls.time || "").split(/\s*-\s*/);
                     const startTime = timeParts[0] || "--:--";
@@ -285,99 +305,166 @@ export default function TimetableScreen() {
                     const endTime = endTimeFull.split(/\s+/)[0] || "--:--";
                     const ampm = (cls.time || "").toUpperCase().includes('PM') ? 'PM' : 'AM';
                     const accentColor = '#FF9500'; // Sunset Orange for Makeup
+                    const isMakeupGrid = makeupClasses.length > 1;
 
                     return (
                       <Animated.View 
                         key={cls.id || index}
                         entering={FadeInDown.delay(index * 50).duration(400)}
+                        style={isMakeupGrid ? { width: '48%' } : { width: '100%' }}
                       >
-                        <View 
-                          style={[
-                            styles.classCard, 
-                            { 
-                              padding: 18, 
-                              paddingLeft: 20,
-                              borderRadius: 24, 
-                              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
-                              borderWidth: 1.2,
-                              backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
-                              marginBottom: 4,
-                              shadowColor: '#000000',
-                              shadowOffset: { width: 0, height: 4 },
-                              shadowOpacity: isDark ? 0.12 : 0.05,
-                              shadowRadius: 8,
-                              elevation: 2,
-                              position: 'relative',
-                              overflow: 'hidden',
-                              flexDirection: 'row'
-                            }
-                          ]}
-                        >
-                          {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                        {isMakeupGrid ? (
                           <View 
-                            style={{ 
-                              ...StyleSheet.absoluteFillObject, 
-                              backgroundColor: accentColor, 
-                              opacity: isDark ? 0.08 : 0.05,
-                              zIndex: -1 
-                            }} 
-                          />
-
-                          {/* Left Time Column */}
-                          <View style={styles.timeColumn}>
-                            <Text style={[styles.timeStart, { color: colors.text, fontWeight: '800' }]}>{startTime}</Text>
-                            <View style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)', marginVertical: 8 }]}>
-                              <View style={[styles.timeDot, { backgroundColor: accentColor, borderColor: isDark ? '#121418' : '#ffffff' }]} />
-                            </View>
-                            <View style={{ alignItems: 'center', marginTop: -2 }}>
-                              <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
-                              <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
-                            </View>
-                          </View>
-
-                          {/* Right Class Details Info */}
-                          <View style={styles.classInfo}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                              <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
-                                <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 11 }]}>{cls.subjectCode}</Text>
-                              </View>
-                              <View style={{ flexDirection: 'row', gap: 6 }}>
-                                <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: 'rgba(255, 149, 0, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
-                                  <Text style={[styles.practicalBadgeText, { color: '#FF9500', fontSize: 9, fontWeight: '800' }]}>MAKEUP</Text>
-                                </View>
-                                {cls.date && (
-                                  <View style={[styles.practicalBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
-                                    <Text style={[styles.practicalBadgeText, { color: colors.textSecondary, fontSize: 9, fontWeight: '800' }]}>{cls.date}</Text>
+                            style={[
+                              styles.classCard, 
+                              { 
+                                height: 175,
+                                padding: 14, 
+                                borderRadius: 20, 
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
+                                borderWidth: 1.2,
+                                backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                                marginBottom: 4,
+                                shadowColor: '#000000',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: isDark ? 0.12 : 0.05,
+                                shadowRadius: 8,
+                                elevation: 2,
+                                position: 'relative',
+                                overflow: 'hidden',
+                              }
+                            ]}
+                          >
+                            <View 
+                              style={{ 
+                                ...StyleSheet.absoluteFillObject, 
+                                backgroundColor: accentColor, 
+                                opacity: isDark ? 0.08 : 0.05,
+                                zIndex: -1 
+                              }} 
+                            />
+                            <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                              <View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                  <Text style={[styles.makeupDate, { color: colors.warning, fontSize: 10, fontWeight: '800', marginBottom: 0 }]} numberOfLines={1}>
+                                    {cls.date}
+                                  </Text>
+                                  <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                                    <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 9 }]}>{cls.subjectCode}</Text>
                                   </View>
-                                )}
-                              </View>
-                            </View>
-
-                            <Text style={[styles.subjectName, { fontSize: 16, color: colors.text, fontWeight: '800', marginBottom: 12 }]}>{cls.subject}</Text>
-
-                            <View style={styles.badgeRow}>
-                              <View style={[styles.roomBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
-                                <MapPin size={11} color={accentColor} />
-                                <Text style={[styles.roomText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.room || 'TBA'}</Text>
-                              </View>
-                              <View style={[styles.typeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
-                                <Tag size={11} color={accentColor} />
-                                <Text style={[styles.typeText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.type}</Text>
-                              </View>
-                            </View>
-
-                            {cls.faculty ? (
-                              <View style={[styles.metaRow, { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-                                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: accentColor + '15', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-                                  <User size={11} color={accentColor} />
                                 </View>
-                                <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '700', fontSize: 12 }]} numberOfLines={1}>
-                                  {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
+                                <Text 
+                                  style={[styles.subjectName, { color: colors.text, fontSize: 12, fontWeight: '800', lineHeight: 16, marginBottom: 0 }]}
+                                  numberOfLines={3}
+                                >
+                                  {cls.subject}
                                 </Text>
                               </View>
-                            ) : null}
+                              <View style={{ marginTop: 6 }}>
+                                <View style={[styles.metaRow, { marginBottom: 4, alignItems: 'center', gap: 4 }]}>
+                                  <Clock size={11} color={colors.textSecondary} />
+                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
+                                    {startTime}
+                                  </Text>
+                                </View>
+                                <View style={[styles.metaRow, { alignItems: 'center', gap: 4 }]}>
+                                  <MapPin size={11} color={colors.textSecondary} />
+                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
+                                    Room: {cls.room || 'TBA'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
                           </View>
-                        </View>
+                        ) : (
+                          <View 
+                            style={[
+                              styles.classCard, 
+                              { 
+                                padding: 18, 
+                                paddingLeft: 20,
+                                borderRadius: 24, 
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
+                                borderWidth: 1.2,
+                                backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                                marginBottom: 4,
+                                shadowColor: '#000000',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: isDark ? 0.12 : 0.05,
+                                shadowRadius: 8,
+                                elevation: 2,
+                                position: 'relative',
+                                overflow: 'hidden',
+                                flexDirection: 'row'
+                              }
+                            ]}
+                          >
+                            {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                            <View 
+                              style={{ 
+                                ...StyleSheet.absoluteFillObject, 
+                                backgroundColor: accentColor, 
+                                opacity: isDark ? 0.08 : 0.05,
+                                zIndex: -1 
+                              }} 
+                            />
+
+                            {/* Left Time Column */}
+                            <View style={styles.timeColumn}>
+                              <Text style={[styles.timeStart, { color: colors.text, fontWeight: '800' }]}>{startTime}</Text>
+                              <View style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)', marginVertical: 8 }]}>
+                                <View style={[styles.timeDot, { backgroundColor: accentColor, borderColor: isDark ? '#121418' : '#ffffff' }]} />
+                              </View>
+                              <View style={{ alignItems: 'center', marginTop: -2 }}>
+                                <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
+                                <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
+                              </View>
+                            </View>
+
+                            {/* Right Class Details Info */}
+                            <View style={styles.classInfo}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                                  <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 11 }]}>{cls.subjectCode}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: 6 }}>
+                                  <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: 'rgba(255, 149, 0, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                                    <Text style={[styles.practicalBadgeText, { color: '#FF9500', fontSize: 9, fontWeight: '800' }]}>MAKEUP</Text>
+                                  </View>
+                                  {cls.date && (
+                                    <View style={[styles.practicalBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                                      <Text style={[styles.practicalBadgeText, { color: colors.textSecondary, fontSize: 9, fontWeight: '800' }]}>{cls.date}</Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+
+                              <Text style={[styles.subjectName, { fontSize: 16, color: colors.text, fontWeight: '800', marginBottom: 12 }]}>{cls.subject}</Text>
+
+                              <View style={styles.badgeRow}>
+                                <View style={[styles.roomBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
+                                  <MapPin size={11} color={accentColor} />
+                                  <Text style={[styles.roomText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.room || 'TBA'}</Text>
+                                </View>
+                                <View style={[styles.typeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
+                                  <Tag size={11} color={accentColor} />
+                                  <Text style={[styles.typeText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.type}</Text>
+                                </View>
+                              </View>
+
+                              {cls.faculty ? (
+                                <View style={[styles.metaRow, { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: accentColor + '15', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                                    <User size={11} color={accentColor} />
+                                  </View>
+                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '700', fontSize: 12 }]} numberOfLines={1}>
+                                    {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+                        )}
                       </Animated.View>
                     );
                   })}
