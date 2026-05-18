@@ -181,35 +181,76 @@ export default function AttendanceScreen() {
               </View>
             </View>
             
-            <TouchableOpacity 
-              onPress={() => setShowAggregate(!showAggregate)}
-              style={[styles.toggleBtnCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
-            >
-              <Text style={[styles.toggleTextCompact, { color: colors.primary }]}>
-                {showAggregate ? 'Aggregate' : 'Raw'}
-              </Text>
-            </TouchableOpacity>
+<TouchableOpacity 
+  onPress={() => setShowAggregate(!showAggregate)}
+  style={[
+    styles.toggleBtnCompact, 
+    { 
+      backgroundColor: isDark ? 'rgba(0, 122, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', 
+      borderColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.18)', 
+      borderWidth: 1 
+    }
+  ]}
+>
+  <Text style={[styles.toggleTextCompact, { color: isDark ? '#FFFFFF' : colors.primary }]}>
+    {showAggregate ? 'Aggregate' : 'Raw'}
+  </Text>
+</TouchableOpacity>
           </View>
 
           <View style={styles.actionRowCompact}>
             <TouchableOpacity 
               onPress={() => setShowDatePicker(true)}
-              style={[styles.chipCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1.5 }]}
+              style={[
+                styles.chipCompact, 
+                { 
+                  backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                  borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                  borderWidth: 1.5 
+                }
+              ]}
             >
-              <Calendar size={12} color={colors.primary} />
+              <Calendar size={12} color={colors.textSecondary} />
               <Text style={[styles.chipTextCompact, { color: colors.text }]}>
                 End: {semesterEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </Text>
             </TouchableOpacity>
 
-            <View style={[styles.chipCompact, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1.5 }]}>
+            <View style={[
+              styles.chipCompact, 
+              { 
+                backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                borderWidth: 1.5 
+              }
+            ]}>
               <View style={styles.targetControlCompact}>
-                <TouchableOpacity onPress={() => changeTarget(-5)} style={styles.miniBtn}>
-                  <Minus size={12} color={colors.primary} />
+                <TouchableOpacity 
+                  onPress={() => changeTarget(-5)} 
+                  style={[
+                    styles.miniBtn,
+                    {
+                      backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.1)',
+                      borderWidth: 1
+                    }
+                  ]}
+                >
+                  <Minus size={12} color={colors.textSecondary} />
                 </TouchableOpacity>
                 <Text style={[styles.chipTextCompact, { color: colors.text }]}>Goal: {targetPct}%</Text>
-                <TouchableOpacity onPress={() => changeTarget(5)} style={styles.miniBtn}>
-                  <Plus size={12} color={colors.primary} />
+                <TouchableOpacity 
+                  onPress={() => changeTarget(5)} 
+                  style={[
+                    styles.miniBtn,
+                    {
+                      backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.1)',
+                      borderWidth: 1
+                    }
+                  ]}
+                >
+                  <Plus size={12} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -384,17 +425,35 @@ export default function AttendanceScreen() {
       {/* Simple Date Picker Modal */}
       <Modal visible={showDatePicker} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInUp} style={[styles.dateModal, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
+          <Animated.View 
+            entering={FadeInUp} 
+            style={[
+              styles.dateModal, 
+              { 
+                backgroundColor: isDark ? '#171A20' : '#FFFFFF', 
+                borderColor: colors.border, 
+                borderWidth: 1.5,
+                shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.18)'
+              }
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: colors.text }]}>Set Semester End Date</Text>
             <Text style={[styles.modalSub, { color: colors.textSecondary }]}>This helps predict your final attendance.</Text>
             
             <View style={styles.dateSelectorGrid}>
               {/* Day Selector */}
-              <View style={styles.dateSelectorRow}>
+              <View style={[styles.dateSelectorRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }]}>
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Day</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setDate(d.getDate() - 1);
@@ -405,7 +464,14 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.getDate()}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setDate(d.getDate() + 1);
@@ -418,11 +484,18 @@ export default function AttendanceScreen() {
               </View>
 
               {/* Month Selector */}
-              <View style={styles.dateSelectorRow}>
+              <View style={[styles.dateSelectorRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }]}>
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Month</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setMonth(d.getMonth() - 1);
@@ -433,7 +506,14 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.toLocaleDateString('en-US', { month: 'short' })}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setMonth(d.getMonth() + 1);
@@ -446,11 +526,18 @@ export default function AttendanceScreen() {
               </View>
 
               {/* Year Selector */}
-              <View style={styles.dateSelectorRow}>
+              <View style={[styles.dateSelectorRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }]}>
                 <Text style={[styles.dateSelectorLabel, { color: colors.textSecondary }]}>Year</Text>
                 <View style={styles.dateSelectorControls}>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setFullYear(d.getFullYear() - 1);
@@ -461,7 +548,14 @@ export default function AttendanceScreen() {
                   </TouchableOpacity>
                   <Text style={[styles.dateSegmentValue, { color: colors.text }]}>{semesterEndDate.getFullYear()}</Text>
                   <TouchableOpacity 
-                    style={[styles.dateSmallBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                    style={[
+                      styles.dateSmallBtn, 
+                      { 
+                        backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                        borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
+                        borderWidth: 1 
+                      }
+                    ]}
                     onPress={() => {
                       const d = new Date(semesterEndDate);
                       d.setFullYear(d.getFullYear() + 1);
@@ -500,11 +594,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     borderWidth: 1.5,
     overflow: 'hidden',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 12,
     zIndex: 5,
   },
   headerTopCompact: {
@@ -563,18 +652,14 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    justifyContent: 'center',
+    gap: 8,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
   chipTextCompact: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
   },
   syncingBadge: {
@@ -594,12 +679,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   miniBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   aggregateBadge: {
     paddingHorizontal: 8,
@@ -708,18 +792,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   miniBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 4,
   },
   syncingBadge: {
     paddingHorizontal: 6,
@@ -950,11 +1027,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    elevation: 3,
   },
   dateSegmentValue: {
     fontSize: 16,
@@ -1310,11 +1382,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1.5,
     overflow: 'hidden',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 28,
-    elevation: 10,
   },
   aggregateTitle: {
     fontSize: 18,

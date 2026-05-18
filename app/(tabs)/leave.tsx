@@ -80,7 +80,14 @@ export default function LeaveScreen() {
       {/* Hero Header - ANIMATED */}
       <Animated.View 
         entering={FadeInUp.delay(100).duration(800).springify()}
-        style={[styles.heroHeader, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[
+          styles.heroHeader, 
+          { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border,
+            shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.15)'
+          }
+        ]}
       >
         <View style={styles.heroContent}>
           <View>
@@ -92,23 +99,43 @@ export default function LeaveScreen() {
           </View>
         </View>
 
-        <View style={[styles.segmentedContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.segmentedContainer, { backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)' }]}>
           <TouchableOpacity
-            style={[styles.segmentItem, activeTab === 'APPLY' && { backgroundColor: colors.card }]}
+            style={[
+              styles.segmentItem, 
+              activeTab === 'APPLY' && { 
+                backgroundColor: isDark ? colors.card : '#FFFFFF',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0 : 0.08,
+                shadowRadius: 4,
+                elevation: isDark ? 0 : 2,
+              }
+            ]}
             onPress={() => setActiveTab('APPLY')}
           >
-            <Send size={16} color={activeTab === 'APPLY' ? colors.primary : colors.textSecondary} />
-            <Text style={[styles.segmentText, { color: activeTab === 'APPLY' ? colors.text : colors.textSecondary }]}>
+            <Send size={16} color={activeTab === 'APPLY' ? colors.primary : (isDark ? colors.textSecondary : '#555558')} />
+            <Text style={[styles.segmentText, { color: activeTab === 'APPLY' ? colors.text : (isDark ? colors.textSecondary : '#555558') }]}>
               Apply Leave
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentItem, activeTab === 'SLIP' && { backgroundColor: colors.card }]}
+            style={[
+              styles.segmentItem, 
+              activeTab === 'SLIP' && { 
+                backgroundColor: isDark ? colors.card : '#FFFFFF',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0 : 0.08,
+                shadowRadius: 4,
+                elevation: isDark ? 0 : 2,
+              }
+            ]}
             onPress={() => setActiveTab('SLIP')}
           >
-            <FileText size={16} color={activeTab === 'SLIP' ? colors.primary : colors.textSecondary} />
-            <Text style={[styles.segmentText, { color: activeTab === 'SLIP' ? colors.text : colors.textSecondary }]}>
+            <FileText size={16} color={activeTab === 'SLIP' ? colors.primary : (isDark ? colors.textSecondary : '#555558')} />
+            <Text style={[styles.segmentText, { color: activeTab === 'SLIP' ? colors.text : (isDark ? colors.textSecondary : '#555558') }]}>
               Leave Slip
             </Text>
           </TouchableOpacity>
@@ -181,11 +208,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderTopWidth: 0,
     overflow: 'hidden',
-    shadowColor: '#5856D6',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
     zIndex: 10,
   },
   heroContent: {
@@ -214,11 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
-    shadowColor: '#5856D6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 6,
   },
   segmentedContainer: {
     flexDirection: 'row',
@@ -227,11 +248,6 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1.5,
     overflow: 'hidden',
-    shadowColor: '#5856D6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 5,
   },
   segmentItem: {
     flex: 1,

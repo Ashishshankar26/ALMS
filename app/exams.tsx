@@ -50,7 +50,14 @@ export default function ExamsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: colors.card, 
+          borderBottomColor: colors.border,
+          shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.15)'
+        }
+      ]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -207,17 +214,14 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1.5,
-    borderBottomColor: '#C7C7CC',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#34C759',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
     zIndex: 5,
   },
   backBtn: { width: 44, height: 44, justifyContent: 'center' },

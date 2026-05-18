@@ -126,7 +126,14 @@ export default function TimetableScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View 
         entering={FadeInUp.delay(100).duration(800).springify()}
-        style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[
+          styles.header, 
+          { 
+            backgroundColor: colors.card, 
+            borderColor: colors.border,
+            shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.15)'
+          }
+        ]}
       >
         <View style={styles.headerTopCompact}>
           <View>
@@ -153,12 +160,23 @@ export default function TimetableScreen() {
               key={day}
               style={[
                 styles.dayButtonCompact, 
-                { backgroundColor: colors.surface, borderColor: colors.border },
-                activeDay === day && { backgroundColor: colors.primary, borderColor: colors.primary }
+                { 
+                  backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
+                  borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)' 
+                },
+                activeDay === day && { 
+                  backgroundColor: colors.primary, 
+                  borderColor: colors.primary,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.24,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }
               ]}
               onPress={() => setActiveDay(day)}
             >
-              <Text style={[styles.dayTextCompact, { color: colors.textSecondary }, activeDay === day && { color: '#fff' }]}>
+              <Text style={[styles.dayTextCompact, { color: activeDay === day ? '#fff' : (isDark ? colors.textSecondary : '#444446') }]}>
                 {day.substring(0, 3)}
               </Text>
             </TouchableOpacity>
@@ -396,11 +414,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderTopWidth: 0,
     overflow: 'hidden',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
     zIndex: 5,
   },
   headerTopCompact: {
@@ -452,12 +469,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 60,
-    borderWidth: 1.5,
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 3,
+    borderWidth: 1.2,
   },
   dayTextCompact: {
     fontSize: 13,
