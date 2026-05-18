@@ -346,12 +346,12 @@ export default function TimetableScreen() {
                             <View style={{ flex: 1, justifyContent: 'space-between' }}>
                               <View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                  <Text style={[styles.makeupDate, { color: colors.warning, fontSize: 10, fontWeight: '800', marginBottom: 0 }]} numberOfLines={1}>
-                                    {cls.date}
-                                  </Text>
                                   <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
                                     <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 9 }]}>{cls.subjectCode}</Text>
                                   </View>
+                                  <Text style={[styles.makeupDate, { color: colors.warning, fontSize: 10, fontWeight: '800', marginBottom: 0 }]} numberOfLines={1}>
+                                    {cls.date}
+                                  </Text>
                                 </View>
                                 <Text 
                                   style={[styles.subjectName, { color: colors.text, fontSize: 12, fontWeight: '800', lineHeight: 16, marginBottom: 0 }]}
@@ -360,18 +360,14 @@ export default function TimetableScreen() {
                                   {cls.subject}
                                 </Text>
                               </View>
-                              <View style={{ marginTop: 6 }}>
-                                <View style={[styles.metaRow, { marginBottom: 4, alignItems: 'center', gap: 4 }]}>
-                                  <Clock size={11} color={colors.textSecondary} />
-                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
-                                    {startTime}
-                                  </Text>
+                              <View style={{ marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                <View style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <Clock size={9} color={accentColor} />
+                                  <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 9 }}>{startTime}</Text>
                                 </View>
-                                <View style={[styles.metaRow, { alignItems: 'center', gap: 4 }]}>
-                                  <MapPin size={11} color={colors.textSecondary} />
-                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
-                                    Room: {cls.room || 'TBA'}
-                                  </Text>
+                                <View style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <MapPin size={9} color={accentColor} />
+                                  <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 9 }}>{cls.room || 'TBA'}</Text>
                                 </View>
                               </View>
                             </View>
