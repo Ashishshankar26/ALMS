@@ -588,8 +588,18 @@ export default function DashboardScreen() {
 
   const getMessageConfig = (title: string) => {
     const t = (title || "").toLowerCase();
-    if (t.includes('result') || t.includes('mark') || t.includes('grade'))
+    if (
+      t.includes('result') || t.includes('mark') || t.includes('grade') ||
+      t.includes('academic') || t.includes('course') || t.includes('class') ||
+      t.includes('syllabus') || t.includes('registration') || t.includes('timetable') ||
+      t.includes('time table') || t.includes('subject') || t.includes('evaluation') ||
+      t.includes('criteria') || t.includes('curriculum') || t.includes('lecture') ||
+      t.includes('practical') || t.includes('workshop') || t.includes('faculty') ||
+      t.includes('mentor') || t.includes('teacher') || t.includes('cse') ||
+      t.includes('ece') || t.includes('mec') || t.includes('mth') || t.includes('phy')
+    ) {
       return { color: '#34C759', label: 'ACADEMIC', icon: GraduationCap };
+    }
     if (t.includes('attendance') || t.includes('shortage') || t.includes('presents'))
       return { color: '#FF9500', label: 'ATTENDANCE', icon: UserCheck };
     if (t.includes('exam') || t.includes('date sheet') || t.includes('ca ') || t.includes('ete'))
