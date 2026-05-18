@@ -1573,9 +1573,37 @@ export default function DashboardScreen() {
                           const Icon = config.icon;
                           const cardTheme = getCardTheme(config.label);
 
-                          // Extract sender and clean subject title for hyper-minimalism
                           const titleParts = (item.title || "").split(/[-:]/);
-                          const rawSender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+
+                          // Extract sender from By/By: or split title
+                          const getSenderName = () => {
+                            const txt = (item.content || '') + ' ' + (item.title || '');
+                            
+                            // Check for explicit "By: Name" or "By Name" (case-insensitive)
+                            const byPatterns = [
+                              /\bBy\s*:\s*([A-Za-z\s\.\,\-\(\)]+)/i,
+                              /\bBy\s+([A-Za-z\s\.\,\-\(\)]+)/i
+                            ];
+
+                            for (const pattern of byPatterns) {
+                              const match = txt.match(pattern);
+                              if (match && match[1]) {
+                                const name = match[1].trim().split(/[\n\r]/)[0].trim();
+                                // Clean up trailing punctuation/unwanted tags
+                                const cleaned = name.replace(/[\:\-\.\,\s]+$/, '').trim();
+                                if (cleaned.length > 2 && 
+                                    !cleaned.toLowerCase().startsWith('http') &&
+                                    !['announcement', 'important', 'recently', 'today', 'notification'].some(w => cleaned.toLowerCase() === w)) {
+                                  return cleaned;
+                                }
+                              }
+                            }
+
+                            // Fallback to title parsing
+                            return titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+                          };
+
+                          const rawSender = getSenderName();
                           const sender = rawSender
                             .toLowerCase()
                             .replace('exmamination', 'examination')
