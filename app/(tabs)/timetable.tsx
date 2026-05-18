@@ -119,7 +119,7 @@ export default function TimetableScreen() {
     time: "10:00 AM - 11:50 AM",
     type: "Makeup",
     room: "28-101",
-    teacher: "Dr. Singh",
+    faculty: "Dr. Singh",
     isMakeup: true,
     date: "19-May-2026"
   });
@@ -146,7 +146,7 @@ export default function TimetableScreen() {
       time: "09:00 AM - 10:50 AM",
       type: "Lecture",
       room: "34-301",
-      teacher: "Dr. Puneet Kumar"
+      faculty: "Dr. Puneet Kumar"
     },
     {
       id: "d2",
@@ -155,7 +155,7 @@ export default function TimetableScreen() {
       time: "11:00 AM - 12:50 PM",
       type: "Practical",
       room: "34-211",
-      teacher: "Prof. Sharma"
+      faculty: "Prof. Sharma"
     },
     {
       id: "d3",
@@ -164,7 +164,7 @@ export default function TimetableScreen() {
       time: "02:00 PM - 02:50 PM",
       type: "Tutorial",
       room: "28-401",
-      teacher: "Dr. Anjali"
+      faculty: "Dr. Anjali"
     },
     {
       id: "d4",
@@ -173,7 +173,7 @@ export default function TimetableScreen() {
       time: "03:00 PM - 04:50 PM",
       type: "Adjustment",
       room: "34-101",
-      teacher: "Dr. Verma",
+      faculty: "Dr. Verma",
       isMakeup: true,
       date: "19-May-2026"
     }
