@@ -501,93 +501,181 @@ export default function AttendanceScreen() {
                 style={[
                   styles.attendanceWindow, 
                   { 
-                    backgroundColor: isDark ? '#111419' : '#FFFFFF', 
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    shadowColor: accent 
+                    backgroundColor: isDark ? '#12151B' : '#FFFFFF', 
+                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    borderWidth: 1.5,
+                    shadowColor: accent,
+                    padding: 0,
+                    position: 'relative',
+                    overflow: 'visible'
                   }
                 ]}
               >
-                <View style={styles.windowHero}>
-                  <View style={styles.windowTop}>
-                    <View style={[styles.subjectCodeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', borderWidth: 1 }]}>
-                      <Text style={[styles.subjectCode, { color: isDark ? '#A0AEC0' : '#4A5568', fontWeight: '800' }]}>{openedSubject.subjectCode}</Text>
+                {/* Top Border Accent Strip */}
+                <View style={{ height: 6, backgroundColor: accent, width: '100%' }} />
+
+                {/* Main Ticket Section */}
+                <View style={{ padding: 20, paddingBottom: 15 }}>
+                  {/* Passenger & Ticket Type Header Row */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1.2 }}>
+                      <Text style={{ color: '#FF4B4B', fontSize: 8, fontWeight: '900', letterSpacing: 1 }}>PASSENGER</Text>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800', marginTop: 2, textTransform: 'uppercase' }} numberOfLines={1}>
+                        {data.profile?.name || 'STUDENT PASSENGER'}
+                      </Text>
                     </View>
-                    <TouchableOpacity onPress={() => setSelectedSubject(null)} activeOpacity={0.8} style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: 'transparent' }]}>
-                      <X size={15} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.windowHeroRow}>
-                    <View style={styles.windowHeroCopy}>
-                      <Text style={[styles.windowSubject, { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: -0.3 }]} numberOfLines={2}>{openedSubject.subjectName}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
-                        <Text style={[styles.windowStatusText, { color: accent, fontSize: 10, fontWeight: '800', marginTop: 0 }]}>{status.text}</Text>
-                      </View>
+                    
+                    {/* Tiny Divider */}
+                    <View style={{ width: 1, height: 20, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', marginHorizontal: 8 }} />
+
+                    <View style={{ flex: 0.8, alignItems: 'flex-end' }}>
+                      <Text style={{ color: '#FF4B4B', fontSize: 8, fontWeight: '900', letterSpacing: 1 }}>DATE</Text>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800', marginTop: 2 }}>
+                        {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                      </Text>
                     </View>
-                    <Text style={[styles.windowPercent, { color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: -1 }]}>{effectivePct}%</Text>
                   </View>
-                  <View style={[styles.windowProgress, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', height: 5, borderRadius: 2.5, marginTop: 16 }]}>
-                    <View style={[styles.widgetProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: accent, borderRadius: 2.5 }]} />
+
+                  {/* Flight Destination Row (Subject Code -> Status) */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }}>
+                    <View style={{ flex: 4 }}>
+                      <Text style={{ color: '#FF4B4B', fontSize: 8, fontWeight: '900', letterSpacing: 0.8, marginBottom: 2 }}>ORIGIN (SUBJECT)</Text>
+                      <Text style={{ color: colors.text, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}>
+                        {openedSubject.subjectCode}
+                      </Text>
+                    </View>
+
+                    {/* Plane / Arrow Symbol in between */}
+                    <View style={{ flex: 2, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: accent, fontSize: 24, fontWeight: '900' }}>→</Text>
+                    </View>
+
+                    <View style={{ flex: 4, alignItems: 'flex-end' }}>
+                      <Text style={{ color: '#FF4B4B', fontSize: 8, fontWeight: '900', letterSpacing: 0.8, marginBottom: 2 }}>DESTINATION (STATUS)</Text>
+                      <Text style={{ color: accent, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}>
+                        {status.text}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Subject Title */}
+                  <Text style={{ color: colors.textSecondary, fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10, textAlign: 'center' }} numberOfLines={2}>
+                    {openedSubject.subjectName}
+                  </Text>
+
+                  {/* Barcode Section */}
+                  <View style={{ marginTop: 15, alignItems: 'center' }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '900', letterSpacing: 2, marginBottom: 4 }}>ATTENDANCE TICKET</Text>
+                    <View style={{ flexDirection: 'row', gap: 2, height: 24, alignItems: 'center', justifyContent: 'center' }}>
+                      {[1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2].map((w, idx) => (
+                        <View key={idx} style={{ width: w, height: '100%', backgroundColor: isDark ? '#FFFFFF' : '#000000', opacity: isDark ? 0.7 : 0.8 }} />
+                      ))}
+                    </View>
                   </View>
                 </View>
 
-                <View style={[styles.windowBody, { padding: 18, paddingTop: 10 }]}>
-                  {/* Section Label */}
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
-                    Class Statistics
+                {/* Perforation Line (Dashed Divider) with Left and Right punch-out stubs */}
+                <View style={{ position: 'relative', height: 24, justifyContent: 'center' }}>
+                  {/* Left punch-out cutout */}
+                  <View 
+                    style={{ 
+                      position: 'absolute', 
+                      left: -12, 
+                      width: 24, 
+                      height: 24, 
+                      borderRadius: 12, 
+                      backgroundColor: 'rgba(0,0,0,0.5)', 
+                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                      borderWidth: 1.5,
+                      zIndex: 10 
+                    }} 
+                  />
+                  {/* Right punch-out cutout */}
+                  <View 
+                    style={{ 
+                      position: 'absolute', 
+                      right: -12, 
+                      width: 24, 
+                      height: 24, 
+                      borderRadius: 12, 
+                      backgroundColor: 'rgba(0,0,0,0.5)', 
+                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                      borderWidth: 1.5,
+                      zIndex: 10 
+                    }} 
+                  />
+
+                  {/* Horizontal Perforation Dashed Line */}
+                  <View 
+                    style={{ 
+                      borderStyle: 'dashed', 
+                      borderTopWidth: 1.5, 
+                      borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', 
+                      marginHorizontal: 12 
+                    }} 
+                  />
+                </View>
+
+                {/* Stub Section / Ticket Footer */}
+                <View style={{ padding: 20, paddingTop: 5, paddingBottom: 20 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '900', color: '#FF4B4B', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
+                    FLIGHT STUB / PERFORMANCE DATA
                   </Text>
-                  
-                  <View style={styles.windowMetricGrid}>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.attendedClasses}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Attended</Text>
+
+                  {/* First row of stats: Attended, Delivered, Leaves */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>ATTENDED</Text>
+                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 2 }}>{openedSubject.attendedClasses}</Text>
                     </View>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.totalClasses}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Total</Text>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>DELIVERED</Text>
+                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 2 }}>{openedSubject.totalClasses}</Text>
                     </View>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.dutyLeaves || 0}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Duty Leaves</Text>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>DUTY LEAVE</Text>
+                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 2 }}>{openedSubject.dutyLeaves || 0}</Text>
                     </View>
                   </View>
 
-                  {/* Section Label */}
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase', marginTop: 12, marginBottom: 8 }}>
-                    Attendance Predictor
-                  </Text>
-
-                  <View style={[styles.compactForecastGrid, { gap: 8 }]}>
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <Target size={14} color={proj.isSafe ? '#34C759' : '#FF3B30'} />
+                  {/* Second row of stats: Missable, Skip 1, Forecast */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 14 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>MISSABLE</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 16, fontWeight: '900' }}>{proj.value}</Text>
                         {proj.isSafe && (
-                          <View style={{ backgroundColor: '#34C75915', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                            <Text style={{ color: '#34C759', fontSize: 7, fontWeight: '900' }}>SAFE</Text>
+                          <View style={{ backgroundColor: '#34C75915', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                            <Text style={{ color: '#34C759', fontSize: 6, fontWeight: '900' }}>OK</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{proj.value}</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Missable</Text>
                     </View>
-
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <AlertTriangle size={14} color={skipTodayPct < targetPct ? '#FF3B30' : '#34C759'} />
-                      </View>
-                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{skipTodayPct}%</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Skip 1 Class</Text>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>SKIP 1 CLASS</Text>
+                      <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{skipTodayPct}%</Text>
                     </View>
-
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <Award size={14} color={proj.forecast < targetPct ? '#FF3B30' : '#34C759'} />
-                      </View>
-                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{proj.forecast}%</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Term Forecast</Text>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 }}>TERM FORECAST</Text>
+                      <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{proj.forecast}%</Text>
                     </View>
                   </View>
                 </View>
+
+                {/* Close/Boarding Button at the bottom */}
+                <TouchableOpacity 
+                  onPress={() => setSelectedSubject(null)} 
+                  activeOpacity={0.9} 
+                  style={{ 
+                    backgroundColor: accent, 
+                    paddingVertical: 14, 
+                    borderBottomLeftRadius: 28, 
+                    borderBottomRightRadius: 28, 
+                    alignItems: 'center' 
+                  }}
+                >
+                  <Text style={{ color: '#000000', fontWeight: '900', fontSize: 12, letterSpacing: 2 }}>DISMISS BOARDING PASS</Text>
+                </TouchableOpacity>
               </Animated.View>
             );
           })() : null}
