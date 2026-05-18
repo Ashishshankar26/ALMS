@@ -111,32 +111,6 @@ export default function TimetableScreen() {
     });
   }
 
-  // INJECT DUMMY MAKEUP CLASS FOR PREVIEW
-  makeupClasses.push(
-    {
-      id: "m1",
-      subjectCode: "MTH101",
-      subject: "ADVANCED CALCULUS AND DIFFERENTIAL EQUATIONS",
-      time: "10:00 AM - 11:50 AM",
-      type: "Makeup",
-      room: "28-101",
-      faculty: "Dr. Singh",
-      isMakeup: true,
-      date: "19-May-2026"
-    },
-    {
-      id: "m2",
-      subjectCode: "PHY105",
-      subject: "MODERN PHYSICS AND QUANTUM MECHANICS",
-      time: "12:00 PM - 01:50 PM",
-      type: "Makeup",
-      room: "34-402",
-      faculty: "Dr. Sharma",
-      isMakeup: true,
-      date: "19-May-2026"
-    }
-  );
-
   let classesForDay = timetable[activeDay] || [];
 
   // Saturday Filtering Logic
@@ -149,48 +123,6 @@ export default function TimetableScreen() {
       return !isProjectWork && (cls.isMakeup || cls.type?.toLowerCase().includes('makeup') || cls.date);
     });
   }
-
-  // INJECT DUMMY CARDS FOR PREVIEW (Lecture, Practical, Tutorial, Makeup)
-  classesForDay = [
-    {
-      id: "d1",
-      subjectCode: "CSE310",
-      subject: "OBJECT ORIENTED PROGRAMMING USING JAVA",
-      time: "09:00 AM - 10:50 AM",
-      type: "Lecture",
-      room: "34-301",
-      faculty: "Dr. Puneet Kumar"
-    },
-    {
-      id: "d2",
-      subjectCode: "CSE101",
-      subject: "DATA COMMUNICATION AND COMPUTER NETWORKS",
-      time: "11:00 AM - 12:50 PM",
-      type: "Practical",
-      room: "34-211",
-      faculty: "Prof. Sharma"
-    },
-    {
-      id: "d3",
-      subjectCode: "INT428",
-      subject: "INTRODUCTION TO ARTIFICIAL INTELLIGENCE AND EXPERT SYSTEMS",
-      time: "02:00 PM - 02:50 PM",
-      type: "Tutorial",
-      room: "28-401",
-      faculty: "Dr. Anjali"
-    },
-    {
-      id: "d4",
-      subjectCode: "CSE320",
-      subject: "SOFTWARE ENGINEERING AND PROJECT MANAGEMENT",
-      time: "03:00 PM - 04:50 PM",
-      type: "Adjustment",
-      room: "34-101",
-      faculty: "Dr. Verma",
-      isMakeup: true,
-      date: "19-May-2026"
-    }
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
