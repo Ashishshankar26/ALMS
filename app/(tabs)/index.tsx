@@ -109,57 +109,41 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const cards = [
     {
       key: 'fee',
-      color: isDark ? '#0E0C15' : '#F3E8FF',
-      gradient: isDark ? ['#1A1725', '#0E0C15'] : ['#FAF5FF', '#F3E8FF'],
+      color: '#4A1D5B',
+      gradient: ['#4A1D5B', '#2D1237'],
       render: (borderStyle?: any) => {
         const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
         const isClear = feeVal === 0;
         const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
-        const accentColor = '#AF52DE';
-        const textColor = isDark ? '#FFFFFF' : '#4B1A6A';
-        const subTextColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(75,26,106,0.6)';
-
         return (
-          <CardGradient 
-            id="grad_fee" 
-            colors={isDark ? ['#1A1725', '#0E0C15'] : ['#FAF5FF', '#F3E8FF']} 
-            style={[styles.stackCardInner, { borderLeftWidth: 6, borderLeftColor: accentColor }]} 
-            borderStyle={borderStyle}
-          >
-            <View style={[styles.stackHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]} />
-            
-            {/* Soft Glass Icon Badge */}
-            <View style={[styles.stackGlassIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-               <FileText size={20} color={accentColor} />
+          <CardGradient id="grad_fee" colors={['#4A1D5B', '#2D1237']} style={styles.stackCardInner} borderStyle={borderStyle}>
+            <View style={styles.stackHandle} />
+            <View style={styles.stackGlassIcon}>
+               <FileText size={20} color="#fff" />
             </View>
-
-            <TouchableOpacity 
-              style={[styles.stackFab, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]} 
-              onPress={onFeePress}
-            >
-              <ChevronRight size={18} color={accentColor} />
+            <TouchableOpacity style={styles.stackFab} onPress={onFeePress}>
+              <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 69, 58, 0.15)' }]}>
-                  <Text style={[styles.miniStatusText, { color: isClear ? '#34C759' : '#FF453A', fontWeight: '800' }]}>{isClear ? 'CLEAR' : 'DUE'}</Text>
+                <View style={[styles.miniStatusBadge, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 69, 58, 0.2)' }]}>
+                  <Text style={[styles.miniStatusText, { color: isClear ? '#34C759' : '#FF453A' }]}>{isClear ? 'CLEAR' : 'DUE'}</Text>
                 </View>
-                <Text style={[styles.stackLabelWhite, { color: accentColor, fontWeight: '800', letterSpacing: 0.6 }]}>FINANCIAL SUMMARY</Text>
+                <Text style={styles.stackLabelWhite}>FINANCIAL SUMMARY</Text>
               </View>
-              <Text style={[styles.stackSubWhite, { color: subTextColor, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                 Academic Session 2024-25
               </Text>
-              <Text style={[styles.stackBigValue, { color: textColor, fontWeight: '800', fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
+              <Text style={[styles.stackBigValue, { fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <FileText size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{isClear ? 'All Clear' : 'Outstanding'}</Text>
+                  <FileText size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{isClear ? 'All Clear' : 'Outstanding'}</Text>
                 </View>
-                <View style={{ width: 1, height: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }} />
+                <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
-                  <Wifi size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>Live Sync</Text>
+                  <Wifi size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>Live Sync</Text>
                 </View>
               </View>
             </View>
@@ -169,60 +153,45 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'library',
-      color: isDark ? '#140E05' : '#FEF3C7',
-      gradient: isDark ? ['#241D12', '#140E05'] : ['#FFFBEB', '#FEF3C7'],
+      color: '#F7CE5B',
+      gradient: ['#F7CE5B', '#F1C40F'],
       render: (borderStyle?: any) => {
         const booking = data.roomBooking;
         const hour = new Date().getHours();
         const isOpen = hour >= 8 && hour < 21;
-        const accentColor = '#FF9500';
-        const textColor = isDark ? '#FFFFFF' : '#613B00';
-        const subTextColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(97,59,0,0.6)';
-
         return (
-          <CardGradient 
-            id="grad_lib" 
-            colors={isDark ? ['#241D12', '#140E05'] : ['#FFFBEB', '#FEF3C7']} 
-            style={[styles.stackCardInner, { borderLeftWidth: 6, borderLeftColor: accentColor }]} 
-            borderStyle={borderStyle}
-          >
-            <View style={[styles.stackHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]} />
-            
-            <View style={[styles.stackGlassIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-               <BookOpen size={20} color={accentColor} />
+          <CardGradient id="grad_lib" colors={['#F7CE5B', '#F1C40F']} style={styles.stackCardInner} borderStyle={borderStyle}>
+            <View style={styles.stackHandleLight} />
+            <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
+               <BookOpen size={20} color="#000" />
             </View>
-
-            <TouchableOpacity 
-              style={[styles.stackFab, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]} 
-              onPress={onLibraryPress}
-            >
-              <ChevronRight size={18} color={accentColor} />
+            <TouchableOpacity style={[styles.stackFab, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
+              <ChevronRight size={18} color="#000" />
             </TouchableOpacity>
-
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(255, 149, 0, 0.15)' : (isOpen ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 69, 58, 0.15)') }]}>
-                  <Text style={[styles.miniStatusText, { color: booking ? '#FF9500' : (isOpen ? '#34C759' : '#FF453A'), fontWeight: '800' }]}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(0, 0, 0, 0.1)' : (isOpen ? 'rgba(39, 174, 96, 0.15)' : 'rgba(231, 76, 60, 0.15)') }]}>
+                  <Text style={[styles.miniStatusText, { color: booking ? '#000' : (isOpen ? '#1E8449' : '#C0392B') }]}>
                     {booking ? 'BOOKED' : (isOpen ? 'OPEN' : 'CLOSED')}
                   </Text>
                 </View>
-                <Text style={[styles.stackLabelWhite, { color: accentColor, fontWeight: '800', letterSpacing: 0.6 }]}>ROOM & LIBRARY</Text>
+                <Text style={[styles.stackLabelWhite, { color: 'rgba(0,0,0,0.5)' }]}>ROOM & LIBRARY</Text>
               </View>
-              <Text style={[styles.stackSubWhite, { color: subTextColor, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+              <Text style={[styles.stackSubWhite, { color: 'rgba(0,0,0,0.7)', fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                 {booking ? 'Active Reservation' : 'Resource Hub Availability'}
               </Text>
-              <Text style={[styles.stackBigValue, { color: textColor, fontWeight: '800', fontSize: (booking?.room || 'Library Booking').length > 15 ? 24 : 32 }]}>
+              <Text style={[styles.stackBigValue, { color: '#000', fontSize: (booking?.room || 'Library Booking').length > 15 ? 24 : 32 }]}>
                 {booking ? booking.room : 'Library Booking'}
               </Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <Clock size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
+                  <Clock size={11} color="#000" style={{ opacity: 0.6 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.slot : (isOpen ? 'Till 9 PM' : 'Opens 8 AM')}</Text>
                 </View>
-                <View style={{ width: 1, height: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }} />
+                <View style={styles.footerInfoSeparatorBlack} />
                 <View style={styles.footerInfoItem}>
-                  <Calendar size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{booking ? booking.date : 'Standard Access'}</Text>
+                  <Calendar size={11} color="#000" style={{ opacity: 0.6 }} />
+                  <Text style={[styles.stackSubBlack]}>{booking ? booking.date : 'Standard Access'}</Text>
                 </View>
               </View>
             </View>
@@ -232,56 +201,42 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'exams',
-      color: isDark ? '#08120C' : '#DCFCE7',
-      gradient: isDark ? ['#102217', '#08120C'] : ['#F0FDF4', '#DCFCE7'],
+      color: '#3DBE6B',
+      gradient: ['#3DBE6B', '#27AE60'],
       render: (borderStyle?: any) => {
         const subjectName = nextExam ? (data.attendance?.find((a: any) => a.subjectCode.includes(nextExam.subjectCode))?.subjectName || nextExam.subject) : 'EXAMS';
-        const accentColor = '#34C759';
-        const textColor = isDark ? '#FFFFFF' : '#0E4420';
-        const subTextColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(14,68,32,0.6)';
-
         return (
-          <CardGradient 
-            id="grad_exams" 
-            colors={isDark ? ['#102217', '#08120C'] : ['#F0FDF4', '#DCFCE7']} 
-            style={[styles.stackCardInner, { borderLeftWidth: 6, borderLeftColor: accentColor }]} 
-            borderStyle={borderStyle}
-          >
-            <View style={[styles.stackHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]} />
-            
-            <View style={[styles.stackGlassIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-               <Award size={20} color={accentColor} />
+          <CardGradient id="grad_exams" colors={['#3DBE6B', '#27AE60']} style={styles.stackCardInner} borderStyle={borderStyle}>
+            <View style={styles.stackHandle} />
+            <View style={styles.stackGlassIcon}>
+               <Award size={20} color="#fff" />
             </View>
-
-            <TouchableOpacity 
-              style={[styles.stackFab, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]} 
-              onPress={onExamsPress}
-            >
-              <ChevronRight size={18} color={accentColor} />
+            <TouchableOpacity style={styles.stackFab} onPress={onExamsPress}>
+              <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: nextExam ? 'rgba(52, 199, 89, 0.15)' : 'rgba(142, 142, 147, 0.15)' }]}>
-                  <Text style={[styles.miniStatusText, { color: nextExam ? '#34C759' : '#8E8E93', fontWeight: '800' }]}>{nextExam ? 'UPCOMING' : 'SYNCED'}</Text>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Clock size={10} color="#FFFFFF" />
+                  <Text style={[styles.miniStatusText, { color: '#FFFFFF' }]}>{nextExam ? 'UPCOMING' : 'SYNC'}</Text>
                 </View>
-                <Text style={[styles.stackLabelWhite, { color: accentColor, fontWeight: '800', letterSpacing: 0.6 }]}>EXAMINATION HUB</Text>
+                <Text style={styles.stackLabelWhite}>EXAMINATION HUB</Text>
               </View>
               {nextExam?.subjectCode && (
-                <Text style={[styles.stackSubWhite, { color: subTextColor, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                   {nextExam.subjectCode}
                 </Text>
               )}
-              <Text style={[styles.stackBigValue, { color: textColor, fontWeight: '800', fontSize: subjectName.length > 15 ? 24 : 32 }]}>{subjectName}</Text>
+              <Text style={[styles.stackBigValue, { fontSize: subjectName.length > 15 ? 24 : 32 }]}>{subjectName}</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <MapPin size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{nextExam ? nextExam.room : 'Schedule'}</Text>
+                  <MapPin size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.room : 'Schedule'}</Text>
                 </View>
-                <View style={{ width: 1, height: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }} />
+                <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
-                  <Layers size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{nextExam ? nextExam.date : 'Seating'}</Text>
+                  <Layers size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{nextExam ? nextExam.date : 'Seating'}</Text>
                 </View>
               </View>
             </View>
@@ -291,60 +246,47 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'attendance',
-      color: isDark ? '#140A0B' : '#FEE2E2',
-      gradient: isDark ? ['#261517', '#140A0B'] : ['#FFF5F5', '#FEE2E2'],
+      color: '#FF7E82',
+      gradient: ['#FF7E82', '#F43F5E'],
       render: (borderStyle?: any) => {
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
         const totalPresent = attendedClasses + dutyLeaves;
+
         const attVal = parseFloat(data.overallAttendance);
-        const accentColor = '#FF2D55';
-        const textColor = isDark ? '#FFFFFF' : '#6F0D1C';
-        const subTextColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(111,13,28,0.6)';
-
         return (
-          <CardGradient 
-            id="grad_att" 
-            colors={isDark ? ['#261517', '#140A0B'] : ['#FFF5F5', '#FEE2E2']} 
-            style={[styles.stackCardInner, { borderLeftWidth: 6, borderLeftColor: accentColor }]} 
-            borderStyle={borderStyle}
-          >
-            <View style={[styles.stackHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]} />
-            
-            <View style={[styles.stackGlassIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-               <UserCheck size={20} color={accentColor} />
+          <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
+            <View style={styles.stackHandle} />
+            <View style={styles.stackGlassIcon}>
+               <UserCheck size={20} color="#fff" />
             </View>
-
-            <TouchableOpacity 
-              style={[styles.stackFab, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]} 
-              onPress={() => router.push('/attendance' as any)}
-            >
-              <ChevronRight size={18} color={accentColor} />
+            <TouchableOpacity style={styles.stackFab} onPress={() => router.push('/attendance' as any)}>
+              <ChevronRight size={18} color="#fff" />
             </TouchableOpacity>
-
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
-                <View style={[styles.miniStatusBadge, { backgroundColor: attVal >= 80 ? 'rgba(52, 199, 89, 0.15)' : (attVal >= 75 ? 'rgba(255, 149, 0, 0.15)' : 'rgba(255, 59, 48, 0.15)') }]}>
-                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#34C759' : (attVal >= 75 ? '#FF9500' : '#FF3B30'), fontWeight: '800' }]}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.9)', paddingHorizontal: 10, paddingVertical: 4 }]}>
+                  <CheckCircle2 size={11} color={attVal >= 80 ? '#27AE60' : (attVal >= 75 ? '#F39C12' : '#E74C3C')} />
+                  <Text style={[styles.miniStatusText, { color: attVal >= 80 ? '#27AE60' : (attVal >= 75 ? '#F39C12' : '#E74C3C'), fontWeight: '900' }]}>
                     {attVal >= 80 ? 'SAFE' : (attVal >= 75 ? 'WARNING' : 'CRITICAL')}
                   </Text>
                 </View>
-                <Text style={[styles.stackLabelWhite, { color: accentColor, fontWeight: '800', letterSpacing: 0.6 }]}>ACADEMIC ATTENDANCE</Text>
+                <Text style={styles.stackLabelWhite}>ACADEMIC ATTENDANCE</Text>
               </View>
-              <Text style={[styles.stackSubWhite, { color: subTextColor, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+              <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                 Live Attendance Tracking
               </Text>
-              <Text style={[styles.stackBigValue, { color: textColor, fontWeight: '800' }]}>{data.overallAttendance}%</Text>
+              <Text style={styles.stackBigValue}>{data.overallAttendance}%</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
-                  <UserCheck size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>{totalPresent}/{totalClasses} Total</Text>
+                  <UserCheck size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>{totalPresent}/{totalClasses} Total</Text>
                 </View>
-                <View style={{ width: 1, height: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }} />
+                <View style={styles.footerInfoSeparator} />
                 <View style={styles.footerInfoItem}>
-                  <Award size={11} color={accentColor} style={{ opacity: 0.8 }} />
-                  <Text style={[styles.stackSubWhite, { color: subTextColor }]}>DLs: {dutyLeaves}</Text>
+                  <Award size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={[styles.stackSubWhite]}>DLs: {dutyLeaves}</Text>
                 </View>
               </View>
             </View>
@@ -386,17 +328,10 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         });
 
         const borderStyle = {
-          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+          borderColor: card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
           borderWidth: 1.5,
           borderRadius: 32,
         };
-
-        const peekColor = isDark ? '#fff' : (
-          card.key === 'fee' ? '#4B1A6A' :
-          card.key === 'library' ? '#613B00' :
-          card.key === 'exams' ? '#0E4420' :
-          '#6F0D1C'
-        );
 
         return (
           <RNAnimated.View
@@ -411,8 +346,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                   { translateY: isTop ? translateY : RNAnimated.add(-offsetY, backCardShift) },
                   { rotateZ: isTop ? rotate : '0deg' },
                 ],
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                borderWidth: 1.5,
+                borderColor: isTop ? 'transparent' : (card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)'),
+                borderWidth: isTop ? 0 : 1.5,
                 opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
                 // Add a dynamic shadow for the top card
                 shadowOpacity: isTop ? translateY.interpolate({
@@ -425,8 +360,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             {depth > 0 && (
               <View style={styles.stackPeekLayer}>
                 <View style={styles.stackPeekBadge}>
-                  <Lock size={12} color={peekColor} />
-                  <Text style={[styles.stackPeekText, { color: peekColor }]}>
+                  <Lock size={12} color="#fff" />
+                  <Text style={styles.stackPeekText}>
                     {card.key === 'fee' ? 'FEES' : card.key === 'exams' ? 'EXAMS' : card.key === 'attendance' ? 'ATTENDANCE' : 'LIBRARY'}
                   </Text>
                 </View>
@@ -1142,26 +1077,21 @@ export default function DashboardScreen() {
             onPress={() => router.push('/results')}
             activeOpacity={0.9}
           >
-            <View style={[styles.gridCardShadow, { backgroundColor: isDark ? '#0E0C15' : '#F3E8FF', height: 154 }]}>
-              <CardGradient 
-                id="grad_perf" 
-                colors={isDark ? ['#1A1725', '#0E0C15'] : ['#FAF5FF', '#F3E8FF']} 
-                style={[styles.gridCardInner, { height: 154, borderLeftWidth: 6, borderLeftColor: '#AF52DE' }]} 
-                borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }}
-              >
+            <View style={[styles.gridCardShadow, { backgroundColor: getUserGradient(userColor)[0] }]}>
+              <CardGradient id="grad_perf" colors={getUserGradient(userColor)} style={[styles.gridCardInner, { height: 154 }]} borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}>
-                     <Award size={14} color="#AF52DE" />
+                  <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
+                     <Award size={16} color="#fff" />
                   </View>
-                  <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(175, 82, 222, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
-                    <Text style={[styles.miniStatusText, { color: '#AF52DE', fontSize: 9, fontWeight: '900' }]}>CGPA</Text>
+                  <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                    <Text style={[styles.miniStatusText, { color: '#fff', fontSize: 9, fontWeight: '900' }]}>CGPA</Text>
                   </View>
                 </View>
                 <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
-                  <Text style={[styles.stackLabelWhite, { color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(75,26,106,0.6)', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 }]}>ACADEMICS</Text>
-                  <Text style={[styles.stackBigValue, { color: isDark ? '#FFFFFF' : '#4B1A6A', fontSize: 34, marginBottom: 8, lineHeight: 38, fontWeight: '800' }]}>{data.cgpa || '0.00'}</Text>
-                  <View style={[styles.miniProgress, { width: '100%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
-                    <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#AF52DE' }]} />
+                  <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ACADEMICS</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{data.cgpa || '0.00'}</Text>
+                  <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <View style={[styles.miniProgressBar, { width: `${(parseFloat(data.cgpa || '0') / 10) * 100}%`, backgroundColor: '#fff' }]} />
                   </View>
                 </View>
               </CardGradient>
@@ -1173,46 +1103,36 @@ export default function DashboardScreen() {
             onPress={() => router.push('/attendance')}
             activeOpacity={0.9}
           >
-            {(() => {
-              const attFloat = parseFloat(overallAttendance);
-              const isSafe = attFloat >= 80;
-              const isWarning = attFloat >= 75 && attFloat < 80;
-              
-              const accentColor = isSafe ? '#34C759' : (isWarning ? '#FF9500' : '#FF2D55');
-              const cardBg = isDark ? (isSafe ? '#08120C' : (isWarning ? '#140E05' : '#140A0B')) : (isSafe ? '#F0FDF4' : (isWarning ? '#FFFBEB' : '#FFF5F5'));
-              const gradientColors = isDark ? (isSafe ? ['#102217', '#08120C'] : (isWarning ? ['#241D12', '#140E05'] : ['#261517', '#140A0B'])) : (isSafe ? ['#F0FDF4', '#DCFCE7'] : (isWarning ? ['#FFFBEB', '#FEF3C7'] : ['#FFF5F5', '#FEE2E2']));
-              const textColor = isDark ? '#FFFFFF' : (isSafe ? '#0E4420' : (isWarning ? '#613B00' : '#6F0D1C'));
-              const subTextColor = isDark ? 'rgba(255,255,255,0.5)' : (isSafe ? 'rgba(14,68,32,0.6)' : (isWarning ? 'rgba(97,59,0,0.6)' : 'rgba(111,13,28,0.6)'));
-
-              return (
-                <View style={[styles.gridCardShadow, { backgroundColor: cardBg, height: 154 }]}>
-                  <CardGradient
-                    id="grad_grid_att"
-                    colors={gradientColors}
-                    style={[styles.gridCardInner, { height: 154, borderLeftWidth: 6, borderLeftColor: accentColor }]}
-                    borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}>
-                         <CheckCircle2 size={14} color={accentColor} />
-                      </View>
-                      <View style={[styles.miniStatusBadge, { backgroundColor: accentColor + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
-                        <Text style={[styles.miniStatusText, { color: accentColor, fontSize: 9, fontWeight: '900' }]}>
-                          {isSafe ? 'SAFE' : (isWarning ? 'WARNING' : 'CRITICAL')}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
-                      <Text style={[styles.stackLabelWhite, { color: subTextColor, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE</Text>
-                      <Text style={[styles.stackBigValue, { color: textColor, fontSize: 34, marginBottom: 8, lineHeight: 38, fontWeight: '800' }]}>{overallAttendance}%</Text>
-                      <View style={[styles.miniProgress, { width: '100%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
-                        <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: accentColor }]} />
-                      </View>
-                    </View>
-                  </CardGradient>
+            <View style={[styles.gridCardShadow, { backgroundColor: parseFloat(overallAttendance) >= 80 ? '#3DBE6B' : (parseFloat(overallAttendance) >= 75 ? '#FFAE33' : '#FF6259'), height: 154 }]}>
+              <CardGradient
+                id="grad_grid_att"
+                colors={
+                  parseFloat(overallAttendance) >= 80
+                    ? ['#3DBE6B', '#1E7C41']
+                    : (parseFloat(overallAttendance) >= 75 ? ['#FFAE33', '#D35400'] : ['#FF6259', '#B71C1C'])
+                }
+                style={[styles.gridCardInner, { height: 154 }]}
+                borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.12)' }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <View style={[styles.stackGlassIcon, { marginBottom: 0, width: 34, height: 34, borderRadius: 17 }]}>
+                     <CheckCircle2 size={16} color="#fff" />
+                  </View>
+                  <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                    <Text style={[styles.miniStatusText, { color: parseFloat(overallAttendance) >= 80 ? '#27AE60' : (parseFloat(overallAttendance) >= 75 ? '#F39C12' : '#E74C3C'), fontSize: 9, fontWeight: '900' }]}>
+                      {parseFloat(overallAttendance) >= 80 ? 'SAFE' : (parseFloat(overallAttendance) >= 75 ? 'WARNING' : 'CRITICAL')}
+                    </Text>
+                  </View>
                 </View>
-              );
-            })()}
+                <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
+                  <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE</Text>
+                  <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{overallAttendance}%</Text>
+                  <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                  </View>
+                </View>
+              </CardGradient>
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
@@ -1220,38 +1140,38 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
           {nextClassInfo.status === 'upcoming' ? (
-            <View style={[styles.nextClassCardShadow, { backgroundColor: isDark ? '#09101E' : '#DBEAFE', borderRadius: 24, overflow: 'hidden' }]}>
+            <View style={[styles.nextClassCardShadow, { backgroundColor: '#1D4ED8', borderRadius: 24, overflow: 'hidden' }]}>
               <CardGradient
                 id="grad_next_class"
-                colors={isDark ? ['#121E36', '#09101E'] : ['#EFF6FF', '#DBEAFE']}
-                style={[styles.nextClassCardInner, { borderLeftWidth: 6, borderLeftColor: '#007AFF' }]}
-                borderStyle={{ borderWidth: 1.5, borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }}
+                colors={['#1D4ED8', '#6D28D9']}
+                style={styles.nextClassCardInner}
+                borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)' }}
               >
-                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 122, 255, 0.03)', width: 120, height: 120, borderRadius: 60 }]} />
+                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 120, height: 120, borderRadius: 60 }]} />
                 <View style={styles.nextClassHeader}>
-                  <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 122, 255, 0.08)', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,122,255,0.1)', flexDirection: 'row', alignItems: 'center' }]}>
-                    <Clock size={12} color="#007AFF" />
-                    <Text style={[styles.timeText, { color: '#007AFF', fontWeight: '800' }]}>{nextClassInfo.time}</Text>
+                  <View style={[styles.timeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', flexDirection: 'row', alignItems: 'center' }]}>
+                    <Clock size={12} color="#ffffff" />
+                    <Text style={[styles.timeText, { color: '#ffffff' }]}>{nextClassInfo.time}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={[styles.pulseDot, { backgroundColor: '#007AFF' }]} />
-                    <View style={[styles.typeBadgeWidget, { backgroundColor: 'rgba(0, 122, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0,122,255,0.15)' }]}>
-                      <Text style={[styles.typeTextWidget, { color: '#007AFF', fontWeight: '800' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+                    <View style={[styles.pulseDot, { backgroundColor: '#ffffff' }]} />
+                    <View style={[styles.typeBadgeWidget, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <Text style={[styles.typeTextWidget, { color: '#ffffff', fontWeight: '800' }]}>{nextClassInfo.type.toUpperCase()}</Text>
                     </View>
                   </View>
                 </View>
 
-                <Text style={[styles.subjectText, { color: isDark ? '#ffffff' : '#0F2D59', fontWeight: '800' }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
+                <Text style={[styles.subjectText, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
 
-                <View style={[styles.nextClassFooter, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                <View style={[styles.nextClassFooter, { borderTopColor: 'rgba(255, 255, 255, 0.2)' }]}>
                   <View style={styles.footerItem}>
-                    <Tag size={12} color={isDark ? 'rgba(255, 255, 255, 0.6)' : '#007AFF'} style={{ opacity: 0.8 }} />
-                    <Text style={[styles.footerText, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : '#007AFF', fontWeight: '600' }]}>{nextClassInfo.subjectCode}</Text>
+                    <Tag size={12} color="rgba(255, 255, 255, 0.85)" />
+                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.subjectCode}</Text>
                   </View>
-                  <View style={[styles.footerDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]} />
+                  <View style={[styles.footerDivider, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]} />
                   <View style={styles.footerItem}>
-                    <MapPin size={12} color={isDark ? 'rgba(255, 255, 255, 0.6)' : '#007AFF'} style={{ opacity: 0.8 }} />
-                    <Text style={[styles.footerText, { color: isDark ? 'rgba(255, 255, 255, 0.6)' : '#007AFF', fontWeight: '600' }]}>{nextClassInfo.room}</Text>
+                    <MapPin size={12} color="rgba(255, 255, 255, 0.85)" />
+                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.room}</Text>
                   </View>
                 </View>
               </CardGradient>
@@ -1603,22 +1523,32 @@ export default function DashboardScreen() {
                           style={[
                             {
                               borderRadius: 24,
-                              borderWidth: 1.5,
+                              borderWidth: 1.2,
                               marginBottom: 12,
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 6 },
-                              shadowOpacity: isDark ? 0.12 : 0.04,
-                              shadowRadius: 12,
+                              shadowColor: '#000000',
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: isDark ? 0.12 : 0.05,
+                              shadowRadius: 8,
                               elevation: 2,
                               overflow: 'hidden',
                               position: 'relative',
                             },
                             {
-                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#ffffff',
-                              borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+                              backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                             }
                           ]}
                         >
+                          {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                          <View 
+                            style={{ 
+                              ...StyleSheet.absoluteFillObject, 
+                              backgroundColor: config.color, 
+                              opacity: isDark ? 0.06 : 0.04,
+                              zIndex: -1 
+                            }} 
+                          />
+
                           {/* Glowing Accent Indicator Left Border */}
                           <View 
                             style={{ 
