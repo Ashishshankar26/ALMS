@@ -1920,94 +1920,38 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-            {/* Modal for Profile Options */}
+      {/* Modal for Profile Options */}
       <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
         <TouchableOpacity
           style={styles.profileModalOverlay}
           activeOpacity={1}
           onPress={() => setShowProfileMenu(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-            <View 
-              style={[
-                styles.profileMenuContent, 
-                { 
-                  backgroundColor: isDark ? '#191D24' : '#FFFFFF', 
-                  borderColor: isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.06)',
-                  borderWidth: 1.5,
-                  width: 290,
-                  borderRadius: 22,
-                  padding: 10,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 12 },
-                  shadowOpacity: isDark ? 0.4 : 0.08,
-                  shadowRadius: 24,
-                  elevation: 12,
-                }
-              ]}
-            >
-              {/* Header */}
-              <View style={[styles.profileMenuHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomWidth: 1.5, paddingBottom: 12, marginBottom: 8 }]}>
-                <Text style={[styles.profileMenuTitle, { color: colors.text, fontSize: 15, fontWeight: '800', textAlign: 'center', letterSpacing: 0.2 }]}>Account Settings</Text>
-              </View>
-
-              {/* Action 1: Change Password */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('frmchangepassword.aspx', 'Change Password'); }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <Lock size={15} color="#007AFF" />
-                  </View>
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
-                </View>
-                <ChevronRight size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Action 2: Wifi Password */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('frmAdPassword.aspx', 'Wifi Password'); }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: isDark ? 'rgba(88,86,214,0.15)' : 'rgba(88,86,214,0.08)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <Wifi size={15} color="#5856D6" />
-                  </View>
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
-                </View>
-                <ChevronRight size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Action 3: Profile Update */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update'); }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(52,199,89,0.08)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <UserCheck size={15} color="#34C759" />
-                  </View>
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
-                </View>
-                <ChevronRight size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Action 4: Sign Out */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomWidth: 0 }]} 
-                onPress={() => { setShowProfileMenu(false); logout(); }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: isDark ? 'rgba(255,59,48,0.15)' : 'rgba(255,59,48,0.08)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <LogOut size={15} color="#FF3B30" />
-                  </View>
-                  <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
-                </View>
-                <ChevronRight size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
+          <View style={[styles.profileMenuContent, { backgroundColor: isDark ? '#1C1F26' : '#FFFFFF' }]}>
+            <View style={[styles.profileMenuHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
             </View>
-          </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
+              <Lock size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmAdPassword.aspx', 'Wifi Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
+              <Wifi size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
+              <UserCheck size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => { setShowProfileMenu(false); logout(); }}>
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
+              <LogOut size={18} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
     </View>
@@ -2816,7 +2760,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(8, 10, 16, 0.55)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     height: '85%',
@@ -3790,9 +3734,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F2F2F7',
   },
   menuItemText: {
     fontSize: 15,
