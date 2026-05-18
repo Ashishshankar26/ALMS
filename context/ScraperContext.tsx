@@ -1064,9 +1064,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
+      didExams.current = false;
+      didRoomBooking.current = false;
     }
   }, [isAuthenticated]);
-
+  const didExams = useRef(false);
+  const didRoomBooking = useRef(false);
   const isProcessingPhase = useRef(false);
 
   const isFullyDone = useRef(false);
@@ -1116,7 +1119,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (unique.includes('dashboard')) didDashboard.current = false;
     if (unique.includes('timetable')) didTimetable.current = false;
     if (unique.includes('makeup')) didMakeup.current = false;
-    // roomBooking and exams don't have dedicated 'did' guards in handleLoadEnd yet, they rely on URL matches
+    if (unique.includes('exams')) didExams.current = false;
+    if (unique.includes('roomBooking')) didRoomBooking.current = false;
     
     // Navigate to the first missing page (the chain will continue from there)
     const firstMissing = unique[0];
@@ -1176,6 +1180,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
+      didExams.current = false;
+      didRoomBooking.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
       retriedSections.current.clear(); // Reset retries on full refresh
@@ -1260,15 +1266,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didTimetable.current = true;
       isProcessingPhase.current = true;
       webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
-    } else if (url.includes('seatingplan') || url.includes('seating-plan')) {
+    } else if ((url.includes('seatingplan') || url.includes('seating-plan')) && !didExams.current) {
       console.log('INJECTING EXAMS_SCRIPT...');
+      didExams.current = true;
       webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
     } else if (url.includes('Student-MakeupAdjustment') && !didMakeup.current) {
       console.log('INJECTING MAKEUP_SCRIPT...');
       didMakeup.current = true;
       webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
-    } else if (url.includes('frmRoomBooking.aspx')) {
+    } else if (url.includes('frmRoomBooking.aspx') && !didRoomBooking.current) {
       console.log('INJECTING ROOM_BOOKING_SCRIPT...');
+      didRoomBooking.current = true;
       webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
     } else if (url.includes('Login.aspx') || url.includes('login.aspx') || url.includes('LoginNew.aspx') || url.includes('index.aspx')) {
       console.warn('SCRAPER: Redirected to Login! Session might be expired.');

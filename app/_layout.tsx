@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as Updates from 'expo-updates';
 import { Alert, Platform, View } from 'react-native';
 import 'react-native-reanimated';
@@ -12,6 +12,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '../context/AuthContext';
 import { ScraperProvider } from '../context/ScraperContext';
 import { AppThemeProvider, useTheme } from '../context/ThemeContext';
+import AnimatedSplashScreen from '../components/AnimatedSplashScreen';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +31,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [splashAnimationComplete, setSplashAnimationComplete] = useState(false);
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
@@ -81,7 +83,12 @@ export default function RootLayout() {
       <AuthProvider>
         <ScraperProvider>
           <AppThemeProvider>
-            <RootLayoutNav />
+            <View style={{ flex: 1 }}>
+              <RootLayoutNav />
+              {!splashAnimationComplete && (
+                <AnimatedSplashScreen onAnimationComplete={() => setSplashAnimationComplete(true)} />
+              )}
+            </View>
           </AppThemeProvider>
         </ScraperProvider>
       </AuthProvider>
