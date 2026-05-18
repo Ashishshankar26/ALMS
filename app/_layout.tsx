@@ -13,6 +13,8 @@ import { AuthProvider } from '../context/AuthContext';
 import { ScraperProvider } from '../context/ScraperContext';
 import { AppThemeProvider, useTheme } from '../context/ThemeContext';
 
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -74,13 +76,15 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <ScraperProvider>
-        <AppThemeProvider>
-          <RootLayoutNav />
-        </AppThemeProvider>
-      </ScraperProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ScraperProvider>
+          <AppThemeProvider>
+            <RootLayoutNav />
+          </AppThemeProvider>
+        </ScraperProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -102,17 +106,17 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      <View style={{ 
+      <SafeAreaView style={{ 
         flex: 1, 
         backgroundColor: colors.background,
         alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
         width: '100%',
-        maxWidth: Platform.OS === 'web' ? 500 : 'none',
+        maxWidth: Platform.OS === 'web' ? 500 : '100%',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: Platform.OS === 'web' ? 0.1 : 0,
         shadowRadius: 10,
-      }}>
+      }} edges={['top', 'left', 'right']}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="fees" options={{ title: 'Fees', headerShown: false }} />
@@ -120,7 +124,7 @@ function RootLayoutNav() {
           <Stack.Screen name="ums_form" options={{ title: 'University Form', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
-      </View>
+      </SafeAreaView>
     </ThemeProvider>
   );
 }
