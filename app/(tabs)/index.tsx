@@ -1379,8 +1379,7 @@ export default function DashboardScreen() {
 
       </View>
     </ScrollView>
-      {/* Modal for My Messages - ENHANCED */}
-      {/* Modal for My Messages - TOTAL REMAKE */}
+      {/* Modal for My Messages - WORLD-CLASS PREMIUM & MINIMAL REMAKE */}
       <Modal visible={showMessages} animationType="slide" transparent={true} onRequestClose={() => setShowMessages(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)' }]}>
           <BlurView intensity={35} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
@@ -1388,7 +1387,7 @@ export default function DashboardScreen() {
           <View style={[styles.modalContent, { backgroundColor: isDark ? '#14161A' : '#F4F4EF' }]}>
             <View style={styles.modalHandle} />
 
-            <View style={[styles.modalHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderBottomWidth: 1 }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomWidth: 1 }]}>
               <View>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>My Messages</Text>
                 <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>University Announcements & Alerts</Text>
@@ -1439,14 +1438,17 @@ export default function DashboardScreen() {
                           paddingHorizontal: 16,
                           paddingVertical: 8,
                           borderRadius: 20,
-                          borderWidth: 1.2,
+                          borderWidth: 1,
                           gap: 6,
                         },
                         isActive
-                          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                          ? { 
+                              backgroundColor: colors.primary + '12', 
+                              borderColor: colors.primary + '40',
+                            }
                           : {
-                              backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                              borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                              borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                             },
                       ]}
                     >
@@ -1456,7 +1458,7 @@ export default function DashboardScreen() {
                             fontSize: 13,
                             fontWeight: '700',
                           },
-                          { color: isActive ? '#ffffff' : colors.textSecondary },
+                          { color: isActive ? colors.primary : colors.textSecondary },
                         ]}
                       >
                         {tab.label}
@@ -1472,8 +1474,8 @@ export default function DashboardScreen() {
                             justifyContent: 'center',
                           },
                           isActive
-                            ? { backgroundColor: 'rgba(255,255,255,0.22)' }
-                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+                            ? { backgroundColor: colors.primary + '18' }
+                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
                         ]}
                       >
                         <Text
@@ -1482,7 +1484,7 @@ export default function DashboardScreen() {
                               fontSize: 10,
                               fontWeight: '800',
                             },
-                            { color: isActive ? '#ffffff' : colors.text },
+                            { color: isActive ? colors.primary : colors.textSecondary },
                           ]}
                         >
                           {count}
@@ -1524,132 +1526,193 @@ export default function DashboardScreen() {
                       >
                         <TouchableOpacity
                           onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
-                          activeOpacity={0.7}
-                          style={{
-                            paddingVertical: 14,
-                            paddingHorizontal: 4,
-                            borderBottomWidth: 1,
-                            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                            flexDirection: 'row',
-                            alignItems: 'flex-start',
-                          }}
+                          activeOpacity={0.88}
+                          style={[
+                            {
+                              borderRadius: 20,
+                              borderWidth: 1,
+                              marginBottom: 12,
+                              shadowColor: '#000000',
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: isDark ? 0.08 : 0.03,
+                              shadowRadius: 8,
+                              elevation: 2,
+                              overflow: 'hidden',
+                              position: 'relative',
+                            },
+                            {
+                              backgroundColor: isDark ? 'rgba(28, 31, 38, 0.85)' : '#FFFFFF',
+                              borderColor: isExpanded 
+                                ? config.color + '40' 
+                                : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'),
+                            }
+                          ]}
                         >
-                          {/* Left Avatar / Category Icon Squircle */}
+                          {/* Subtle Frosted Dynamic Color Tint Overlay */}
                           <View 
                             style={{ 
-                              width: 40, 
-                              height: 40, 
-                              borderRadius: 12, 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              backgroundColor: config.color + '12',
-                              borderWidth: 1,
-                              borderColor: config.color + '20',
-                              marginTop: 2
-                            }}
-                          >
-                            <Icon size={18} color={config.color} />
-                          </View>
+                              ...StyleSheet.absoluteFillObject, 
+                              backgroundColor: config.color, 
+                              opacity: isDark ? 0.05 : 0.02,
+                              zIndex: -1 
+                            }} 
+                          />
 
-                          {/* Right Content Column */}
-                          <View style={{ flex: 1, marginLeft: 12 }}>
-                            {/* Sender and Time/Date Header */}
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                              <Text 
-                                style={{ 
-                                  fontSize: 14, 
-                                  fontWeight: '800', 
-                                  color: colors.text,
-                                  flex: 1,
-                                  marginRight: 8
-                                }}
-                                numberOfLines={1}
-                              >
-                                {sender}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '500' }}>
-                                {item.date || 'Recently'}
-                              </Text>
-                            </View>
+                          {/* Sleek Accent Indicator Left Border with Rounded Corners */}
+                          <View 
+                            style={{ 
+                              position: 'absolute', 
+                              left: 0, 
+                              top: 0, 
+                              bottom: 0, 
+                              width: 3.5, 
+                              borderTopRightRadius: 4,
+                              borderBottomRightRadius: 4,
+                              backgroundColor: config.color 
+                            }} 
+                          />
 
-                            {/* Subject Title and Category pill badge */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              <Text 
-                                style={{ 
-                                  fontSize: 13, 
-                                  fontWeight: '600', 
-                                  color: isExpanded ? colors.primary : colors.textSecondary,
-                                  flex: 1
-                                }}
-                                numberOfLines={isExpanded ? undefined : 1}
-                              >
-                                {cleanTitle}
-                              </Text>
-
-                              {/* Tiny modern pill tag badge */}
+                          <View style={{ padding: 18, paddingLeft: 22 }}>
+                            {/* Main Top Header Details */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <View 
                                 style={{ 
-                                  backgroundColor: config.color + '08', 
-                                  borderColor: config.color + '18', 
-                                  borderWidth: 1, 
-                                  paddingHorizontal: 6, 
-                                  paddingVertical: 1.5, 
-                                  borderRadius: 6 
+                                  width: 32, 
+                                  height: 32, 
+                                  borderRadius: 10, 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  backgroundColor: config.color + '10'
                                 }}
                               >
-                                <Text style={{ fontSize: 9, fontWeight: '800', color: config.color, letterSpacing: 0.2 }}>
-                                  {config.label}
+                                <Icon size={14} color={config.color} />
+                              </View>
+
+                              <View style={{ flex: 1 }}>
+                                <Text 
+                                  style={{ 
+                                    fontSize: 14, 
+                                    fontWeight: '700', 
+                                    lineHeight: 20, 
+                                    color: colors.text,
+                                    letterSpacing: -0.1
+                                  }} 
+                                  numberOfLines={isExpanded ? undefined : 1}
+                                >
+                                  {cleanTitle}
                                 </Text>
+                              </View>
+
+                              <View 
+                                style={{ 
+                                  width: 24, 
+                                  height: 24, 
+                                  borderRadius: 12, 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)' 
+                                }}
+                              >
+                                <ChevronRight
+                                  size={12}
+                                  color={colors.textSecondary}
+                                  style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
+                                />
                               </View>
                             </View>
 
-                            {/* Chat Bubble Reply Block (Expandable) */}
+                            {/* Expandable Alert Content */}
                             {(isExpanded || item.content) && (
-                              <Animated.View entering={FadeInUp.duration(300)} style={{ marginTop: 8 }}>
+                              <Animated.View entering={FadeInUp.duration(300)}>
                                 <View 
                                   style={{ 
-                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)', 
-                                    borderRadius: 16, 
-                                    padding: 12, 
-                                    borderWidth: 1, 
-                                    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' 
+                                    height: 1, 
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', 
+                                    marginVertical: 14 
+                                  }} 
+                                />
+                                <Text
+                                  style={{ 
+                                    fontSize: 13.5, 
+                                    lineHeight: 21, 
+                                    color: colors.text, 
+                                    opacity: 0.9 
                                   }}
+                                  numberOfLines={isExpanded ? undefined : 2}
                                 >
-                                  <Text
-                                    style={{ 
-                                      fontSize: 13, 
-                                      lineHeight: 19, 
-                                      color: colors.text, 
-                                      opacity: 0.9 
-                                    }}
-                                  >
-                                    {item.content}
-                                  </Text>
-                                  
-                                  {isExpanded && (
-                                    <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
-                                      <TouchableOpacity 
-                                        activeOpacity={0.7}
-                                        onPress={async () => {
-                                          const Clipboard = await import('expo-clipboard');
-                                          await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
-                                        }}
-                                        style={{ 
-                                          paddingHorizontal: 12, 
-                                          paddingVertical: 6, 
-                                          borderRadius: 8, 
-                                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                                          borderWidth: 1,
-                                          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
-                                        }}
-                                      >
-                                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>Copy Text</Text>
-                                      </TouchableOpacity>
-                                    </View>
-                                  )}
-                                </View>
+                                  {item.content}
+                                </Text>
+                                {isExpanded && (
+                                  <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
+                                    <TouchableOpacity 
+                                      activeOpacity={0.7}
+                                      onPress={async () => {
+                                        const Clipboard = await import('expo-clipboard');
+                                        await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
+                                      }}
+                                      style={{ 
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        paddingHorizontal: 12, 
+                                        paddingVertical: 6, 
+                                        borderRadius: 8, 
+                                        backgroundColor: config.color + '10',
+                                        borderWidth: 1,
+                                        borderColor: config.color + '20'
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: config.color }}>Copy Alert</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
                               </Animated.View>
                             )}
+
+                            {/* Premium Minimal Bottom Info */}
+                            <View 
+                              style={{ 
+                                flexDirection: 'row', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                marginTop: 12,
+                                paddingTop: 10,
+                                borderTopWidth: 1,
+                                borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
+                                {/* Translucent Category Pill Tag */}
+                                <View 
+                                  style={{ 
+                                    paddingHorizontal: 8, 
+                                    paddingVertical: 3, 
+                                    borderRadius: 6, 
+                                    backgroundColor: config.color + '10',
+                                    borderWidth: 1,
+                                    borderColor: config.color + '20'
+                                  }} 
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: '800', color: config.color, letterSpacing: 0.2, textTransform: 'uppercase' }}>
+                                    {config.label}
+                                  </Text>
+                                </View>
+
+                                <Text 
+                                  style={{ 
+                                    fontSize: 11, 
+                                    fontWeight: '600', 
+                                    color: colors.textSecondary,
+                                  }} 
+                                  numberOfLines={1}
+                                >
+                                  {sender}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
+                                {item.date || 'Recently'}
+                              </Text>
+                            </View>
                           </View>
                         </TouchableOpacity>
                       </Animated.View>
