@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Platform } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { StyleSheet, View, Dimensions, Image } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,64 +9,55 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
   onAnimationComplete: () => void;
 }
 
-const ALMS_LETTERS = ['a', 'l', 'm', 's'];
-const SUB_LETTERS = ['F', 'O', 'R', ' ', 'S', 'T', 'U', 'D', 'E', 'N', 'T', 'S'];
+const { width, height } = Dimensions.get('window');
+const PARTICLES_COUNT = 80;
 
 export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   const [hidden, setHidden] = useState(false);
   
-  // Safe explicit hook declarations for constant arrays to satisfy React Hook rules
-  const a1 = useSharedValue(0);
-  const a2 = useSharedValue(0);
-  const a3 = useSharedValue(0);
-  const a4 = useSharedValue(0);
-  const almsProgress = [a1, a2, a3, a4];
-
-  const s1 = useSharedValue(0);
-  const s2 = useSharedValue(0);
-  const s3 = useSharedValue(0);
-  const s4 = useSharedValue(0);
-  const s5 = useSharedValue(0);
-  const s6 = useSharedValue(0);
-  const s7 = useSharedValue(0);
-  const s8 = useSharedValue(0);
-  const s9 = useSharedValue(0);
-  const s10 = useSharedValue(0);
-  const s11 = useSharedValue(0);
-  const subProgress = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11];
-
+  // Single shared value drives all particles for maximum 60fps performance
+  const particleProgress = useSharedValue(0);
+  const logoProgress = useSharedValue(0);
   const containerOpacity = useSharedValue(1);
 
-  // Cinematic District-style easing
-  const cinematicEase = Easing.bezier(0.16, 1, 0.3, 1);
-  const easeInOut = Easing.bezier(0.4, 0, 0.2, 1);
+  // Generate random scatter positions for particles
+  const particles = useMemo(() => {
+    return Array.from({ length: PARTICLES_COUNT }).map(() => {
+      const angle = Math.random() * Math.PI * 2;
+      // Start them well outside the center, some even off-screen
+      const distance = 150 + Math.random() * 400; 
+      return {
+        startX: Math.cos(angle) * distance,
+        startY: Math.sin(angle) * distance,
+        size: 3 + Math.random() * 5,
+        isDarkPurple: Math.random() > 0.5,
+      };
+    });
+  }, []);
 
   useEffect(() => {
-    // 1. "alms" forms letter by letter
-    almsProgress.forEach((p, i) => {
-      p.value = withDelay(
-        350 + i * 110, // Staggering
-        withTiming(1, { duration: 1200, easing: cinematicEase })
-      );
-    });
+    // 1. Particles rapidly fly into the center
+    particleProgress.value = withDelay(
+      200,
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.exp) })
+    );
 
-    // 2. "FOR STUDENTS" forms rapidly below it right as ALMS settles
-    subProgress.forEach((p, i) => {
-      p.value = withDelay(
-        800 + i * 40, // Fast fluid stagger
-        withTiming(1, { duration: 900, easing: cinematicEase })
-      );
-    });
+    // 2. The real ALMS logo bursts out as particles hit the center
+    logoProgress.value = withDelay(
+      950, // Triggers exactly as particles collapse
+      withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) })
+    );
 
-    // 3. Fade the whole splash screen out smoothly into the app
+    // 3. Fade entire splash screen cleanly into the app
     containerOpacity.value = withDelay(
-      2800,
-      withTiming(0, { duration: 450, easing: easeInOut }, (finished) => {
+      2600,
+      withTiming(0, { duration: 400, easing: Easing.inOut(Easing.ease) }, (finished) => {
         if (finished) {
           runOnJS(setHidden)(true);
           runOnJS(onAnimationComplete)();
@@ -81,59 +72,78 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
     };
   });
 
-  const getLetterStyle = (progress: Animated.SharedValue<number>, isSub: boolean) => {
-    return useAnimatedStyle(() => {
-      const v = progress.value;
-      const startY = isSub ? 10 : 18; // Subtitle pops up from a shorter distance
-      return {
-        opacity: interpolate(v, [0, 0.3, 1], [0, 1, 1]),
-        transform: [
-          { translateY: interpolate(v, [0, 1], [startY, 0]) },
-          { scale: interpolate(v, [0, 1], [isSub ? 1.05 : 1.08, 1]) },
-          { skewX: `${interpolate(v, [0, 1], [12, 0])}deg` } // The District signature motion skew
-        ],
-      };
-    });
-  };
+  const logoStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(logoProgress.value, [0, 0.2, 1], [0, 1, 1]),
+      transform: [
+        { scale: interpolate(logoProgress.value, [0, 1], [0.3, 1]) }
+      ],
+    };
+  });
+
+  const auraStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(logoProgress.value, [0, 0.5, 1], [0, 0.8, 0.4]),
+      transform: [
+        { scale: interpolate(logoProgress.value, [0, 1], [0.5, 1.5]) }
+      ],
+    };
+  });
 
   if (hidden) return null;
 
   return (
     <Animated.View style={[styles.container, containerStyle]} pointerEvents="none">
-      <View style={styles.mainContainer}>
-        {/* Main "alms" Text */}
-        <View style={styles.textRow}>
-          {ALMS_LETTERS.map((char, i) => {
-            const style = getLetterStyle(almsProgress[i], false);
-            return (
-              <View key={`alms-${i}`} style={styles.letterWrapper}>
-                <Animated.Text style={[styles.mainLetter, style]}>
-                  {char}
-                </Animated.Text>
-              </View>
-            );
-          })}
-        </View>
+      
+      {/* Deep purple/black gradient aura that pulses behind the logo */}
+      <Animated.View style={[styles.auraContainer, auraStyle]}>
+        <LinearGradient
+          colors={['rgba(147, 51, 234, 0.6)', 'rgba(0, 0, 0, 0)']}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.5, y: 0.5 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </Animated.View>
 
-        {/* Subtitle "FOR STUDENTS" */}
-        <View style={styles.subRow}>
-          {SUB_LETTERS.map((char, i) => {
-            if (char === ' ') {
-              return <View key={`space-${i}`} style={{ width: 8 }} />;
-            }
-            // Map index to progress array (skipping the space at index 3)
-            const progressIndex = i > 3 ? i - 1 : i;
-            const style = getLetterStyle(subProgress[progressIndex], true);
-            return (
-              <View key={`sub-${i}`} style={styles.subLetterWrapper}>
-                <Animated.Text style={[styles.subLetter, style]}>
-                  {char}
-                </Animated.Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      {/* The Particle Swarm */}
+      {particles.map((p, i) => {
+        const style = useAnimatedStyle(() => {
+          const v = particleProgress.value;
+          return {
+            opacity: interpolate(v, [0, 0.1, 0.8, 1], [0, 1, 1, 0]),
+            transform: [
+              { translateX: interpolate(v, [0, 1], [p.startX, 0]) },
+              { translateY: interpolate(v, [0, 1], [p.startY, 0]) },
+              { scale: interpolate(v, [0, 0.9, 1], [1, 1, 0.1]) },
+            ],
+          };
+        });
+
+        return (
+          <Animated.View 
+            key={i} 
+            style={[
+              styles.particle, 
+              { 
+                width: p.size, 
+                height: p.size, 
+                backgroundColor: p.isDarkPurple ? '#4C1D95' : '#A855F7' 
+              }, 
+              style
+            ]} 
+          />
+        );
+      })}
+
+      {/* The Real ALMS Logo */}
+      <Animated.View style={[styles.logoWrapper, logoStyle]}>
+        <Image 
+          source={require('../assets/images/splash-icon.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+      </Animated.View>
+
     </Animated.View>
   );
 }
@@ -142,50 +152,36 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 99999,
-    backgroundColor: '#000000', // Ultra-minimal black
+    backgroundColor: '#000000', // Pitch black canvas
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mainContainer: {
+  auraContainer: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: width * 1.5,
+    borderRadius: width,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -16, // Optical centering correction
   },
-  textRow: {
-    flexDirection: 'row',
+  particle: {
+    position: 'absolute',
+    borderRadius: 10,
+    shadowColor: '#9333EA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  logoWrapper: {
+    position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 6,
+    width: 200,
+    height: 200,
   },
-  letterWrapper: {
-    marginHorizontal: 1,
-  },
-  mainLetter: {
-    color: '#FFFFFF',
-    fontSize: 54,
-    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
-    fontWeight: '500', // Sleek elegant weight
-    letterSpacing: 6,
-    textTransform: 'lowercase',
-    includeFontPadding: false,
-  },
-  subRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6, // Tight clustering
-    paddingLeft: 4,
-  },
-  subLetterWrapper: {
-    marginHorizontal: 1,
-  },
-  subLetter: {
-    color: 'rgba(255,255,255,0.55)', // Dimmer grey/white for hierarchy
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
-    fontWeight: '700', // Bold confident subtitle
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    includeFontPadding: false,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
 });
