@@ -304,23 +304,32 @@ export default function ResultsScreen() {
                       key={`${sem.semester}-${index}`}
                       entering={FadeInDown.delay(70 + index * 45).duration(420)}
                       layout={Layout.duration(360)}
-                      style={[
-                        styles.cardWrap,
-                        {
-                          zIndex: isActive ? displayData.length + 4 : displayData.length - index,
-                          top,
-                          shadowColor: isActive ? accent : '#111111',
-                          shadowOpacity: isActive ? 0.5 : 0.24,
-                          shadowRadius: isActive ? 42 : 28,
-                          elevation: isActive ? 20 : 12,
-                          opacity: relative < -2 || relative > 5 ? 0 : 1,
-                          transform: [
-                            { translateY: isActive ? -8 : Math.abs(relative) * 1.5 },
-                            { scale: isActive ? 1 : 0.97 - Math.min(Math.abs(relative), 5) * 0.008 },
-                          ],
-                        },
-                      ]}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        width: CARD_WIDTH,
+                        zIndex: isActive ? displayData.length + 4 : displayData.length - index,
+                        top,
+                      }}
                     >
+                      <Animated.View
+                        style={[
+                          styles.cardWrap,
+                          {
+                            position: 'relative',
+                            top: 0,
+                            shadowColor: isActive ? accent : '#111111',
+                            shadowOpacity: isActive ? 0.5 : 0.24,
+                            shadowRadius: isActive ? 42 : 28,
+                            elevation: isActive ? 20 : 12,
+                            opacity: relative < -2 || relative > 5 ? 0 : 1,
+                            transform: [
+                              { translateY: isActive ? -8 : Math.abs(relative) * 1.5 },
+                              { scale: isActive ? 1 : 0.97 - Math.min(Math.abs(relative), 5) * 0.008 },
+                            ],
+                          },
+                        ]}
+                      >
                       <View
                         style={[
                           styles.semCardGlow,
@@ -380,6 +389,7 @@ export default function ResultsScreen() {
                           </View>
                         </LinearGradient>
                       </TouchableOpacity>
+                      </Animated.View>
                     </Animated.View>
                   );
                 })}
