@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, View, Dimensions, Image } from 'react-native';
+import { StyleSheet, View, Dimensions, Text, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,12 +30,11 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   const particles = useMemo(() => {
     return Array.from({ length: PARTICLES_COUNT }).map(() => {
       const angle = Math.random() * Math.PI * 2;
-      // Start them well outside the center, some even off-screen
       const distance = 150 + Math.random() * 400; 
       return {
         startX: Math.cos(angle) * distance,
         startY: Math.sin(angle) * distance,
-        size: 3 + Math.random() * 5,
+        size: 2 + Math.random() * 6,
         isDarkPurple: Math.random() > 0.5,
       };
     });
@@ -44,20 +43,20 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   useEffect(() => {
     // 1. Particles rapidly fly into the center
     particleProgress.value = withDelay(
-      200,
+      300,
       withTiming(1, { duration: 900, easing: Easing.inOut(Easing.exp) })
     );
 
-    // 2. The real ALMS logo bursts out as particles hit the center
+    // 2. The constructed gradient logo bursts out
     logoProgress.value = withDelay(
-      950, // Triggers exactly as particles collapse
+      1050, // Triggers exactly as particles collapse
       withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) })
     );
 
     // 3. Fade entire splash screen cleanly into the app
     containerOpacity.value = withDelay(
-      2600,
-      withTiming(0, { duration: 400, easing: Easing.inOut(Easing.ease) }, (finished) => {
+      2800,
+      withTiming(0, { duration: 450, easing: Easing.inOut(Easing.ease) }, (finished) => {
         if (finished) {
           runOnJS(setHidden)(true);
           runOnJS(onAnimationComplete)();
@@ -98,7 +97,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       {/* Deep purple/black gradient aura that pulses behind the logo */}
       <Animated.View style={[styles.auraContainer, auraStyle]}>
         <LinearGradient
-          colors={['rgba(147, 51, 234, 0.6)', 'rgba(0, 0, 0, 0)']}
+          colors={['rgba(147, 51, 234, 0.5)', 'rgba(0, 0, 0, 0)']}
           style={StyleSheet.absoluteFillObject}
           start={{ x: 0.5, y: 0.5 }}
           end={{ x: 1, y: 1 }}
@@ -127,7 +126,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
               { 
                 width: p.size, 
                 height: p.size, 
-                backgroundColor: p.isDarkPurple ? '#4C1D95' : '#A855F7' 
+                backgroundColor: p.isDarkPurple ? '#3B0764' : '#A855F7' 
               }, 
               style
             ]} 
@@ -135,13 +134,19 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
         );
       })}
 
-      {/* The Real ALMS Logo */}
+      {/* The Constructed ALMS Logo */}
       <Animated.View style={[styles.logoWrapper, logoStyle]}>
-        <Image 
-          source={require('../assets/images/splash-icon.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
+        <LinearGradient
+          colors={['#2E0B5C', '#000000', '#100224']} // The requested purple black mix gradient
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.logoBox}
+        >
+          {/* Subtle inner ring to make it look like a premium app icon */}
+          <View style={styles.logoInnerRing}>
+            <Text style={styles.logoText}>alms</Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
 
     </Animated.View>
@@ -177,11 +182,35 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 200,
-    height: 200,
+    shadowColor: '#7E22CE',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 16,
   },
-  logoImage: {
-    width: '100%',
-    height: '100%',
+  logoBox: {
+    width: 140,
+    height: 140,
+    borderRadius: 40, // Squircle shape like an iOS icon
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.4)', // Purple rim light
+  },
+  logoInnerRing: {
+    width: 124,
+    height: 124,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  logoText: {
+    color: '#FFFFFF',
+    fontSize: 38,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
+    fontWeight: '700',
+    letterSpacing: -1,
   },
 });
