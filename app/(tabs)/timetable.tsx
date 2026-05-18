@@ -111,6 +111,19 @@ export default function TimetableScreen() {
     });
   }
 
+  // INJECT DUMMY MAKEUP CLASS FOR PREVIEW
+  makeupClasses.push({
+    id: "m1",
+    subjectCode: "MTH101",
+    subject: "Advanced Calculus (Makeup)",
+    time: "10:00 AM - 11:50 AM",
+    type: "Makeup",
+    room: "28-101",
+    teacher: "Dr. Singh",
+    isMakeup: true,
+    date: "19-May-2026"
+  });
+
   let classesForDay = timetable[activeDay] || [];
 
   // Saturday Filtering Logic
@@ -123,6 +136,48 @@ export default function TimetableScreen() {
       return !isProjectWork && (cls.isMakeup || cls.type?.toLowerCase().includes('makeup') || cls.date);
     });
   }
+
+  // INJECT DUMMY CARDS FOR PREVIEW (Lecture, Practical, Tutorial, Makeup)
+  classesForDay = [
+    {
+      id: "d1",
+      subjectCode: "CSE310",
+      subject: "Programming in Java",
+      time: "09:00 AM - 10:50 AM",
+      type: "Lecture",
+      room: "34-301",
+      teacher: "Dr. Puneet Kumar"
+    },
+    {
+      id: "d2",
+      subjectCode: "CSE101",
+      subject: "Computer Networks",
+      time: "11:00 AM - 12:50 PM",
+      type: "Practical",
+      room: "34-211",
+      teacher: "Prof. Sharma"
+    },
+    {
+      id: "d3",
+      subjectCode: "INT428",
+      subject: "Artificial Intelligence",
+      time: "02:00 PM - 02:50 PM",
+      type: "Tutorial",
+      room: "28-401",
+      teacher: "Dr. Anjali"
+    },
+    {
+      id: "d4",
+      subjectCode: "CSE320",
+      subject: "Software Engineering",
+      time: "03:00 PM - 04:50 PM",
+      type: "Adjustment",
+      room: "34-101",
+      teacher: "Dr. Verma",
+      isMakeup: true,
+      date: "19-May-2026"
+    }
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
