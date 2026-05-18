@@ -134,13 +134,27 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
         );
       })}
 
-      {/* The Real ALMS Logo */}
+      {/* The Constructed ALMS Logo */}
       <Animated.View style={[styles.logoWrapper, logoStyle]}>
-        <Image 
-          source={require('../assets/icon.png')} 
+        <LinearGradient
+          colors={['#2E0B5C', '#000000', '#100224']} // The requested purple black mix gradient
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.logoBox}
-          resizeMode="cover"
-        />
+        >
+          {/* Texture overlay from the real ALMS icon.png, rotated and scaled to hide its text and only keep the geometric lines */}
+          <Image 
+            source={require('../assets/icon.png')} 
+            style={styles.logoTexture}
+            resizeMode="cover"
+          />
+          
+          {/* Subtle inner ring to make it look like a premium app icon */}
+          <View style={styles.logoInnerRing}>
+            <Text style={styles.logoText}>alms</Text>
+            <Text style={styles.logoSubtext}>FOR STUDENTS</Text>
+          </View>
+        </LinearGradient>
       </Animated.View>
 
     </Animated.View>
@@ -186,8 +200,43 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 36, // iOS-style squircle border
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: 'rgba(168, 85, 247, 0.4)', // Premium rim light matching the icon
+  },
+  logoTexture: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    top: -80,
+    left: -80,
+    opacity: 0.35, // Blend the polygons with the gradient
+    transform: [{ rotate: '35deg' }], // Rotating completely scrambles the original text into pure geometric texture
+  },
+  logoInnerRing: {
+    width: 134,
+    height: 134,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  logoText: {
+    color: '#FFFFFF',
+    fontSize: 42,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
+  logoSubtext: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginTop: 2,
   },
 });
