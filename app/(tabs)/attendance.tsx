@@ -487,7 +487,7 @@ export default function AttendanceScreen() {
     </ScrollView>
 
       <Modal visible={!!openedSubject} transparent animationType="fade" onRequestClose={() => setSelectedSubject(null)}>
-                                                                <View style={styles.modalOverlay}>
+                                                                        <View style={styles.modalOverlay}>
           {openedSubject ? (() => {
             const effectivePct = getEffectivePct(openedSubject);
             const status = getStatus(effectivePct);
@@ -520,9 +520,9 @@ export default function AttendanceScreen() {
                         padding: 0,
                         position: 'relative',
                         overflow: 'visible',
-                        height: 205,
+                        height: 200,
                         width: width - 24,
-                        maxWidth: 450,
+                        maxWidth: 440,
                         borderRadius: 18,
                         justifyContent: 'space-between'
                       }
@@ -532,7 +532,7 @@ export default function AttendanceScreen() {
                     <View style={{ position: 'absolute', top: 0, left: 24, right: 24, height: 3, backgroundColor: '#FF4B4B', borderBottomLeftRadius: 1.5, borderBottomRightRadius: 1.5 }} />
 
                     {/* Inner Ticket Container */}
-                    <View style={{ flex: 1, padding: 12, paddingVertical: 14, justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1, padding: 14, paddingVertical: 14, justifyContent: 'space-between' }}>
                       
                       {/* Top Row: Passenger, Barcode, Date */}
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -593,31 +593,23 @@ export default function AttendanceScreen() {
                         </View>
                       </View>
 
-                      {/* Bottom Section: Single horizontal row with 6 columns, tiny full labels, large numbers */}
+                      {/* Bottom Section: Single horizontal row with 4 columns, full labels, massive numbers */}
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 10 }}>
-                        <View style={{ alignItems: 'flex-start', flex: 1.1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>ATTENDED</Text>
-                          <Text style={{ color: isDark ? '#FFFFFF' : '#111419', fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{openedSubject.attendedClasses}</Text>
+                        <View style={{ alignItems: 'flex-start', flex: 1 }}>
+                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PERCENTAGE</Text>
+                          <Text style={{ color: accent, fontSize: 16, fontWeight: '900', marginTop: 2 }}>{effectivePct}%</Text>
                         </View>
-                        <View style={{ alignItems: 'center', flex: 1.1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>DELIVERED</Text>
-                          <Text style={{ color: isDark ? '#FFFFFF' : '#111419', fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{openedSubject.totalClasses}</Text>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>MISSABLE</Text>
+                          <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{proj.value}</Text>
                         </View>
-                        <View style={{ alignItems: 'center', flex: 1.2 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>PERCENT</Text>
-                          <Text style={{ color: accent, fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{effectivePct}%</Text>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>FORECAST</Text>
+                          <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{proj.forecast}%</Text>
                         </View>
-                        <View style={{ alignItems: 'center', flex: 1.1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>MISSABLE</Text>
-                          <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{proj.value}</Text>
-                        </View>
-                        <View style={{ alignItems: 'center', flex: 1.1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>FORECAST</Text>
-                          <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{proj.forecast}%</Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end', flex: 1.1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 6.2, fontWeight: '900', letterSpacing: 0.1 }} numberOfLines={1}>SKIP TODAY</Text>
-                          <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 13.5, fontWeight: '900', marginTop: 2 }}>{skipTodayPct}%</Text>
+                        <View style={{ alignItems: 'flex-end', flex: 1 }}>
+                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>SKIP TODAY</Text>
+                          <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{skipTodayPct}%</Text>
                         </View>
                       </View>
 
