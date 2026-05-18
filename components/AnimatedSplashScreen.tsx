@@ -142,6 +142,13 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
           end={{ x: 1, y: 1 }}
           style={styles.logoBox}
         >
+          {/* Texture overlay from the real icon.png */}
+          <Image 
+            source={require('../assets/images/icon.png')} 
+            style={styles.logoTexture}
+            resizeMode="cover"
+          />
+          
           {/* Subtle inner ring to make it look like a premium app icon */}
           <View style={styles.logoInnerRing}>
             <Text style={styles.logoText}>alms</Text>
@@ -196,6 +203,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(168, 85, 247, 0.4)', // Purple rim light
+    overflow: 'hidden', // Ensure the texture image doesn't bleed out
+  },
+  logoTexture: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.65, // Blend the texture with the gradient
   },
   logoInnerRing: {
     width: 124,
