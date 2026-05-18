@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
 import { CheckCircle, AlertTriangle, XCircle, Plus, Minus, Calendar, Award, X, Target } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
@@ -12,6 +13,7 @@ const SEMESTER_DATE_KEY = '@semester_end_date';
 const TARGET_PCT_KEY = '@attendance_target_pct';
 
 export default function AttendanceScreen() {
+  const insets = useSafeAreaInsets();
   const { data, isScraping } = useScraper();
   const { colors, isDark } = useTheme();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export default function AttendanceScreen() {
       >
         <Animated.View 
           entering={FadeInUp.delay(100).duration(800).springify()}
-          style={{ marginHorizontal: 16, marginTop: 15 }}
+          style={{ marginHorizontal: 16, marginTop: insets.top > 0 ? insets.top + 10 : 20 }}
         >
           {/* Header Label outside */}
           <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
