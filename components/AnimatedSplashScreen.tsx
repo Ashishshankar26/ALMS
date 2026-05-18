@@ -1,50 +1,65 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Dimensions, Text } from 'react-native';
+import { StyleSheet, View, Platform, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSpring,
   withDelay,
+  withSequence,
   runOnJS,
   Easing,
+  interpolate,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-
-const { width, height } = Dimensions.get('window');
 
 interface Props {
   onAnimationComplete: () => void;
 }
 
+const LETTERS = ['a', 'l', 'm', 's'];
+const BRAND_PURPLE = '#9333EA'; // Deep vibrant purple
+const GLOW_PURPLE = '#A855F7';
+
 export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
   const [hidden, setHidden] = useState(false);
   
-  const logoOpacity = useSharedValue(0);
-  const logoScale = useSharedValue(0.4);
-  const textOpacity = useSharedValue(0);
-  const textTranslateY = useSharedValue(20);
-  const ringScale1 = useSharedValue(0.8);
-  const ringOpacity1 = useSharedValue(0);
+  // Shared values for each letter for kinetic staggered animation
+  const p1 = useSharedValue(0);
+  const p2 = useSharedValue(0);
+  const p3 = useSharedValue(0);
+  const p4 = useSharedValue(0);
+  const letterProgress = [p1, p2, p3, p4];
+  
+  const glowOpacity = useSharedValue(0);
   const containerOpacity = useSharedValue(1);
 
+  // Ultra-smooth cinematic easing
+  const cinematicEase = Easing.bezier(0.16, 1, 0.3, 1);
+  const easeInOut = Easing.bezier(0.4, 0, 0.2, 1);
+
   useEffect(() => {
-    // Reveal logo
-    logoOpacity.value = withTiming(1, { duration: 1000, easing: Easing.out(Easing.exp) });
-    logoScale.value = withSpring(1, { damping: 14, stiffness: 90 });
+    // 0.0s - 0.4s: Completely black screen (handled by delay)
+    
+    // 0.4s - 1.8s: Letters form dynamically
+    letterProgress.forEach((p, i) => {
+      p.value = withDelay(
+        400 + i * 120, // Precise staggered entry
+        withTiming(1, { duration: 1100, easing: cinematicEase })
+      );
+    });
 
-    // Expanding ring effect
-    ringScale1.value = withDelay(300, withSpring(1.5, { damping: 20, stiffness: 60 }));
-    ringOpacity1.value = withDelay(300, withTiming(0.15, { duration: 800 }));
+    // 1.8s - 2.5s: Final lock and soft glow pulse
+    glowOpacity.value = withDelay(
+      1800,
+      withSequence(
+        withTiming(1, { duration: 400, easing: cinematicEase }),
+        withTiming(0.3, { duration: 500, easing: cinematicEase })
+      )
+    );
 
-    // Reveal text
-    textOpacity.value = withDelay(600, withTiming(1, { duration: 800 }));
-    textTranslateY.value = withDelay(600, withSpring(0, { damping: 12, stiffness: 90 }));
-
-    // Hide everything
+    // 2.5s+: Seamless fade into app opening
     containerOpacity.value = withDelay(
-      2800,
-      withTiming(0, { duration: 500, easing: Easing.inOut(Easing.ease) }, (finished) => {
+      2600,
+      withTiming(0, { duration: 450, easing: easeInOut }, (finished) => {
         if (finished) {
           runOnJS(setHidden)(true);
           runOnJS(onAnimationComplete)();
@@ -53,59 +68,58 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
     );
   }, []);
 
-  const logoStyle = useAnimatedStyle(() => {
-    return {
-      opacity: logoOpacity.value,
-      transform: [{ scale: logoScale.value }],
-    };
-  });
-
-  const textStyle = useAnimatedStyle(() => {
-    return {
-      opacity: textOpacity.value,
-      transform: [{ translateY: textTranslateY.value }],
-    };
-  });
-
-  const ringStyle = useAnimatedStyle(() => {
-    return {
-      opacity: ringOpacity1.value,
-      transform: [{ scale: ringScale1.value }],
-    };
-  });
-
   const containerStyle = useAnimatedStyle(() => {
     return {
       opacity: containerOpacity.value,
     };
   });
 
+  const baseGlowStyle = useAnimatedStyle(() => {
+    return {
+      opacity: glowOpacity.value,
+    };
+  });
+
+  const getLetterStyle = (progress: Animated.SharedValue<number>) => {
+    return useAnimatedStyle(() => {
+      const v = progress.value;
+      return {
+        // Fluid morphing opacity
+        opacity: interpolate(v, [0, 0.3, 1], [0, 1, 1]),
+        transform: [
+          // Elegant settling motion
+          { translateY: interpolate(v, [0, 1], [18, 0]) },
+          // Subtle scale down
+          { scale: interpolate(v, [0, 1], [1.08, 1]) },
+          // Kinetic typography motion blur approximation
+          { skewX: `${interpolate(v, [0, 1], [12, 0])}deg` }
+        ],
+      };
+    });
+  };
+
   if (hidden) return null;
 
   return (
     <Animated.View style={[styles.container, containerStyle]} pointerEvents="none">
-      <LinearGradient
-        colors={['#0A0B10', '#12151C']}
-        style={StyleSheet.absoluteFillObject}
-      />
-      
-      <Animated.View style={[styles.ring, ringStyle]} />
-
-      <Animated.View style={[styles.logoContainer, logoStyle]}>
-        <LinearGradient
-          colors={['#3B82F6', '#8B5CF6']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.logoBox}
-        >
-          <Text style={styles.logoText}>ALMS</Text>
-        </LinearGradient>
-      </Animated.View>
-
-      <Animated.View style={[styles.textContainer, textStyle]}>
-        <Text style={styles.subtitle}>LOVELY PROFESSIONAL UNIVERSITY</Text>
-        <Text style={styles.version}>PREMIUM EXPERIENCE</Text>
-      </Animated.View>
+      <View style={styles.textRow}>
+        {LETTERS.map((char, i) => {
+          const style = getLetterStyle(letterProgress[i]);
+          return (
+            <View key={i} style={styles.letterContainer}>
+              {/* Soft glow layer (pulses at the end) */}
+              <Animated.Text style={[styles.letter, styles.glowLayer, style, baseGlowStyle]}>
+                {char}
+              </Animated.Text>
+              
+              {/* Crisp top layer */}
+              <Animated.Text style={[styles.letter, style]}>
+                {char}
+              </Animated.Text>
+            </View>
+          );
+        })}
+      </View>
     </Animated.View>
   );
 }
@@ -114,59 +128,36 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 99999,
+    backgroundColor: '#000000', // Pure pitch black
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ring: {
+  textRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 8, // Optical balancing for letter spacing
+  },
+  letterContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 1, 
+  },
+  letter: {
+    color: BRAND_PURPLE,
+    fontSize: 54,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
+    fontWeight: '300', // Thin/medium weight
+    letterSpacing: 8, // Clean spacing
+    textTransform: 'lowercase',
+    includeFontPadding: false,
+  },
+  glowLayer: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 20,
-  },
-  logoBox: {
-    width: 130,
-    height: 130,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  logoText: {
-    color: '#FFFFFF',
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: -1.5,
-  },
-  textContainer: {
-    position: 'absolute',
-    bottom: height * 0.12,
-    alignItems: 'center',
-  },
-  subtitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 2,
-    opacity: 0.9,
-  },
-  version: {
-    color: '#8B5CF6',
-    fontSize: 11,
-    fontWeight: '800',
-    marginTop: 8,
-    letterSpacing: 4,
-    opacity: 0.8,
+    color: GLOW_PURPLE,
+    textShadowColor: GLOW_PURPLE,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20, // Subtle soft glow
+    opacity: 0, // Controlled via baseGlowStyle
   },
 });
