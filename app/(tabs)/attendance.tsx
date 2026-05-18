@@ -583,12 +583,10 @@ export default function AttendanceScreen() {
 
                     {/* Barcode Column (1.2 flex) - Vertical barcode right next to perforation */}
                     <View style={{ flex: 1.2, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}>
-                      <View style={{ width: 28, height: '90%', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ flexDirection: 'row', gap: 2, height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                          {[1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2].map((w, idx) => (
-                            <View key={idx} style={{ width: w, height: '100%', backgroundColor: isDark ? '#FFFFFF' : '#000000', opacity: isDark ? 0.65 : 0.8 }} />
-                          ))}
-                        </View>
+                      <View style={{ width: 22, height: '90%', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {[1, 2, 1, 3, 1, 4, 2, 1, 3, 1, 2, 4, 1, 2, 3, 1, 4, 1, 2, 3, 1].map((h, idx) => (
+                          <View key={idx} style={{ height: h, width: '100%', backgroundColor: isDark ? '#FFFFFF' : '#000000', opacity: isDark ? 0.65 : 0.8 }} />
+                        ))}
                       </View>
                     </View>
 
