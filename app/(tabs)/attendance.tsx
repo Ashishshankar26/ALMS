@@ -487,7 +487,7 @@ export default function AttendanceScreen() {
     </ScrollView>
 
       <Modal visible={!!openedSubject} transparent animationType="fade" onRequestClose={() => setSelectedSubject(null)}>
-                        <View style={styles.modalOverlay}>
+                                <View style={styles.modalOverlay}>
           {openedSubject ? (() => {
             const effectivePct = getEffectivePct(openedSubject);
             const status = getStatus(effectivePct);
@@ -514,113 +514,115 @@ export default function AttendanceScreen() {
                         position: 'relative',
                         overflow: 'visible',
                         flexDirection: 'row',
-                        height: 220,
-                        width: width - 32,
-                        maxWidth: 440,
+                        height: 200,
+                        width: width - 24,
+                        maxWidth: 460,
                         borderRadius: 16
                       }
                     ]}
                   >
-                    {/* Left Ticket Body (68% width) */}
-                    <View style={{ flex: 6.8, padding: 14, paddingRight: 10, justifyContent: 'space-between' }}>
-                      {/* Top Row: Passenger & Barcode */}
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flex: 1.2 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>PASSENGER</Text>
-                          <Text style={{ color: colors.text, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginTop: 2 }} numberOfLines={1}>
-                            {data.profile?.name || 'STUDENT PASSENGER'}
-                          </Text>
-                        </View>
-
-                        {/* Barcode in the middle */}
-                        <View style={{ alignItems: 'flex-end', marginRight: 5 }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 6, fontWeight: '900', letterSpacing: 0.8 }}>FIRST CLASS TICKET</Text>
-                          <View style={{ flexDirection: 'row', gap: 1.5, height: 12, marginTop: 2, alignItems: 'center' }}>
-                            {[1, 2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 1].map((w, idx) => (
-                              <View key={idx} style={{ width: w, height: '100%', backgroundColor: isDark ? '#FFFFFF' : '#000000', opacity: 0.7 }} />
-                            ))}
-                          </View>
-                        </View>
+                    {/* Left Main Body (5.6 flex) */}
+                    <View style={{ flex: 5.6, padding: 16, paddingRight: 8, justifyContent: 'space-between' }}>
+                      {/* Passenger Row */}
+                      <View>
+                        <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.8 }}>PASSENGER</Text>
+                        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800', textTransform: 'uppercase', marginTop: 1 }} numberOfLines={1}>
+                          {data.profile?.name || 'STUDENT PASSENGER'}
+                        </Text>
                       </View>
 
-                      {/* Middle Row: Flight Route (Subject Code -> Status) */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                        <View style={{ flex: 4 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>ORIGIN (SUBJECT)</Text>
-                          <Text style={{ color: colors.text, fontSize: 26, fontWeight: '900', letterSpacing: -0.5, marginTop: 1 }}>
+                      {/* Flight Route (Subject Code ➔ Status) */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+                        <View style={{ flex: 1.1 }}>
+                          <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>ORIGIN</Text>
+                          <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }} numberOfLines={1}>
                             {openedSubject.subjectCode}
                           </Text>
                         </View>
 
-                        <Text style={{ color: accent, fontSize: 22, fontWeight: '900', marginHorizontal: 4 }}>➔</Text>
+                        <Text style={{ color: accent, fontSize: 20, fontWeight: '900', paddingHorizontal: 6, marginTop: 10 }}>➔</Text>
 
-                        <View style={{ flex: 4, alignItems: 'flex-end', marginRight: 10 }}>
+                        <View style={{ flex: 1.1, alignItems: 'flex-end', paddingRight: 6 }}>
                           <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>STATUS</Text>
-                          <Text style={{ color: accent, fontSize: 26, fontWeight: '900', letterSpacing: -0.5, marginTop: 1 }}>
+                          <Text style={{ color: accent, fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }} numberOfLines={1}>
                             {status.text}
                           </Text>
                         </View>
                       </View>
 
-                      {/* Full Subject Name Badge/Text */}
-                      <Text style={{ color: colors.textSecondary, fontSize: 8.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: -4 }} numberOfLines={1}>
+                      {/* Full Subject Name */}
+                      <Text style={{ color: colors.textSecondary, fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 }} numberOfLines={1}>
                         {openedSubject.subjectName}
                       </Text>
 
-                      {/* Bottom Row: Metrics with elegant visual hierarchy */}
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 10 }}>
+                      {/* Bottom Row Metrics */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 8 }}>
                         <View>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800', letterSpacing: 0.3 }}>ATTENDED</Text>
-                          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '900', marginTop: 1 }}>
-                            {openedSubject.attendedClasses} <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Lecs</Text>
-                          </Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800', letterSpacing: 0.3 }}>ATTENDED</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
+                            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '900' }}>{openedSubject.attendedClasses}</Text>
+                            <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Lecs</Text>
+                          </View>
                         </View>
                         <View>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800', letterSpacing: 0.3 }}>DELIVERED</Text>
-                          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '900', marginTop: 1 }}>
-                            {openedSubject.totalClasses} <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Lecs</Text>
-                          </Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800', letterSpacing: 0.3 }}>DELIVERED</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
+                            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '900' }}>{openedSubject.totalClasses}</Text>
+                            <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Lecs</Text>
+                          </View>
                         </View>
-                        <View style={{ marginRight: 10 }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800', letterSpacing: 0.3 }}>DUTY LEAVE</Text>
-                          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '900', marginTop: 1 }}>
-                            {openedSubject.dutyLeaves || 0} <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Days</Text>
-                          </Text>
+                        <View>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800', letterSpacing: 0.3 }}>DUTY LEAVE</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2 }}>
+                            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '900' }}>{openedSubject.dutyLeaves || 0}</Text>
+                            <Text style={{ fontSize: 8, fontWeight: '600', color: colors.textSecondary }}>Days</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
 
-                    {/* Right Ticket Stub (32% width) */}
-                    <View style={{ flex: 3.2, padding: 14, paddingLeft: 10, backgroundColor: isDark ? '#171A21' : '#F9FAFC', borderTopRightRadius: 14, borderBottomRightRadius: 14, justifyContent: 'space-between' }}>
+                    {/* Barcode Column (1.2 flex) - Vertical barcode right next to perforation */}
+                    <View style={{ flex: 1.2, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ width: 28, height: '90%', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', gap: 2, height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                          {[1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2].map((w, idx) => (
+                            <View key={idx} style={{ width: w, height: '100%', backgroundColor: isDark ? '#FFFFFF' : '#000000', opacity: isDark ? 0.65 : 0.8 }} />
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Right Ticket Stub (3.2 flex) */}
+                    <View style={{ flex: 3.2, padding: 16, paddingLeft: 12, backgroundColor: isDark ? '#171A21' : '#F9FAFC', borderTopRightRadius: 14, borderBottomRightRadius: 14, justifyContent: 'space-between' }}>
                       {/* Top Stub Row: Date */}
                       <View>
-                        <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>DATE</Text>
-                        <Text style={{ color: colors.text, fontSize: 12, fontWeight: '900', marginTop: 2 }}>
+                        <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>DATE</Text>
+                        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '900', marginTop: 1 }}>
                           {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
                         </Text>
                       </View>
 
                       {/* Middle Stub Row: Percentage */}
                       <View style={{ marginVertical: 2 }}>
-                        <Text style={{ color: '#FF4B4B', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>PERCENTAGE</Text>
-                        <Text style={{ color: accent, fontSize: 28, fontWeight: '900', letterSpacing: -0.5, marginTop: 1 }}>
+                        <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PERCENTAGE</Text>
+                        <Text style={{ color: accent, fontSize: 30, fontWeight: '900', letterSpacing: -0.5, marginTop: 1 }}>
                           {effectivePct}%
                         </Text>
                       </View>
 
                       {/* Bottom Stub Columns */}
-                      <View style={{ borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 10, gap: 4 }}>
+                      <View style={{ borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 8, gap: 4 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800' }}>MISSABLE</Text>
-                          <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 8, fontWeight: '900' }}>{proj.value}</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800' }}>MISSABLE</Text>
+                          <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 8.5, fontWeight: '900' }}>{proj.value}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800' }}>FORECAST</Text>
-                          <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 8, fontWeight: '900' }}>{proj.forecast}%</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800' }}>FORECAST</Text>
+                          <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 8.5, fontWeight: '900' }}>{proj.forecast}%</Text>
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 7, fontWeight: '800' }}>SKIP 1</Text>
-                          <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 8, fontWeight: '900' }}>{skipTodayPct}%</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '800' }}>SKIP 1</Text>
+                          <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 8.5, fontWeight: '900' }}>{skipTodayPct}%</Text>
                         </View>
                       </View>
                     </View>
