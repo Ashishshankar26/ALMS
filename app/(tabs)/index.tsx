@@ -1638,7 +1638,21 @@ export default function DashboardScreen() {
                             return fallback;
                           };
 
-                          const properDate = extractProperDate((item.content || '') + ' ' + (item.title || ''), item.date);
+                          // Extract parenthesis date right after By/By: [Name] (e.g. By Sami Anand (May 05, 2026))
+                          const extractParenthesisDate = (txt: string) => {
+                            if (!txt) return null;
+                            const match = txt.match(/\bBy\s*(?:\:\s*)?[A-Za-z\s\.\,\-]+\(\s*([A-Za-z0-9\s\,\-\/]{4,20})/i);
+                            if (match && match[1]) {
+                              const d = match[1].trim().replace(/\)$/, '').trim();
+                              if (d.match(/\d{4}/) && (d.match(/[0-9]/) || d.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i))) {
+                                return d;
+                              }
+                            }
+                            return null;
+                          };
+
+                          const pDate = extractParenthesisDate((item.content || '') + ' ' + (item.title || ''));
+                          const properDate = pDate || extractProperDate((item.content || '') + ' ' + (item.title || ''), item.date);
 
                           return (
                             <Animated.View
