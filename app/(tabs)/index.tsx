@@ -1920,153 +1920,64 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-            {/* Modal for Profile Options (Slide-up Bottom Sheet) */}
+                  {/* Modal for Profile Options (Subtle Centered Minimal Card) */}
       <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
         <TouchableOpacity
           style={styles.profileModalOverlay}
           activeOpacity={1}
           onPress={() => setShowProfileMenu(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={{ width: '100%', justifyContent: 'flex-end' }}>
+          <TouchableOpacity activeOpacity={1} style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
             <Animated.View 
-              entering={FadeInUp.duration(320).springify().damping(20)} 
+              entering={FadeInUp.duration(240).springify().damping(18)} 
               style={[
-                styles.profileBottomSheet, 
+                styles.profileMenuContent, 
                 { 
-                  backgroundColor: isDark ? '#12151D' : '#FFFFFF', 
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
+                  backgroundColor: isDark ? '#1C1F26' : '#FFFFFF', 
+                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  borderWidth: 1.5,
                 }
               ]}
             >
-              {/* Bottom Sheet Top Handle */}
-              <View style={{ width: 36, height: 4.5, backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', borderRadius: 2.25, alignSelf: 'center', marginBottom: 20 }} />
-
-              {/* Student Profile Card Header */}
-              <View style={[
-                styles.studentCard, 
-                { 
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
-                  borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-                }
-              ]}>
-                {/* Avatar Initials Circle with high-contrast text */}
-                <View style={{ 
-                  width: 52, 
-                  height: 52, 
-                  borderRadius: 26, 
-                  backgroundColor: colors.primary + '15',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderWidth: 1.5,
-                  borderColor: colors.primary + '30'
-                }}>
-                  <Text style={{ color: colors.primary, fontSize: 18, fontWeight: '900' }}>
-                    {data.profile?.name ? data.profile.name.trim().split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : 'ST'}
-                  </Text>
-                </View>
-
-                {/* Student Details */}
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800', textTransform: 'uppercase' }} numberOfLines={1}>
-                    {data.profile?.name || 'STUDENT PASSENGER'}
-                  </Text>
-                  
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
-                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
-                      {data.profile?.regNo || '12218032'}
-                    </Text>
-                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.textSecondary, marginHorizontal: 6 }} />
-                    <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }} numberOfLines={1}>
-                      {data.profile?.programName || 'COMPUTER SCIENCE & ENGINEERING'}
-                    </Text>
-                  </View>
-
-                  {/* Active Verified Badge with Pulsing Green Circle */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(52,199,89,0.1)' : 'rgba(52,199,89,0.08)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', marginTop: 8 }}>
-                    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#34C759', marginRight: 5 }} />
-                    <Text style={{ color: '#34C759', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>ACTIVE UMS SESSION</Text>
-                  </View>
-                </View>
+              {/* Card Header */}
+              <View style={[styles.profileMenuHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomWidth: 1.5 }]}>
+                <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
               </View>
 
-              {/* Menu Actions Section */}
-              <View style={{ gap: 10, marginBottom: 16 }}>
-                {/* Action 1: Change Password */}
-                <TouchableOpacity 
-                  style={[styles.profileMenuItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]} 
-                  onPress={() => { setShowProfileMenu(false); openUmsForm('frmchangepassword.aspx', 'Change Password'); }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#5856D615' }]}>
-                      <Lock size={16} color="#5856D6" />
-                    </View>
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={[styles.menuItemTitleText, { color: colors.text }]}>Change Password</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 2 }} numberOfLines={1}>Update your UMS portal account password</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 8 }} />
-                </TouchableOpacity>
-
-                {/* Action 2: Wi-Fi Password */}
-                <TouchableOpacity 
-                  style={[styles.profileMenuItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]} 
-                  onPress={() => { setShowProfileMenu(false); openUmsForm('frmAdPassword.aspx', 'Wifi Password'); }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#007AFF15' }]}>
-                      <Wifi size={16} color="#007AFF" />
-                    </View>
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={[styles.menuItemTitleText, { color: colors.text }]}>Wi-Fi Registration</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 2 }} numberOfLines={1}>Manage device access keys for campus internet</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 8 }} />
-                </TouchableOpacity>
-
-                {/* Action 3: Profile Update */}
-                <TouchableOpacity 
-                  style={[styles.profileMenuItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]} 
-                  onPress={() => { setShowProfileMenu(false); openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update'); }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#34C75915' }]}>
-                      <UserCheck size={16} color="#34C759" />
-                    </View>
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={[styles.menuItemTitleText, { color: colors.text }]}>Profile Details</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 2 }} numberOfLines={1}>Modify academic bio and emergency contacts</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 8 }} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Portal Sync Status Banner Widget */}
-              <View style={[
-                styles.statusWidget, 
-                { 
-                  backgroundColor: isDark ? 'rgba(52,199,89,0.05)' : 'rgba(52,199,89,0.03)', 
-                  borderColor: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(52,199,89,0.08)' 
-                }
-              ]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Sparkles size={14} color="#34C759" />
-                  <Text style={{ color: colors.text, fontSize: 11.5, fontWeight: '700', marginLeft: 6 }}>UMS Cloud Synced</Text>
-                </View>
-                <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 4 }}>
-                  Your grades, assignment uploads and attendance details are safely cached.
-                </Text>
-              </View>
-
-              {/* Wide Logout Button */}
+              {/* Action 1: Change Password */}
               <TouchableOpacity 
-                style={[styles.profileLogoutButton, { backgroundColor: '#FF3B3012', borderColor: '#FF3B3020' }]} 
+                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
+                onPress={() => { setShowProfileMenu(false); openUmsForm('frmchangepassword.aspx', 'Change Password'); }}
+              >
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
+                <Lock size={16} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Action 2: Wifi Password */}
+              <TouchableOpacity 
+                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
+                onPress={() => { setShowProfileMenu(false); openUmsForm('frmAdPassword.aspx', 'Wifi Password'); }}
+              >
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
+                <Wifi size={16} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Action 3: Profile Update */}
+              <TouchableOpacity 
+                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
+                onPress={() => { setShowProfileMenu(false); openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update'); }}
+              >
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
+                <UserCheck size={16} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Action 4: Sign Out */}
+              <TouchableOpacity 
+                style={[styles.menuItem, { borderBottomWidth: 0 }]} 
                 onPress={() => { setShowProfileMenu(false); logout(); }}
               >
-                <LogOut size={15} color="#FF3B30" />
-                <Text style={{ color: '#FF3B30', fontSize: 13, fontWeight: '800', marginLeft: 8, letterSpacing: 0.5 }}>SIGN OUT ACCOUNT</Text>
+                <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
+                <LogOut size={16} color={colors.error} />
               </TouchableOpacity>
             </Animated.View>
           </TouchableOpacity>
@@ -2878,7 +2789,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(8, 10, 16, 0.55)',
   },
   modalContent: {
     height: '85%',
@@ -3833,61 +3744,38 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(8, 10, 16, 0.65)',
   },
-  profileBottomSheet: {
-    width: '100%',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderWidth: 1.5,
-    borderBottomWidth: 0,
-    padding: 24,
-    paddingTop: 14,
+  profileMenuContent: {
+    width: '78%',
+    maxWidth: 320,
+    borderRadius: 24,
+    padding: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 25,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  studentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  profileMenuHeader: {
     padding: 14,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
+    marginBottom: 4,
   },
-  profileMenuItem: {
+  profileMenuTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
-  menuIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuItemTitleText: {
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  statusWidget: {
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  profileLogoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: Platform.OS === 'ios' ? 24 : 10,
+  menuItemText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   gridCardWrapper: {
     flex: 1,
