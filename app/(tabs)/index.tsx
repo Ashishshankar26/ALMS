@@ -1585,12 +1585,16 @@ export default function DashboardScreen() {
                               /\bBy\s+([A-Za-z\s\.\,\-\(\)]+)/i
                             ];
 
-                            for (const pattern of byPatterns) {
+                             for (const pattern of byPatterns) {
                               const match = txt.match(pattern);
                               if (match && match[1]) {
                                 const name = match[1].trim().split(/[\n\r]/)[0].trim();
-                                // Clean up trailing punctuation/unwanted tags
-                                const cleaned = name.replace(/[\:\-\.\,\s]+$/, '').trim();
+                                // Clean brackets, parentheses and trailing punctuation
+                                const cleaned = name
+                                  .replace(/\([^)]*\)/g, '')
+                                  .replace(/\[[^\]]*\]/g, '')
+                                  .replace(/[\:\-\.\,\s]+$/, '')
+                                  .trim();
                                 if (cleaned.length > 2 && 
                                     !cleaned.toLowerCase().startsWith('http') &&
                                     !['announcement', 'important', 'recently', 'today', 'notification'].some(w => cleaned.toLowerCase() === w)) {
