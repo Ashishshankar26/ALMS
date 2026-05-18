@@ -1581,18 +1581,20 @@ export default function DashboardScreen() {
                             
                             // Check for explicit "By: Name" or "By Name" (case-insensitive)
                             const byPatterns = [
-                              /\bBy\s*:\s*([A-Za-z\s\.\,\-\(\)]+)/i,
-                              /\bBy\s+([A-Za-z\s\.\,\-\(\)]+)/i
+                              /\bBy\s*:\s*([A-Za-z\s\.\,\-]+)/i,
+                              /\bBy\s+([A-Za-z\s\.\,\-]+)/i
                             ];
 
                              for (const pattern of byPatterns) {
                               const match = txt.match(pattern);
                               if (match && match[1]) {
                                 const name = match[1].trim().split(/[\n\r]/)[0].trim();
-                                // Clean brackets, parentheses and trailing punctuation
+                                // Clean brackets, parentheses, unclosed enclosures and trailing punctuation
                                 const cleaned = name
                                   .replace(/\([^)]*\)/g, '')
                                   .replace(/\[[^\]]*\]/g, '')
+                                  .replace(/\([^\)]*$/, '')
+                                  .replace(/\[[^\]]*$/, '')
                                   .replace(/[\:\-\.\,\s]+$/, '')
                                   .trim();
                                 if (cleaned.length > 2 && 
