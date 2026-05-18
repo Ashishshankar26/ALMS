@@ -38,6 +38,7 @@ export interface ScrapedData {
   makeupClasses: any[];
   roomBooking: any;
   lastUpdated?: string;
+  makeupUrl?: string;
 }
 
 type ScraperContextType = {
@@ -1070,6 +1071,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isFullyDone = useRef(false);
   const isRetrying = useRef(false);
+  const retriedSections = useRef<Set<string>>(new Set());
 
   // Selective retry: only re-fetch specific pages that returned empty data
   const runSelectiveRetry = (currentData: ScrapedData) => {
@@ -1077,17 +1079,26 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     const missing: string[] = [];
     
-    if (!currentData.timetable || Object.keys(currentData.timetable).length === 0) {
+    if ((!currentData.timetable || Object.keys(currentData.timetable).length === 0) && !retriedSections.current.has('timetable')) {
       missing.push('timetable');
     }
-    if (!currentData.attendance || currentData.attendance.length === 0) {
+    if ((!currentData.attendance || currentData.attendance.length === 0) && !retriedSections.current.has('dashboard')) {
       missing.push('dashboard');
     }
-    if (!currentData.results || currentData.results.length === 0) {
+    if ((!currentData.results || currentData.results.length === 0) && !retriedSections.current.has('dashboard')) {
       missing.push('dashboard');
     }
-    if (currentData.cgpa === '--' || !currentData.cgpa) {
+    if ((currentData.cgpa === '--' || !currentData.cgpa) && !retriedSections.current.has('dashboard')) {
       missing.push('dashboard');
+    }
+    if (currentData.examUrl && (!currentData.exams || currentData.exams.length === 0) && !retriedSections.current.has('exams')) {
+      missing.push('exams');
+    }
+    if (currentData.makeupUrl && (!currentData.makeupClasses || currentData.makeupClasses.length === 0) && !retriedSections.current.has('makeup')) {
+      missing.push('makeup');
+    }
+    if (!currentData.roomBooking && !retriedSections.current.has('roomBooking')) {
+      missing.push('roomBooking');
     }
     
     // Deduplicate
@@ -1102,23 +1113,33 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isRetrying.current = true;
     
     // Reset only the specific dedup guards for missing sections
-    if (unique.includes('dashboard')) {
-      didDashboard.current = false;
-    }
-    if (unique.includes('timetable')) {
-      didTimetable.current = false;
-    }
+    if (unique.includes('dashboard')) didDashboard.current = false;
+    if (unique.includes('timetable')) didTimetable.current = false;
+    if (unique.includes('makeup')) didMakeup.current = false;
+    // roomBooking and exams don't have dedicated 'did' guards in handleLoadEnd yet, they rely on URL matches
     
     // Navigate to the first missing page (the chain will continue from there)
     const firstMissing = unique[0];
+    retriedSections.current.add(firstMissing); // Mark as retried to avoid infinite loops
+    
     setTimeout(() => {
       if (firstMissing === 'dashboard') {
         console.log('SELECTIVE RETRY: Re-fetching dashboard data...');
         webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'; true;`);
+      } else if (firstMissing === 'makeup' && currentData.makeupUrl) {
+        console.log('SELECTIVE RETRY: Re-fetching makeup data...');
+        webViewRef.current?.injectJavaScript(`window.location.href = '${currentData.makeupUrl}'; true;`);
+      } else if (firstMissing === 'exams' && currentData.examUrl) {
+        console.log('SELECTIVE RETRY: Re-fetching exams data...');
+        webViewRef.current?.injectJavaScript(`window.location.href = '${currentData.examUrl}'; true;`);
+      } else if (firstMissing === 'roomBooking') {
+        console.log('SELECTIVE RETRY: Re-fetching room booking data...');
+        webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/frmRoomBooking.aspx'; true;`);
       } else if (firstMissing === 'timetable') {
         console.log('SELECTIVE RETRY: Re-fetching timetable data...');
         webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
       }
+      
       // Auto-reset retry flag after 12s so it doesn't block forever
       setTimeout(() => { isRetrying.current = false; }, 12000);
     }, 1500);
@@ -1157,6 +1178,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didMakeup.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
+      retriedSections.current.clear(); // Reset retries on full refresh
       setIsScraping(true);
 
       // Safety watchdog: force stop loading after 15s
@@ -1299,6 +1321,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.cgpa) merged.cgpa = p.cgpa;
           if (p.fee) merged.fee = p.fee;
           if (p.examUrl) merged.examUrl = p.examUrl;
+          if (p.makeupUrl) merged.makeupUrl = p.makeupUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
           // Trigger Makeup Scraping if URL found (Continues in background)
