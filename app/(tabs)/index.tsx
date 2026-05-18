@@ -1524,178 +1524,132 @@ export default function DashboardScreen() {
                       >
                         <TouchableOpacity
                           onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
-                          activeOpacity={0.88}
-                          style={[
-                            {
-                              borderRadius: 24,
-                              borderWidth: 1.2,
-                              marginBottom: 12,
-                              shadowColor: '#000000',
-                              shadowOffset: { width: 0, height: 4 },
-                              shadowOpacity: isDark ? 0.12 : 0.05,
-                              shadowRadius: 8,
-                              elevation: 2,
-                              overflow: 'hidden',
-                              position: 'relative',
-                            },
-                            {
-                              backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
-                              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                            }
-                          ]}
+                          activeOpacity={0.7}
+                          style={{
+                            paddingVertical: 14,
+                            paddingHorizontal: 4,
+                            borderBottomWidth: 1,
+                            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                          }}
                         >
-                          {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                          {/* Left Avatar / Category Icon Squircle */}
                           <View 
                             style={{ 
-                              ...StyleSheet.absoluteFillObject, 
-                              backgroundColor: config.color, 
-                              opacity: isDark ? 0.06 : 0.04,
-                              zIndex: -1 
-                            }} 
-                          />
+                              width: 40, 
+                              height: 40, 
+                              borderRadius: 12, 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              backgroundColor: config.color + '12',
+                              borderWidth: 1,
+                              borderColor: config.color + '20',
+                              marginTop: 2
+                            }}
+                          >
+                            <Icon size={18} color={config.color} />
+                          </View>
 
-                          {/* Glowing Accent Indicator Left Border */}
-                          <View 
-                            style={{ 
-                              position: 'absolute', 
-                              left: 0, 
-                              top: 0, 
-                              bottom: 0, 
-                              width: 5, 
-                              backgroundColor: config.color 
-                            }} 
-                          />
-
-                          <View style={{ padding: 18, paddingLeft: 22 }}>
-                            {/* Main Top Header Details */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                              <View 
+                          {/* Right Content Column */}
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            {/* Sender and Time/Date Header */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                              <Text 
                                 style={{ 
-                                  width: 36, 
-                                  height: 36, 
-                                  borderRadius: 12, 
-                                  alignItems: 'center', 
-                                  justifyContent: 'center',
-                                  backgroundColor: config.color + '18'
+                                  fontSize: 14, 
+                                  fontWeight: '800', 
+                                  color: colors.text,
+                                  flex: 1,
+                                  marginRight: 8
                                 }}
+                                numberOfLines={1}
                               >
-                                <Icon size={16} color={config.color} />
-                              </View>
-
-                              <View style={{ flex: 1 }}>
-                                <Text 
-                                  style={{ 
-                                    fontSize: 14, 
-                                    fontWeight: '700', 
-                                    lineHeight: 20, 
-                                    color: colors.text 
-                                  }} 
-                                  numberOfLines={isExpanded ? undefined : 1}
-                                >
-                                  {cleanTitle}
-                                </Text>
-                              </View>
-
-                              <View 
-                                style={{ 
-                                  width: 26, 
-                                  height: 26, 
-                                  borderRadius: 13, 
-                                  alignItems: 'center', 
-                                  justifyContent: 'center', 
-                                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' 
-                                }}
-                              >
-                                <ChevronRight
-                                  size={13}
-                                  color={colors.textSecondary}
-                                  style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
-                                />
-                              </View>
-                            </View>
-
-                            {/* Expandable Alert Content */}
-                            {(isExpanded || item.content) && (
-                              <Animated.View entering={FadeInUp.duration(300)}>
-                                <View 
-                                  style={{ 
-                                    height: 1, 
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', 
-                                    marginVertical: 14 
-                                  }} 
-                                />
-                                <Text
-                                  style={{ 
-                                    fontSize: 13.5, 
-                                    lineHeight: 21, 
-                                    color: colors.text, 
-                                    opacity: 0.9 
-                                  }}
-                                  numberOfLines={isExpanded ? undefined : 2}
-                                >
-                                  {item.content}
-                                </Text>
-                                {isExpanded && (
-                                  <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
-                                    <TouchableOpacity 
-                                      activeOpacity={0.7}
-                                      onPress={async () => {
-                                        const Clipboard = await import('expo-clipboard');
-                                        await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
-                                      }}
-                                      style={{ 
-                                        paddingHorizontal: 14, 
-                                        paddingVertical: 8, 
-                                        borderRadius: 12, 
-                                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                                        borderWidth: 1,
-                                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
-                                      }}
-                                    >
-                                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>Copy to Clipboard</Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                )}
-                              </Animated.View>
-                            )}
-
-                            {/* Premium Minimal Bottom Info */}
-                            <View 
-                              style={{ 
-                                flexDirection: 'row', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                marginTop: 12,
-                                paddingTop: 10,
-                                borderTopWidth: 1,
-                                borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
-                                <View 
-                                  style={{ 
-                                    width: 6, 
-                                    height: 6, 
-                                    borderRadius: 3, 
-                                    backgroundColor: config.color 
-                                  }} 
-                                />
-                                <Text 
-                                  style={{ 
-                                    fontSize: 11, 
-                                    fontWeight: '700', 
-                                    color: colors.textSecondary,
-                                    letterSpacing: 0.1
-                                  }} 
-                                  numberOfLines={1}
-                                >
-                                  {sender}
-                                </Text>
-                              </View>
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
+                                {sender}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '500' }}>
                                 {item.date || 'Recently'}
                               </Text>
                             </View>
+
+                            {/* Subject Title and Category pill badge */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <Text 
+                                style={{ 
+                                  fontSize: 13, 
+                                  fontWeight: '600', 
+                                  color: isExpanded ? colors.primary : colors.textSecondary,
+                                  flex: 1
+                                }}
+                                numberOfLines={isExpanded ? undefined : 1}
+                              >
+                                {cleanTitle}
+                              </Text>
+
+                              {/* Tiny modern pill tag badge */}
+                              <View 
+                                style={{ 
+                                  backgroundColor: config.color + '08', 
+                                  borderColor: config.color + '18', 
+                                  borderWidth: 1, 
+                                  paddingHorizontal: 6, 
+                                  paddingVertical: 1.5, 
+                                  borderRadius: 6 
+                                }}
+                              >
+                                <Text style={{ fontSize: 9, fontWeight: '800', color: config.color, letterSpacing: 0.2 }}>
+                                  {config.label}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Chat Bubble Reply Block (Expandable) */}
+                            {(isExpanded || item.content) && (
+                              <Animated.View entering={FadeInUp.duration(300)} style={{ marginTop: 8 }}>
+                                <View 
+                                  style={{ 
+                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)', 
+                                    borderRadius: 16, 
+                                    padding: 12, 
+                                    borderWidth: 1, 
+                                    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' 
+                                  }}
+                                >
+                                  <Text
+                                    style={{ 
+                                      fontSize: 13, 
+                                      lineHeight: 19, 
+                                      color: colors.text, 
+                                      opacity: 0.9 
+                                    }}
+                                  >
+                                    {item.content}
+                                  </Text>
+                                  
+                                  {isExpanded && (
+                                    <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
+                                      <TouchableOpacity 
+                                        activeOpacity={0.7}
+                                        onPress={async () => {
+                                          const Clipboard = await import('expo-clipboard');
+                                          await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
+                                        }}
+                                        style={{ 
+                                          paddingHorizontal: 12, 
+                                          paddingVertical: 6, 
+                                          borderRadius: 8, 
+                                          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                                          borderWidth: 1,
+                                          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>Copy Text</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  )}
+                                </View>
+                              </Animated.View>
+                            )}
                           </View>
                         </TouchableOpacity>
                       </Animated.View>
