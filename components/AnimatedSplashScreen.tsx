@@ -134,26 +134,13 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
         );
       })}
 
-      {/* The Constructed ALMS Logo */}
+      {/* The Real ALMS Logo */}
       <Animated.View style={[styles.logoWrapper, logoStyle]}>
-        <LinearGradient
-          colors={['#2E0B5C', '#000000', '#100224']} // The requested purple black mix gradient
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <Image 
+          source={require('../assets/icon.png')} 
           style={styles.logoBox}
-        >
-          {/* Texture overlay from the real icon.png */}
-          <Image 
-            source={require('../assets/images/icon.png')} 
-            style={styles.logoTexture}
-            resizeMode="cover"
-          />
-          
-          {/* Subtle inner ring to make it look like a premium app icon */}
-          <View style={styles.logoInnerRing}>
-            <Text style={styles.logoText}>alms</Text>
-          </View>
-        </LinearGradient>
+          resizeMode="cover"
+        />
       </Animated.View>
 
     </Animated.View>
@@ -196,35 +183,11 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   logoBox: {
-    width: 140,
-    height: 140,
-    borderRadius: 40, // Squircle shape like an iOS icon
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.4)', // Purple rim light
-    overflow: 'hidden', // Ensure the texture image doesn't bleed out
-  },
-  logoTexture: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-    opacity: 0.65, // Blend the texture with the gradient
-  },
-  logoInnerRing: {
-    width: 124,
-    height: 124,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  logoText: {
-    color: '#FFFFFF',
-    fontSize: 38,
-    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
-    fontWeight: '700',
-    letterSpacing: -1,
+    width: 150,
+    height: 150,
+    borderRadius: 36, // iOS-style squircle border
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(168, 85, 247, 0.4)', // Premium rim light matching the icon
   },
 });
