@@ -441,7 +441,7 @@ export default function AttendanceScreen() {
           return (
             <TouchableOpacity 
               key={index}
-              style={[styles.widgetCardWrap, index % 2 === 0 && styles.widgetCardLeft]}
+              style={[styles.widgetCardWrap, index % 2 === 0 && styles.widgetCardLeft, { shadowColor: accent }]}
               onPress={() => setSelectedSubject(item.subjectCode)}
               activeOpacity={0.82}
             >
