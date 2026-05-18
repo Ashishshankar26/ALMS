@@ -1921,15 +1921,14 @@ export default function DashboardScreen() {
       </Modal>
 
                   {/* Modal for Profile Options (Subtle Centered Minimal Card) */}
-      <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
+      <Modal visible={showProfileMenu} animationType="none" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
         <TouchableOpacity
           style={styles.profileModalOverlay}
           activeOpacity={1}
           onPress={() => setShowProfileMenu(false)}
         >
           <TouchableOpacity activeOpacity={1} style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-            <Animated.View 
-              entering={FadeInUp.duration(240).springify().damping(18)} 
+            <View 
               style={[
                 styles.profileMenuContent, 
                 { 
@@ -1979,7 +1978,7 @@ export default function DashboardScreen() {
                 <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
                 <LogOut size={16} color={colors.error} />
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
