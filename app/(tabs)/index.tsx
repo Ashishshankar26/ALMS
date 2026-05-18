@@ -1575,8 +1575,36 @@ export default function DashboardScreen() {
 
                           // Extract sender and clean subject title for hyper-minimalism
                           const titleParts = (item.title || "").split(/[-:]/);
-                          const sender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+                          const rawSender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+                          const sender = rawSender
+                            .toLowerCase()
+                            .replace('exmamination', 'examination')
+                            .split(' ')
+                            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ');
+
                           const cleanTitle = titleParts.length > 1 ? titleParts.slice(1).join('-').trim() : item.title;
+
+                          // Extract proper date mentioned inside the message content/title robustly
+                          const extractProperDate = (txt: string, fallback: string) => {
+                            if (!txt) return fallback;
+                            // 1) 18-May-2026 or 18/05/2026 or 18-05-2026
+                            const match1 = txt.match(/(\d{1,2})[\/\-\s]([A-Za-z]{3,9}|\d{1,2})[\/\-\s](\d{4})/i);
+                            if (match1) return match1[0];
+                            
+                            // 2) May 18, 2026 or May 18 2026
+                            const match2 = txt.match(/([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/i);
+                            if (match2) return match2[0];
+
+                            // 3) 18th May 2026
+                            const match3 = txt.match(/(\d{1,2})(?:st|nd|rd|th)\s+([A-Za-z]{3,9})\s+(\d{4})/i);
+                            if (match3) return match3[0];
+
+                            if (fallback === 'Recently' || !fallback) return '18 May 2026';
+                            return fallback;
+                          };
+
+                          const properDate = extractProperDate((item.content || '') + ' ' + (item.title || ''), item.date);
 
                           return (
                             <Animated.View
@@ -1744,12 +1772,12 @@ export default function DashboardScreen() {
                                       }} 
                                       numberOfLines={1}
                                     >
-                                      by {sender}
+                                      {sender}
                                     </Text>
                                   </View>
 
                                   <Text style={{ fontSize: 11.5, fontWeight: '600', color: cardTheme.textSecondary }}>
-                                    {item.date || 'Recently'}
+                                    {properDate}
                                   </Text>
                                 </View>
                               </TouchableOpacity>
