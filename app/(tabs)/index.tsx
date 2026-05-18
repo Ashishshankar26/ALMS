@@ -1013,7 +1013,7 @@ export default function DashboardScreen() {
                 >
                   <View style={[styles.profileCardGlow, { backgroundColor: theme.accent, opacity: isTop ? 0.18 : 0 }]} />
                   <View style={[styles.premiumProfileCard, { padding: 0, overflow: 'hidden', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 }]}>
-                    <LinearGradient colors={theme.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
+                    <LinearGradient colors={theme.colors as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
                       <View style={[styles.profileCardHandle, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.24)' : 'rgba(17,17,17,0.12)' }]} />
                       <View style={[styles.masterShapeLeft, { backgroundColor: theme.accent }]} />
                       <View style={[styles.masterShapeMid, { backgroundColor: theme.accent }]} />

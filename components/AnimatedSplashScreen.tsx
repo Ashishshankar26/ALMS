@@ -19,8 +19,6 @@ const { width, height } = Dimensions.get('window');
 const PARTICLES_COUNT = 80;
 
 export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
-  const [hidden, setHidden] = useState(false);
-  
   // Single shared value drives all particles for maximum 60fps performance
   const particleProgress = useSharedValue(0);
   const logoProgress = useSharedValue(0);
@@ -58,7 +56,6 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       2800,
       withTiming(0, { duration: 450, easing: Easing.inOut(Easing.ease) }, (finished) => {
         if (finished) {
-          runOnJS(setHidden)(true);
           runOnJS(onAnimationComplete)();
         }
       })
@@ -88,8 +85,6 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       ],
     };
   });
-
-  if (hidden) return null;
 
   return (
     <Animated.View style={[styles.container, containerStyle]} pointerEvents="none">
@@ -136,13 +131,14 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
 
       {/* The Constructed ALMS Logo */}
       <Animated.View style={[styles.logoWrapper, logoStyle]}>
-        <LinearGradient
-          colors={['#2E0B5C', '#000000', '#100224']} // The requested purple black mix gradient
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.logoBox}
-        >
-          {/* Texture overlay from the real ALMS icon.png, rotated and scaled to hide its text and only keep the geometric lines */}
+        <View style={styles.logoBox}>
+          <LinearGradient
+            colors={['#2E0B5C', '#000000', '#100224']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* Texture overlay from the real ALMS icon.png, rotated and scaled */}
           <Image 
             source={require('../assets/icon.png')} 
             style={styles.logoTexture}
@@ -154,7 +150,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
             <Text style={styles.logoText}>alms</Text>
             <Text style={styles.logoSubtext}>FOR STUDENTS</Text>
           </View>
-        </LinearGradient>
+        </View>
       </Animated.View>
 
     </Animated.View>

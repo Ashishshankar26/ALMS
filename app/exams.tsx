@@ -23,7 +23,9 @@ export default function ExamsScreen() {
     try {
       setLoading(true);
       const filename = 'LPU_Admit_Card_' + new Date().getTime() + '.pdf';
-      const fileUri = FileSystem.documentDirectory + filename;
+      const docDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+      if (!docDir) throw new Error('No writable directory available');
+      const fileUri = docDir + filename;
       
       console.log('Downloading admit card from:', downloadUrl);
       
