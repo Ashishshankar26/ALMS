@@ -487,7 +487,7 @@ export default function AttendanceScreen() {
     </ScrollView>
 
       <Modal visible={!!openedSubject} transparent animationType="fade" onRequestClose={() => setSelectedSubject(null)}>
-                                                                        <View style={styles.modalOverlay}>
+                                                                                <View style={styles.modalOverlay}>
           {openedSubject ? (() => {
             const effectivePct = getEffectivePct(openedSubject);
             const status = getStatus(effectivePct);
@@ -528,8 +528,8 @@ export default function AttendanceScreen() {
                       }
                     ]}
                   >
-                    {/* Top Red Accent Strip (Offset) */}
-                    <View style={{ position: 'absolute', top: 0, left: 24, right: 24, height: 3, backgroundColor: '#FF4B4B', borderBottomLeftRadius: 1.5, borderBottomRightRadius: 1.5 }} />
+                    {/* Top Accent Strip (Dynamic Status Accent Color) */}
+                    <View style={{ position: 'absolute', top: 0, left: 24, right: 24, height: 3, backgroundColor: accent, borderBottomLeftRadius: 1.5, borderBottomRightRadius: 1.5 }} />
 
                     {/* Inner Ticket Container */}
                     <View style={{ flex: 1, padding: 14, paddingVertical: 14, justifyContent: 'space-between' }}>
@@ -538,7 +538,7 @@ export default function AttendanceScreen() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         {/* Passenger */}
                         <View style={{ flex: 1.2, marginRight: 4 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PASSENGER</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PASSENGER</Text>
                           <Text style={{ color: isDark ? '#FFFFFF' : '#111419', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginTop: 2 }} numberOfLines={1}>
                             {formattedName}
                           </Text>
@@ -556,7 +556,7 @@ export default function AttendanceScreen() {
 
                         {/* Date */}
                         <View style={{ flex: 0.6, alignItems: 'flex-end', marginLeft: 4 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>DATE</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>DATE</Text>
                           <Text style={{ color: isDark ? '#FFFFFF' : '#111419', fontSize: 12, fontWeight: '800', marginTop: 2 }}>
                             {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
                           </Text>
@@ -567,7 +567,7 @@ export default function AttendanceScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 4 }}>
                         {/* Origin (Subject Code) */}
                         <View style={{ flex: 4.5 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>ORIGIN</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>ORIGIN</Text>
                           <Text style={{ color: isDark ? '#FFFFFF' : '#111419', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 }} numberOfLines={1}>
                             {openedSubject.subjectCode}
                           </Text>
@@ -583,7 +583,7 @@ export default function AttendanceScreen() {
 
                         {/* Destination (Status) */}
                         <View style={{ flex: 4.5, alignItems: 'flex-end' }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>STATUS</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>STATUS</Text>
                           <Text style={{ color: accent, fontSize: 26, fontWeight: '900', letterSpacing: -0.5 }} numberOfLines={1}>
                             {status.text}
                           </Text>
@@ -596,27 +596,27 @@ export default function AttendanceScreen() {
                       {/* Bottom Section: Single horizontal row with 4 columns, full labels, massive numbers */}
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1.5, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', paddingTop: 10 }}>
                         <View style={{ alignItems: 'flex-start', flex: 1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PERCENTAGE</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>PERCENTAGE</Text>
                           <Text style={{ color: accent, fontSize: 16, fontWeight: '900', marginTop: 2 }}>{effectivePct}%</Text>
                         </View>
                         <View style={{ alignItems: 'center', flex: 1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>MISSABLE</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>MISSABLE</Text>
                           <Text style={{ color: proj.isSafe ? '#34C759' : '#FF3B30', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{proj.value}</Text>
                         </View>
                         <View style={{ alignItems: 'center', flex: 1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>FORECAST</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>FORECAST</Text>
                           <Text style={{ color: proj.forecast < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{proj.forecast}%</Text>
                         </View>
                         <View style={{ alignItems: 'flex-end', flex: 1 }}>
-                          <Text style={{ color: '#FF4B4B', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>SKIP TODAY</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 7.5, fontWeight: '900', letterSpacing: 0.5 }}>SKIP TODAY</Text>
                           <Text style={{ color: skipTodayPct < targetPct ? '#FF3B30' : '#34C759', fontSize: 16, fontWeight: '900', marginTop: 2 }}>{skipTodayPct}%</Text>
                         </View>
                       </View>
 
                     </View>
 
-                    {/* Bottom Red Accent Strip (Offset) */}
-                    <View style={{ position: 'absolute', bottom: 0, left: 24, right: 24, height: 3, backgroundColor: '#FF4B4B', borderTopLeftRadius: 1.5, borderTopRightRadius: 1.5 }} />
+                    {/* Bottom Accent Strip (Dynamic Status Accent Color) */}
+                    <View style={{ position: 'absolute', bottom: 0, left: 24, right: 24, height: 3, backgroundColor: accent, borderTopLeftRadius: 1.5, borderTopRightRadius: 1.5 }} />
 
                     {/* Left half-circle notch punch-out (Vertically Centered) */}
                     <View 
