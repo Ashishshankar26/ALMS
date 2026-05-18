@@ -1772,9 +1772,9 @@ export default function DashboardScreen() {
                                       <View style={{ flexDirection: 'row', marginBottom: 14, gap: 10 }}>
                                         <TouchableOpacity 
                                           activeOpacity={0.7}
-                                          onPress={async () => {
-                                            const Clipboard = await import('expo-clipboard');
-                                            await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
+                                          onPress={() => {
+                                            const { Clipboard } = require('react-native');
+                                            Clipboard.setString(item.title + '\n\n' + item.content);
                                           }}
                                           style={{ 
                                             flexDirection: 'row',
