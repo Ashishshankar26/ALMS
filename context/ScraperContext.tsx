@@ -1069,6 +1069,60 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isProcessingPhase = useRef(false);
 
   const isFullyDone = useRef(false);
+  const isRetrying = useRef(false);
+
+  // Selective retry: only re-fetch specific pages that returned empty data
+  const runSelectiveRetry = (currentData: ScrapedData) => {
+    if (isRetrying.current) return;
+    
+    const missing: string[] = [];
+    
+    if (!currentData.timetable || Object.keys(currentData.timetable).length === 0) {
+      missing.push('timetable');
+    }
+    if (!currentData.attendance || currentData.attendance.length === 0) {
+      missing.push('dashboard');
+    }
+    if (!currentData.results || currentData.results.length === 0) {
+      missing.push('dashboard');
+    }
+    if (currentData.cgpa === '--' || !currentData.cgpa) {
+      missing.push('dashboard');
+    }
+    
+    // Deduplicate
+    const unique = [...new Set(missing)];
+    
+    if (unique.length === 0) {
+      console.log('SELECTIVE RETRY: All data sections populated, no retry needed.');
+      return;
+    }
+    
+    console.log('SELECTIVE RETRY: Missing sections:', unique.join(', '));
+    isRetrying.current = true;
+    
+    // Reset only the specific dedup guards for missing sections
+    if (unique.includes('dashboard')) {
+      didDashboard.current = false;
+    }
+    if (unique.includes('timetable')) {
+      didTimetable.current = false;
+    }
+    
+    // Navigate to the first missing page (the chain will continue from there)
+    const firstMissing = unique[0];
+    setTimeout(() => {
+      if (firstMissing === 'dashboard') {
+        console.log('SELECTIVE RETRY: Re-fetching dashboard data...');
+        webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'; true;`);
+      } else if (firstMissing === 'timetable') {
+        console.log('SELECTIVE RETRY: Re-fetching timetable data...');
+        webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
+      }
+      // Auto-reset retry flag after 12s so it doesn't block forever
+      setTimeout(() => { isRetrying.current = false; }, 12000);
+    }, 1500);
+  };
 
   const refreshData = (webUsername?: string) => {
     console.log('REFRESH DATA START', { webUsername });
@@ -1169,7 +1223,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    if (isFullyDone.current) return;
+    // Allow selective retry to pass through even after initial scrape is done
+    if (isFullyDone.current && !isRetrying.current) return;
 
     if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
       console.log('INJECTING DASHBOARD_SCRIPT...');
@@ -1384,6 +1439,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             lastUpdated: new Date().toISOString()
           };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+          
+          // After main chain completes, check for missing data and selectively retry
+          setTimeout(() => {
+            runSelectiveRetry(merged);
+          }, 2000);
+          
           return merged;
         });
 
