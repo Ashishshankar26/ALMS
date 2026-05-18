@@ -1511,6 +1511,11 @@ export default function DashboardScreen() {
                     const config = getMessageConfig(item.title);
                     const Icon = config.icon;
 
+                    // Extract sender and clean subject title for hyper-minimalism
+                    const titleParts = (item.title || "").split(/[-:]/);
+                    const sender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+                    const cleanTitle = titleParts.length > 1 ? titleParts.slice(1).join('-').trim() : item.title;
+
                     return (
                       <Animated.View
                         key={item.id || idx}
@@ -1562,6 +1567,7 @@ export default function DashboardScreen() {
                           />
 
                           <View style={{ padding: 18, paddingLeft: 22 }}>
+                            {/* Main Top Header Details */}
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <View 
                                 style={{ 
@@ -1577,39 +1583,16 @@ export default function DashboardScreen() {
                               </View>
 
                               <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                                  <Text 
-                                    style={{ 
-                                      fontSize: 10, 
-                                      fontWeight: '800', 
-                                      letterSpacing: 0.6, 
-                                      color: config.color 
-                                    }}
-                                  >
-                                    {config.label}
-                                  </Text>
-                                  <View 
-                                    style={{ 
-                                      width: 4, 
-                                      height: 4, 
-                                      borderRadius: 2, 
-                                      backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' 
-                                    }} 
-                                  />
-                                  <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>
-                                    {item.date || 'LPU UMS'}
-                                  </Text>
-                                </View>
                                 <Text 
                                   style={{ 
-                                    fontSize: 14.5, 
-                                    fontWeight: '800', 
+                                    fontSize: 14, 
+                                    fontWeight: '700', 
                                     lineHeight: 20, 
                                     color: colors.text 
                                   }} 
                                   numberOfLines={isExpanded ? undefined : 1}
                                 >
-                                  {item.title}
+                                  {cleanTitle}
                                 </Text>
                               </View>
 
@@ -1631,6 +1614,7 @@ export default function DashboardScreen() {
                               </View>
                             </View>
 
+                            {/* Expandable Alert Content */}
                             {(isExpanded || item.content) && (
                               <Animated.View entering={FadeInUp.duration(300)}>
                                 <View 
@@ -1674,6 +1658,44 @@ export default function DashboardScreen() {
                                 )}
                               </Animated.View>
                             )}
+
+                            {/* Premium Minimal Bottom Info */}
+                            <View 
+                              style={{ 
+                                flexDirection: 'row', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                marginTop: 12,
+                                paddingTop: 10,
+                                borderTopWidth: 1,
+                                borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
+                                <View 
+                                  style={{ 
+                                    width: 6, 
+                                    height: 6, 
+                                    borderRadius: 3, 
+                                    backgroundColor: config.color 
+                                  }} 
+                                />
+                                <Text 
+                                  style={{ 
+                                    fontSize: 11, 
+                                    fontWeight: '700', 
+                                    color: colors.textSecondary,
+                                    letterSpacing: 0.1
+                                  }} 
+                                  numberOfLines={1}
+                                >
+                                  {sender}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
+                                {item.date || 'Recently'}
+                              </Text>
+                            </View>
                           </View>
                         </TouchableOpacity>
                       </Animated.View>
