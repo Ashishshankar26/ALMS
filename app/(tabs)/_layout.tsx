@@ -8,7 +8,7 @@ import { registerForPushNotificationsAsync } from '../../utils/notifications';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const TAB_BAR_W = SCREEN_W * 0.75;
+const TAB_BAR_W = Math.min(SCREEN_W * 0.85, 380);
 
 const ICON_MAP: Record<string, any> = {
   index: Home,
@@ -18,10 +18,14 @@ const ICON_MAP: Record<string, any> = {
   leave: FileText,
 };
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 function MyTabBar({ state, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom > 0 ? insets.bottom + 8 : 20;
   const { isDark } = useTheme();
   return (
-    <View style={[styles.tabBarOuter, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)', borderWidth: 1 }]}>
+    <View style={[styles.tabBarOuter, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)', borderWidth: 1, bottom: bottomInset, left: (SCREEN_W - TAB_BAR_W) / 2, width: TAB_BAR_W }]}>
       <BlurView tint={isDark ? 'dark' : 'light'} intensity={Platform.OS === 'ios' ? 85 : 65} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32 }} />
       {state.routes.map((route: any, i: number) => {
         const focused = i === state.index;
