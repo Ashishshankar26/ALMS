@@ -1920,66 +1920,38 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-                  {/* Modal for Profile Options (Subtle Centered Minimal Card) */}
-      <Modal visible={showProfileMenu} animationType="none" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
+      {/* Modal for Profile Options */}
+      <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
         <TouchableOpacity
           style={styles.profileModalOverlay}
           activeOpacity={1}
           onPress={() => setShowProfileMenu(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-            <View 
-              style={[
-                styles.profileMenuContent, 
-                { 
-                  backgroundColor: isDark ? '#1C1F26' : '#FFFFFF', 
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  borderWidth: 1.5,
-                }
-              ]}
-            >
-              {/* Card Header */}
-              <View style={[styles.profileMenuHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomWidth: 1.5 }]}>
-                <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
-              </View>
-
-              {/* Action 1: Change Password */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('frmchangepassword.aspx', 'Change Password'); }}
-              >
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
-                <Lock size={16} color={colors.primary} />
-              </TouchableOpacity>
-
-              {/* Action 2: Wifi Password */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('frmAdPassword.aspx', 'Wifi Password'); }}
-              >
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
-                <Wifi size={16} color={colors.primary} />
-              </TouchableOpacity>
-
-              {/* Action 3: Profile Update */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} 
-                onPress={() => { setShowProfileMenu(false); openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update'); }}
-              >
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
-                <UserCheck size={16} color={colors.primary} />
-              </TouchableOpacity>
-
-              {/* Action 4: Sign Out */}
-              <TouchableOpacity 
-                style={[styles.menuItem, { borderBottomWidth: 0 }]} 
-                onPress={() => { setShowProfileMenu(false); logout(); }}
-              >
-                <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
-                <LogOut size={16} color={colors.error} />
-              </TouchableOpacity>
+          <View style={[styles.profileMenuContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.profileMenuHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
             </View>
-          </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
+              <Lock size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmAdPassword.aspx', 'Wifi Password')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
+              <Wifi size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update')}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
+              <UserCheck size={18} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => { setShowProfileMenu(false); logout(); }}>
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
+              <LogOut size={18} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
     </View>
@@ -2788,7 +2760,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(8, 10, 16, 0.55)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     height: '85%',
@@ -3738,42 +3710,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(8, 10, 16, 0.65)',
-  },
   profileMenuContent: {
-    width: '78%',
-    maxWidth: 320,
+    width: '75%',
     borderRadius: 24,
     padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 10,
   },
   profileMenuHeader: {
-    padding: 14,
-    marginBottom: 4,
+    padding: 15,
+    borderBottomWidth: 1,
+    marginBottom: 5,
   },
   profileMenuTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: 'bold',
     textAlign: 'center',
-    letterSpacing: 0.2,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F2F2F7',
   },
   menuItemText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   gridCardWrapper: {
