@@ -13,7 +13,8 @@ import { AuthProvider } from '../context/AuthContext';
 import { ScraperProvider } from '../context/ScraperContext';
 import { AppThemeProvider, useTheme } from '../context/ThemeContext';
 
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -106,7 +107,8 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      <SafeAreaView style={{ 
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={{ 
         flex: 1, 
         backgroundColor: colors.background,
         alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
@@ -116,7 +118,7 @@ function RootLayoutNav() {
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: Platform.OS === 'web' ? 0.1 : 0,
         shadowRadius: 10,
-      }} edges={['top', 'left', 'right']}>
+      }}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="fees" options={{ title: 'Fees', headerShown: false }} />
@@ -124,7 +126,7 @@ function RootLayoutNav() {
           <Stack.Screen name="ums_form" options={{ title: 'University Form', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
-      </SafeAreaView>
+      </View>
     </ThemeProvider>
   );
 }
