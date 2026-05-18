@@ -820,12 +820,14 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     alignSelf: 'center',
+    // Increased bottom margin for safe‑area clearance
     marginTop: 0,
-    marginBottom: 62,
+    marginBottom: 100,
     minWidth: 270,
-    height: 72,
-    paddingHorizontal: 10,
-    borderRadius: 36,
+    // Slightly slimmer bar for a premium feel
+    height: 64,
+    paddingHorizontal: 12,
+    borderRadius: 32,
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.13)',
     flexDirection: 'row',
@@ -833,10 +835,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     shadowColor: '#111111',
-    shadowOffset: { width: 0, height: 16 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowRadius: 20,
+    elevation: 8,
   },
   sideAction: {
     width: 54,

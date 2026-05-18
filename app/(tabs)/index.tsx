@@ -781,11 +781,11 @@ export default function DashboardScreen() {
     { key: 'sage', colors: ['#E2E8D8', '#C5D5B7'], accent: '#8FA87A', text: '#1E2B18', layers: ['#D4E2C9', '#B8CBA5', '#EAF0E3'] },
     { key: 'rose', colors: ['#FFD1DC', '#FB7185'], accent: '#111111', text: '#FFFFFF', layers: ['#F4FF62', '#92D980', '#AAB9FF'] },
     { key: 'ocean', colors: ['#C8E6F5', '#5BA3D9'], accent: '#1E4D7A', text: '#0A1F33', layers: ['#B8DCF0', '#7BBDE6', '#E1F0FA'] },
-    { key: 'mauve', colors: ['#EDE0F5', '#C9A8E0'], accent: '#6B3FA0', text: '#1C0F2B', layers: ['#DCC8EE', '#B48DD4', '#F5EEFA'] },
-    { key: 'peach', colors: ['#FFE8D6', '#FFB58A'], accent: '#C45A2C', text: '#2A1408', layers: ['#FFDCC0', '#FFC4A0', '#FFF0E6'] },
-    { key: 'emerald', colors: ['#D4EDDA', '#7BC47F'], accent: '#1C6B2F', text: '#0A1F0E', layers: ['#B8E0C0', '#8FD495', '#E8F5EC'] },
-    { key: 'twilight', colors: ['#D9D0F0', '#8B7FC7'], accent: '#3C2E6B', text: '#0F0824', layers: ['#C4B8E8', '#A094D8', '#EDE8F8'] },
-    { key: 'sienna', colors: ['#F5DDD0', '#DBA885'], accent: '#8B4A2B', text: '#1E0D05', layers: ['#ECCBB8', '#C89B78', '#F5E8E0'] },
+    { key: 'midnight', colors: ['#1A213D', '#0A0E23'], accent: '#4FD1C5', text: '#FFFFFF', layers: ['#262F52', '#141A30', '#0E1224'] },
+    { key: 'forest', colors: ['#102E24', '#06130E'], accent: '#A0ECA4', text: '#FFFFFF', layers: ['#1A4235', '#0A1C14', '#071610'] },
+    { key: 'void', colors: ['#23153C', '#0D061A'], accent: '#F687B3', text: '#FFFFFF', layers: ['#352256', '#140A26', '#0E071D'] },
+    { key: 'slate', colors: ['#2A323C', '#11151A'], accent: '#82AAFF', text: '#FFFFFF', layers: ['#3B4552', '#1B2129', '#141A20'] },
+    { key: 'abyss', colors: ['#2D1F25', '#120B0F'], accent: '#FFB86C', text: '#FFFFFF', layers: ['#422C36', '#1F121A', '#160D12'] },
   ];
 
   const getProfileCardThemes = (seed: string) => {
@@ -837,7 +837,10 @@ export default function DashboardScreen() {
 
   const profileCardPanResponder = React.useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onMoveShouldSetPanResponder: (evt, gesture) => {
+        // Allow swipe anywhere on the card with a gentle threshold
+        return Math.abs(gesture.dx) > 5;
+      },
       onPanResponderRelease: (_, gesture) => {
         if (profileCardLockedRef.current || Math.abs(gesture.dx) < SWIPE_THRESHOLD) return;
         const direction = gesture.dx < 0 ? 1 : -1;
@@ -955,10 +958,10 @@ export default function DashboardScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <TouchableOpacity
-              style={[styles.headerIconBtn]}
+              style={[styles.headerIconBtn, { backgroundColor: isDark ? 'rgba(255,183,28,0.15)' : 'rgba(99,102,241,0.12)' }]}
               onPress={toggleTheme}
             >
-              {isDark ? <Sun size={22} color={colors.warning} /> : <Moon size={22} color={colors.primary} />}
+              {isDark ? <Sun size={22} color="#FFB71C" /> : <Moon size={22} color="#6366F1" />}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1327,7 +1330,7 @@ export default function DashboardScreen() {
           {/* Update Manager */}
           <View style={[styles.updateCard, { padding: 0, overflow: 'hidden', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1.5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, marginTop: 20 }]}>
             <LinearGradient
-              colors={['#6366F1', '#4338CA']}
+              colors={['#2D2D2D', '#1A1A1A']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ padding: 18, width: '100%', flexDirection: 'column', alignItems: 'center' }}
@@ -1723,6 +1726,13 @@ const styles = StyleSheet.create({
     top: 28,
     backgroundColor: '#AEBBFF',
   },
+  profileCircularOverlay: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 16,
+    bottom: -16,
+  },
   profileCardGlow: {
     position: 'absolute',
     left: 16,
@@ -1815,8 +1825,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 0,
-    paddingLeft: 62,
-    paddingRight: 54,
+    paddingLeft: 52,
+    paddingRight: 0,
   },
   profileTitleBlock: {
     flex: 1,

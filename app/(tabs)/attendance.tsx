@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const SEMESTER_DATE_KEY = '@semester_end_date';
+const TARGET_PCT_KEY = '@attendance_target_pct';
 
 export default function AttendanceScreen() {
   const { data, isScraping } = useScraper();
@@ -18,19 +19,23 @@ export default function AttendanceScreen() {
   const [semesterEndDate, setSemesterEndDate] = useState(new Date('2026-06-01'));
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Persistence: Load Date on Mount
+  // Persistence: Load Date & Target on Mount
   useEffect(() => {
-    const loadStoredDate = async () => {
+    const loadStoredData = async () => {
       try {
         const storedDate = await AsyncStorage.getItem(SEMESTER_DATE_KEY);
         if (storedDate) {
           setSemesterEndDate(new Date(storedDate));
         }
+        const storedTarget = await AsyncStorage.getItem(TARGET_PCT_KEY);
+        if (storedTarget) {
+          setTargetPct(parseInt(storedTarget, 10));
+        }
       } catch (e) {
-        console.error('Failed to load semester date', e);
+        console.error('Failed to load stored attendance data', e);
       }
     };
-    loadStoredDate();
+    loadStoredData();
   }, []);
 
   // Persistence: Save Date on Change
@@ -44,6 +49,18 @@ export default function AttendanceScreen() {
     };
     saveDate();
   }, [semesterEndDate]);
+
+  // Persistence: Save Target on Change
+  useEffect(() => {
+    const saveTarget = async () => {
+      try {
+        await AsyncStorage.setItem(TARGET_PCT_KEY, targetPct.toString());
+      } catch (e) {
+        console.error('Failed to save target percentage', e);
+      }
+    };
+    saveTarget();
+  }, [targetPct]);
 
   const changeTarget = (delta: number) => {
     setTargetPct(prev => Math.min(100, Math.max(50, prev + delta)));
@@ -76,8 +93,8 @@ export default function AttendanceScreen() {
   const displayAttendance = showAggregate ? overallAttendance : rawOverallAttendance;
 
   const getStatus = (percentage: number) => {
-    if (percentage >= targetPct + 10) return { text: 'Safe', color: '#34C759', icon: <CheckCircle size={20} color="#34C759" /> };
-    if (percentage >= targetPct)      return { text: 'Warning', color: '#FF9500', icon: <AlertTriangle size={20} color="#FF9500" /> };
+    if (percentage === 100 || percentage >= targetPct + 5) return { text: 'Safe', color: '#34C759', icon: <CheckCircle size={20} color="#34C759" /> };
+    if (percentage >= targetPct)                            return { text: 'Warning', color: '#FF9500', icon: <AlertTriangle size={20} color="#FF9500" /> };
     return { text: 'Critical', color: '#FF3B30', icon: <XCircle size={20} color="#FF3B30" /> };
   };
 
@@ -90,8 +107,8 @@ export default function AttendanceScreen() {
   );
 
   const getWidgetTheme = (percentage: number): [string, string, string] => {
-    if (percentage >= targetPct + 10) return ['#F4FFF8', '#34C759', '#111111'];
-    if (percentage >= targetPct) return ['#FFF8EA', '#FF9500', '#111111'];
+    if (percentage === 100 || percentage >= targetPct + 5) return ['#F4FFF8', '#34C759', '#111111'];
+    if (percentage >= targetPct)                            return ['#FFF8EA', '#FF9500', '#111111'];
     return ['#FFF1F3', '#FF3B30', '#111111'];
   };
 
@@ -166,97 +183,250 @@ export default function AttendanceScreen() {
       >
         <Animated.View 
           entering={FadeInUp.delay(100).duration(800).springify()}
-          style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={{ marginHorizontal: 16, marginTop: 15 }}
         >
-          <View style={styles.headerTopCompact}>
-            <View>
-              <Text style={[styles.headerLabel, { color: colors.textSecondary }]}>ATTENDANCE</Text>
-              <View style={styles.heroValueRow}>
-                <Text style={[styles.heroValueCompact, { color: colors.text }]}>{displayAttendance}%</Text>
-                {isScraping && (
-                  <View style={[styles.syncingBadge, { backgroundColor: colors.primary + '15' }]}>
-                    <Text style={[styles.syncingText, { color: colors.primary }]}>Sync</Text>
-                  </View>
-                )}
+          {/* Header Label outside */}
+          <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+            ATTENDANCE WIDGET
+          </Text>
+
+          <View 
+            style={{ 
+              borderRadius: 24, 
+              borderColor: isDark ? '#2D3139' : '#E5E5E5', 
+              borderWidth: 1.5,
+              backgroundColor: isDark ? '#000000' : '#FFFFFF',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: isDark ? 0.15 : 0.05,
+              shadowRadius: 12,
+              elevation: 2,
+              padding: 20,
+            }}
+          >
+            {/* Top Row: Left Overall Percentage, Right Segment LED & Stats */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              
+              {/* Left Column (40% width) */}
+              <View style={{ flex: 4, justifyContent: 'center' }}>
+                <Text style={{ color: isDark ? '#888888' : '#666666', fontSize: 8, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 }}>
+                  OVERALL
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: colors.text, fontSize: 44, fontWeight: '900', letterSpacing: -1.5, lineHeight: 46 }}>
+                    {displayAttendance}%
+                  </Text>
+                  {isScraping && (
+                    <View style={{ backgroundColor: colors.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: colors.primary, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>SYNC</Text>
+                    </View>
+                  )}
+                </View>
+                
+                {/* Dynamic Status Pill */}
+                {(() => {
+                  const numVal = parseFloat(displayAttendance);
+                  const isSafe = numVal >= targetPct;
+                  const pillColor = isSafe ? '#00E676' : '#FF9100';
+                  return (
+                    <View 
+                      style={{ 
+                        alignSelf: 'flex-start',
+                        backgroundColor: pillColor, 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 2, 
+                        borderRadius: 4, 
+                        marginTop: 8 
+                      }}
+                    >
+                      <Text style={{ color: '#000000', fontWeight: '900', fontSize: 8, letterSpacing: 0.8 }}>
+                        {isSafe ? 'SAFE' : 'LOW ATTENDANCE'}
+                      </Text>
+                    </View>
+                  );
+                })()}
+
+                {/* Aggregate / Raw Toggle inside Widget */}
+                <TouchableOpacity 
+                  onPress={() => setShowAggregate(!showAggregate)}
+                  activeOpacity={0.8}
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.12)' : 'rgba(0, 122, 255, 0.06)',
+                    borderColor: isDark ? 'rgba(0, 122, 255, 0.22)' : 'rgba(0, 122, 255, 0.12)',
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                    marginTop: 6
+                  }}
+                >
+                  <Text style={{ color: isDark ? '#FFFFFF' : colors.primary, fontSize: 8, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                    {showAggregate ? 'Aggregate View' : 'Raw View'}
+                  </Text>
+                </TouchableOpacity>
               </View>
+
+              {/* Middle Vertical Tech Divider */}
+              <View style={{ width: 1.5, height: '80%', backgroundColor: isDark ? '#2D3139' : '#E5E5E5', marginHorizontal: 16 }} />
+
+              {/* Right Column: LED & Stats (60% width) */}
+              <View style={{ flex: 6, justifyContent: 'center' }}>
+                {/* LED Progress segments */}
+                {(() => {
+                  const numVal = parseFloat(displayAttendance);
+                  const isSafe = numVal >= targetPct;
+                  const barColor = isSafe ? '#00E676' : '#FF9100';
+                  const activeBlocks = Math.round(numVal / 10);
+                  
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 16 }}>
+                      {Array.from({ length: 10 }).map((_, idx) => {
+                        const isActive = idx < activeBlocks;
+                        return (
+                          <View 
+                            key={idx}
+                            style={{ 
+                              flex: 1, 
+                              height: 6, 
+                              borderRadius: 1.5, 
+                              backgroundColor: isActive ? barColor : (isDark ? '#262626' : '#E5E5E5'),
+                              marginRight: idx === 9 ? 0 : 3
+                            }} 
+                          />
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
+
+                {/* Grid Analytics Columns */}
+                <View style={{ width: '100%' }}>
+                  {/* Labels Row */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: isDark ? '#888888' : '#666666', fontSize: 7, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', textAlign: 'center' }} numberOfLines={1}>
+                        DELIVERED
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: isDark ? '#888888' : '#666666', fontSize: 7, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', textAlign: 'center' }} numberOfLines={1}>
+                        ATTENDED
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: isDark ? '#888888' : '#666666', fontSize: 7, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase', textAlign: 'center' }} numberOfLines={1}>
+                        DUTY LEAVE
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Values Row */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', textAlign: 'center' }}>
+                        {totalClasses}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', textAlign: 'center' }}>
+                        {attendedClasses}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', textAlign: 'center' }}>
+                        {dutyLeaves}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
             </View>
-            
-<TouchableOpacity 
-  onPress={() => setShowAggregate(!showAggregate)}
-  style={[
-    styles.toggleBtnCompact, 
-    { 
-      backgroundColor: isDark ? 'rgba(0, 122, 255, 0.08)' : 'rgba(0, 122, 255, 0.05)', 
-      borderColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.18)', 
-      borderWidth: 1 
-    }
-  ]}
->
-  <Text style={[styles.toggleTextCompact, { color: isDark ? '#FFFFFF' : colors.primary }]}>
-    {showAggregate ? 'Aggregate' : 'Raw'}
-  </Text>
-</TouchableOpacity>
-          </View>
 
-          <View style={styles.actionRowCompact}>
-            <TouchableOpacity 
-              onPress={() => setShowDatePicker(true)}
-              style={[
-                styles.chipCompact, 
-                { 
-                  backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
-                  borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
-                  borderWidth: 1.5 
-                }
-              ]}
-            >
-              <Calendar size={12} color={colors.textSecondary} />
-              <Text style={[styles.chipTextCompact, { color: colors.text }]}>
-                End: {semesterEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </Text>
-            </TouchableOpacity>
+            {/* Bottom Tech Divider Line */}
+            <View style={{ height: 1.5, backgroundColor: isDark ? '#2D3139' : '#E5E5E5', marginVertical: 16 }} />
 
-            <View style={[
-              styles.chipCompact, 
-              { 
-                backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.04)', 
-                borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.08)', 
-                borderWidth: 1.5 
-              }
-            ]}>
-              <View style={styles.targetControlCompact}>
+            {/* Bottom Row: Date Picker & Goal target controller */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              
+              {/* Date selection capsule */}
+              <TouchableOpacity 
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+                style={{ 
+                  flex: 1, 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: 6,
+                  backgroundColor: isDark ? '#16181D' : 'rgba(0,0,0,0.02)',
+                  borderColor: isDark ? '#2D3139' : '#E5E5E5',
+                  borderWidth: 1.2,
+                  borderRadius: 12,
+                  paddingVertical: 8,
+                }}
+              >
+                <Calendar size={12} color={colors.textSecondary} />
+                <Text style={{ color: colors.text, fontSize: 10, fontWeight: '800' }}>
+                  End: {semesterEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Goal control capsule */}
+              <View 
+                style={{ 
+                  flex: 1.2, 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  backgroundColor: isDark ? '#16181D' : 'rgba(0,0,0,0.02)',
+                  borderColor: isDark ? '#2D3139' : '#E5E5E5',
+                  borderWidth: 1.2,
+                  borderRadius: 12,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                }}
+              >
                 <TouchableOpacity 
                   onPress={() => changeTarget(-5)} 
-                  style={[
-                    styles.miniBtn,
-                    {
-                      backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)',
-                      borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.1)',
-                      borderWidth: 1
-                    }
-                  ]}
+                  activeOpacity={0.8}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    backgroundColor: isDark ? '#2D3139' : 'rgba(0, 0, 0, 0.05)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  <Minus size={12} color={colors.textSecondary} />
+                  <Minus size={11} color={colors.text} />
                 </TouchableOpacity>
-                <Text style={[styles.chipTextCompact, { color: colors.text }]}>Goal: {targetPct}%</Text>
+                
+                <Text style={{ color: colors.text, fontSize: 10, fontWeight: '800' }}>
+                  Goal: {targetPct}%
+                </Text>
+                
                 <TouchableOpacity 
                   onPress={() => changeTarget(5)} 
-                  style={[
-                    styles.miniBtn,
-                    {
-                      backgroundColor: isDark ? colors.surface : 'rgba(0, 0, 0, 0.05)',
-                      borderColor: isDark ? colors.border : 'rgba(0, 0, 0, 0.1)',
-                      borderWidth: 1
-                    }
-                  ]}
+                  activeOpacity={0.8}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    backgroundColor: isDark ? '#2D3139' : 'rgba(0, 0, 0, 0.05)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  <Plus size={12} color={colors.textSecondary} />
+                  <Plus size={11} color={colors.text} />
                 </TouchableOpacity>
               </View>
+
             </View>
+
           </View>
         </Animated.View>
-
       <View style={styles.list}>
         <Text style={[styles.sectionTitleCompact, { color: colors.text }]}>COURSE WIDGETS</Text>
         <View style={styles.widgetGrid}>
@@ -311,42 +481,6 @@ export default function AttendanceScreen() {
         })}
         </View>
 
-        {/* Aggregate Summary Section at the Bottom - ANIMATED */}
-        <Animated.View entering={FadeInDown.delay(400).duration(800)}>
-          <Text style={[styles.sectionTitle, { marginTop: 30, marginBottom: 10, color: colors.text }]}>Summary Report</Text>
-          <View style={[styles.aggregateCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-            <LinearGradient
-              colors={['#4A1D5B', '#2D1237']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ padding: 20, borderRadius: 22 }}
-            >
-              <Text style={[styles.aggregateTitle, { color: '#ffffff', fontWeight: '800' }]}>Aggregate Attendance Details</Text>
-              <View style={[styles.aggregateDivider, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
-              <View style={styles.aggregateRow}>
-                <View style={styles.aggregateStat}>
-                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total</Text>
-                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{totalClasses}</Text>
-                </View>
-                <View style={styles.aggregateStat}>
-                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Attended</Text>
-                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{attendedClasses}</Text>
-                </View>
-                <View style={styles.aggregateStat}>
-                  <Text style={[styles.aggregateLabel, { color: 'rgba(255,255,255,0.7)' }]}>Duty Leave</Text>
-                  <Text style={[styles.aggregateValue, { color: '#ffffff', fontWeight: '700' }]}>{dutyLeaves}</Text>
-                </View>
-              </View>
-              <View style={[styles.finalPercentageBox, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 14 }]}>
-                <View>
-                  <Text style={[styles.finalPercentageLabel, { color: '#ffffff', fontWeight: '800' }]}>Aggregate Attendance</Text>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '700' }}>Including Duty Leaves</Text>
-                </View>
-                <Text style={[styles.finalPercentageValue, { color: '#ffffff', fontWeight: '800' }]}>{overallAttendance}%</Text>
-              </View>
-            </LinearGradient>
-          </View>
-        </Animated.View>
       </View>
     </ScrollView>
 

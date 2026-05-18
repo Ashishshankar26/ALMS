@@ -58,8 +58,17 @@ export default function ExamsScreen() {
           shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.15)'
         }
       ]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={22} color={colors.primary} />
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={[
+            styles.backBtn, 
+            { 
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            }
+          ]}
+        >
+          <ArrowLeft size={18} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Upcoming Exams</Text>
         <View style={{ width: 44 }} />
@@ -68,43 +77,88 @@ export default function ExamsScreen() {
       {/* Native Exam List */}
       {exams.length > 0 && !showWebView ? (
         <ScrollView style={styles.examList} contentContainerStyle={{ padding: 20 }}>
-          {exams.map((exam: any, index: number) => (
-            <View key={index} style={[styles.examCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-              <LinearGradient
-                colors={['#FF6259', '#B71C1C']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ padding: 18, borderRadius: 14 }}
+                              {exams.map((exam: any, index: number) => {
+            const examColors = [
+              '#FF3B30', // Vibrant Red
+              '#007AFF', // Electric Blue
+              '#34C759', // Emerald Green
+              '#FF9500', // Sunset Orange
+              '#5856D6', // Royal Purple
+              '#AF52DE', // Deep Orchid/Violet
+            ];
+            const cardColor = examColors[index % examColors.length];
+
+            return (
+              <View 
+                key={index} 
+                style={[
+                  styles.examCard, 
+                  { 
+                    padding: 18, 
+                    borderRadius: 24, 
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
+                    borderWidth: 1.2,
+                    backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                    marginBottom: 16,
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: isDark ? 0.12 : 0.05,
+                    shadowRadius: 8,
+                    elevation: 2,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }
+                ]}
               >
+                {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                <View 
+                  style={{ 
+                    ...StyleSheet.absoluteFillObject, 
+                    backgroundColor: cardColor, 
+                    opacity: isDark ? 0.05 : 0.03,
+                    zIndex: -1 
+                  }} 
+                />
+
+                {/* Exam Header */}
                 <View style={styles.examHeader}>
-                  <View style={[styles.dateBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-                    <Calendar size={14} color="#ffffff" />
-                    <Text style={[styles.dateText, { color: '#ffffff' }]}>{exam.date}</Text>
+                  <View style={[styles.dateBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)', borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, gap: 5 }]}>
+                    <Calendar size={13} color={cardColor} />
+                    <Text style={[styles.dateText, { color: colors.text, fontSize: 11, fontWeight: '700' }]}>{exam.date}</Text>
                   </View>
-                  <View style={[styles.timeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                    <Clock size={14} color="#ffffff" />
-                    <Text style={[styles.timeText, { color: '#ffffff' }]}>{exam.time}</Text>
+                  <View style={[styles.timeBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)', borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)', borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, gap: 5 }]}>
+                    <Clock size={13} color={cardColor} />
+                    <Text style={[styles.timeText, { color: colors.text, fontSize: 11, fontWeight: '700' }]}>{exam.time}</Text>
                   </View>
                 </View>
 
-                <Text style={[styles.courseCode, { color: '#ffffff', fontWeight: '800' }]}>{exam.subjectCode}</Text>
-                <Text style={[styles.subjectName, { color: '#ffffff', fontWeight: '800' }]}>{exam.subject}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '900', color: cardColor, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                  {exam.subjectCode}
+                </Text>
+                
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, lineHeight: 22, letterSpacing: -0.2, marginBottom: 14 }}>
+                  {exam.subject}
+                </Text>
 
-                <View style={[styles.footerRow, { borderTopColor: 'rgba(255, 255, 255, 0.25)' }]}>
+                <View style={[styles.footerRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)', borderTopWidth: 1, paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between' }]}>
                   <View style={styles.metaItem}>
-                    <MapPin size={16} color="#ffffff" />
-                    <Text style={[styles.metaText, { color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }]}>Room: {exam.room}</Text>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: cardColor + '15', alignItems: 'center', justifyContent: 'center' }}>
+                      <MapPin size={11} color={cardColor} />
+                    </View>
+                    <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '700' }]}>Room: {exam.room}</Text>
                   </View>
                   {exam.seat && (
                     <View style={styles.metaItem}>
-                      <User size={16} color="#ffffff" />
-                      <Text style={[styles.metaText, { color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }]}>Seat: {exam.seat}</Text>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: cardColor + '15', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={11} color={cardColor} />
+                      </View>
+                      <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '700' }]}>Seat: {exam.seat}</Text>
                     </View>
                   )}
                 </View>
-              </LinearGradient>
-            </View>
-          ))}
+              </View>
+            );
+          })}
           
           <TouchableOpacity 
             style={[styles.webFallbackBtn, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '10' }]} 
@@ -224,7 +278,14 @@ const styles = StyleSheet.create({
     elevation: 4,
     zIndex: 5,
   },
-  backBtn: { width: 44, height: 44, justifyContent: 'center' },
+  backBtn: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   title: { fontSize: 18, fontWeight: '700', color: '#000' },
   webview: { flex: 1 },
   loaderContainer: {

@@ -50,10 +50,12 @@ export default function TimetableScreen() {
     return !!isMatchedInMakeupList;
   };
 
-  // Populate Makeup Classes section exclusively from the dedicated makeup data
+    // Populate Makeup Classes section exclusively from the dedicated makeup data
   const now = new Date();
-  if (data.makeupClasses && data.makeupClasses.length > 0) {
-    data.makeupClasses.forEach(cls => {
+  const rawMakeupClasses = data.makeupClasses || [];
+
+  if (rawMakeupClasses && rawMakeupClasses.length > 0) {
+    rawMakeupClasses.forEach(cls => {
       // 1. Check if class has already happened
       let hasHappened = false;
       if (cls.date) {
@@ -192,8 +194,14 @@ export default function TimetableScreen() {
         {/* Makeup Classes Section - COLLAPSIBLE */}
         {makeupClasses.length > 0 && (
           <View style={styles.makeupSection}>
-            <TouchableOpacity 
-              style={[styles.makeupHeader, { backgroundColor: isDark ? 'rgba(255,159,10,0.1)' : 'rgba(255,149,0,0.1)', borderColor: isDark ? 'rgba(255,159,10,0.2)' : 'rgba(255,149,0,0.2)' }]}
+                        <TouchableOpacity 
+              style={[
+                styles.makeupHeader, 
+                { 
+                  backgroundColor: isDark ? '#2A1905' : '#FFF9E6', 
+                  borderColor: isDark ? 'rgba(255, 149, 0, 0.15)' : '#FFEAA7',
+                }
+              ]}
               onPress={() => setShowMakeup(!showMakeup)}
               activeOpacity={0.7}
             >
@@ -210,104 +218,101 @@ export default function TimetableScreen() {
             </TouchableOpacity>
 
             {showMakeup && (
-              <Animated.View 
+  <Animated.View 
                 entering={FadeInUp.duration(400)}
-                layout={Layout.springify()}
                 style={styles.makeupContent}
               >
-                <View style={makeupClasses.length > 1 ? styles.makeupGridContainer : null}>
+                <ScrollView 
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 8, gap: 12, flexDirection: 'row' }}
+                >
                   {makeupClasses.map((cls: any, index: number) => {
-                    const isGrid = makeupClasses.length > 1;
                     const timeParts = (cls.time || "").split(/\s*-\s*/);
                     const startTime = timeParts[0] || "--:--";
-                    const endTimeFull = timeParts[1] || "";
-                    const endTime = endTimeFull.split(/\s+/)[0] || "--:--";
-                    const ampm = (cls.time || "").toUpperCase().includes('PM') ? 'PM' : 'AM';
+                    const accentColor = '#FF9500'; // Sunset Orange for Makeup
 
                     return (
                       <Animated.View 
                         key={index}
                         entering={FadeInDown.delay(index * 50).duration(400)}
                         style={[
-                          styles.classCard, 
-                          isGrid ? styles.makeupGridCard : styles.makeupSingleCard,
-                          { backgroundColor: colors.card }
+                          { 
+                            width: 175,
+                            height: 175,
+                            padding: 14, 
+                            borderRadius: 20, 
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
+                            borderWidth: 1.2,
+                            backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                            shadowColor: '#000000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: isDark ? 0.12 : 0.05,
+                            shadowRadius: 8,
+                            elevation: 2,
+                            position: 'relative',
+                            overflow: 'hidden',
+                          }
                         ]}
                       >
-                        {!isGrid && (
-                          <View style={styles.timeColumn}>
-                            <Text style={[styles.timeStart, { color: colors.text }]}>{startTime}</Text>
-                            <View style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255,149,0,0.3)' : '#FFD60A' }]} />
-                            <View style={{ alignItems: 'center', marginTop: -2 }}>
-                              <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
-                              <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
+                        {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                        <View 
+                          style={{ 
+                            ...StyleSheet.absoluteFillObject, 
+                            backgroundColor: accentColor, 
+                            opacity: isDark ? 0.05 : 0.03,
+                            zIndex: -1 
+                          }} 
+                        />
+
+                        <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                          <View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <Text style={[styles.makeupDate, { color: colors.warning, fontSize: 10, fontWeight: '800', marginBottom: 0 }]} numberOfLines={1}>
+                                {cls.date}
+                              </Text>
+                              <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }]}>
+                                <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 9 }]}>{cls.subjectCode}</Text>
+                              </View>
+                            </View>
+                            
+                            <Text 
+                              style={[styles.subjectName, { color: colors.text, fontSize: 12, fontWeight: '800', lineHeight: 16, marginBottom: 0 }]}
+                              numberOfLines={3}
+                            >
+                              {cls.subject}
+                            </Text>
+                          </View>
+
+                          <View style={{ marginTop: 6 }}>
+                            <View style={[styles.metaRow, { marginBottom: 4, alignItems: 'center', gap: 4 }]}>
+                              <Clock size={11} color={colors.textSecondary} />
+                              <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
+                                {startTime}
+                              </Text>
+                            </View>
+
+                            <View style={[styles.metaRow, { alignItems: 'center', gap: 4 }]}>
+                              <MapPin size={11} color={colors.textSecondary} />
+                              <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 10, fontWeight: '600', marginLeft: 0 }]} numberOfLines={1}>
+                                Room: {cls.room}
+                              </Text>
                             </View>
                           </View>
-                        )}
-                        
-                        <View style={isGrid ? { flex: 1 } : styles.classInfo}>
-                          <Text style={[styles.makeupDate, { color: colors.warning, fontSize: isGrid ? 11 : 13 }]}>
-                            {cls.date} {cls.dayName ? `(${cls.dayName})` : ''}
-                          </Text>
-
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                            <Text style={[styles.courseCode, { color: colors.primary, marginBottom: 0, fontSize: isGrid ? 12 : 14 }]}>
-                              {cls.subjectCode}
-                            </Text>
-                          </View>
-                          
-                          <Text 
-                            style={[styles.subjectName, { color: colors.text, fontSize: isGrid ? 14 : 18, marginBottom: 8 }]}
-                            numberOfLines={isGrid ? 2 : undefined}
-                          >
-                            {cls.subject}
-                          </Text>
-
-                          {isGrid && (
-                             <View style={[styles.metaRow, { marginBottom: 2 }]}>
-                                <Clock size={12} color={colors.textSecondary} />
-                                <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 11, marginLeft: 4 }]}>{startTime}</Text>
-                             </View>
-                          )}
-
-                          <View style={styles.metaRow}>
-                            <MapPin size={isGrid ? 12 : 14} color={colors.textSecondary} />
-                            <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: isGrid ? 11 : 14, marginLeft: isGrid ? 4 : 8 }]}>
-                              {isGrid ? cls.room : `Room: ${cls.room}`}
-                            </Text>
-                          </View>
-
-                          {!isGrid && cls.category ? (
-                            <>
-                              <View style={[styles.metaRow, { marginTop: 4 }]}>
-                                <View style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: 'bold' }}>{cls.category.toUpperCase()}</Text>
-                                </View>
-                              </View>
-                              {cls.faculty ? (
-                                <View style={[styles.metaRow, { marginTop: 4 }]}>
-                                  <User size={12} color={colors.textSecondary} />
-                                  <Text style={[styles.metaText, { color: colors.textSecondary, fontSize: 11 }]}>
-                                    {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </>
-                          ) : null}
                         </View>
                       </Animated.View>
                     );
                   })}
-                </View>
+                </ScrollView>
               </Animated.View>
             )}
           </View>
         )}
 
-        {/* Regular Schedule Section - ANIMATED */}
+                {/* Regular Schedule Section - ANIMATED */}
         <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Regular Schedule</Text>
-          {classesForDay.length > 0 ? (
+                    {classesForDay.length > 0 ? (
             classesForDay.map((cls: any, index: number) => {
               const timeParts = (cls.time || "").split(/\s*-\s*/);
               const startTime = timeParts[0] || "--:--";
@@ -316,76 +321,109 @@ export default function TimetableScreen() {
               const ampm = (cls.time || "").toUpperCase().includes('PM') ? 'PM' : 'AM';
 
               const isPractical = (cls.type || "").toLowerCase().includes('practical');
-              const accentColor = isPractical ? '#34C759' : colors.primary; // Green for practical, Purple/Blue for lecture
+              const isTutorial = (cls.type || "").toLowerCase().includes('tutorial');
+              const accentColor = isClassMakeup(cls) 
+                ? '#FF9500' // Sunset Orange for Makeup
+                : (isPractical ? '#34C759' : (isTutorial ? '#00A2FF' : '#5856D6')); // Cyan for Tutorial, Emerald for Practical, Royal Purple for Lecture
 
               return (
                 <Animated.View 
                   key={cls.id || index}
                   entering={FadeInDown.delay(500 + index * 50).duration(600).springify()}
                 >
-                  <View style={[styles.classCard, { padding: 0, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)', borderWidth: 1.5 }]}>
-                    <LinearGradient
-                      colors={
-                        isClassMakeup(cls)
-                          ? ['#FFAE33', '#D35400']
-                          : (isPractical ? ['#3DBE6B', '#1E7C41'] : ['#6366F1', '#4338CA'])
+                                    <View 
+                    style={[
+                      styles.classCard, 
+                      { 
+                        padding: 18, 
+                        paddingLeft: 20,
+                        borderRadius: 24, 
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)', 
+                        borderWidth: 1.2,
+                        backgroundColor: isDark ? '#1C1F26' : '#FFFFFF',
+                        marginBottom: 16,
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: isDark ? 0.12 : 0.05,
+                        shadowRadius: 8,
+                        elevation: 2,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        flexDirection: 'row'
                       }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ padding: 20, paddingLeft: 24, flex: 1, flexDirection: 'row', borderRadius: 18 }}
-                    >
-                      <View style={styles.timeColumn}>
-                        <Text style={[styles.timeStart, { color: '#ffffff', fontWeight: '800' }]}>{startTime}</Text>
-                        <View style={[styles.timeLine, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-                          <View style={[styles.timeDot, { backgroundColor: '#ffffff' }]} />
+                    ]}
+                  >
+                    {/* Subtle Frosted Dynamic Color Tint Overlay */}
+                    <View 
+                      style={{ 
+                        ...StyleSheet.absoluteFillObject, 
+                        backgroundColor: accentColor, 
+                        opacity: isDark ? 0.05 : 0.03,
+                        zIndex: -1 
+                      }} 
+                    />
+
+                    {/* Left Time Column */}
+                    <View style={styles.timeColumn}>
+                      <Text style={[styles.timeStart, { color: colors.text, fontWeight: '800' }]}>{startTime}</Text>
+                      <View style={[styles.timeLine, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)', marginVertical: 8 }]}>
+                        <View style={[styles.timeDot, { backgroundColor: accentColor, borderColor: isDark ? '#121418' : '#ffffff' }]} />
+                      </View>
+                      <View style={{ alignItems: 'center', marginTop: -2 }}>
+                        <Text style={[styles.timeEnd, { color: colors.textSecondary }]}>{endTime}</Text>
+                        <Text style={[styles.timeAmpm, { color: colors.textSecondary }]}>{ampm}</Text>
+                      </View>
+                    </View>
+
+                    {/* Right Class Details Info */}
+                    <View style={styles.classInfo}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <View style={[styles.courseBadge, { backgroundColor: accentColor + '15', borderColor: accentColor + '30', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                          <Text style={[styles.courseCode, { color: accentColor, fontWeight: '800', fontSize: 11 }]}>{cls.subjectCode}</Text>
                         </View>
-                        <View style={{ alignItems: 'center', marginTop: -2 }}>
-                          <Text style={[styles.timeEnd, { color: 'rgba(255, 255, 255, 0.8)' }]}>{endTime}</Text>
-                          <Text style={[styles.timeAmpm, { color: 'rgba(255, 255, 255, 0.8)' }]}>{ampm}</Text>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          {isClassMakeup(cls) && (
+                            <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: 'rgba(255, 149, 0, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                              <Text style={[styles.practicalBadgeText, { color: '#FF9500', fontSize: 9, fontWeight: '800' }]}>MAKEUP</Text>
+                            </View>
+                          )}
+                          {isPractical && (
+                            <View style={[styles.practicalBadge, { backgroundColor: 'rgba(52, 199, 89, 0.15)', borderColor: 'rgba(52, 199, 89, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                              <Text style={[styles.practicalBadgeText, { color: '#34C759', fontSize: 9, fontWeight: '800' }]}>LAB</Text>
+                            </View>
+                          )}
+                          {isTutorial && (
+                            <View style={[styles.practicalBadge, { backgroundColor: 'rgba(0, 162, 255, 0.15)', borderColor: 'rgba(0, 162, 255, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                              <Text style={[styles.practicalBadgeText, { color: '#00A2FF', fontSize: 9, fontWeight: '800' }]}>TUTORIAL</Text>
+                            </View>
+                          )}
                         </View>
                       </View>
 
-                      <View style={styles.classInfo}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <View style={[styles.courseBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                            <Text style={[styles.courseCode, { color: '#ffffff', fontWeight: '700' }]}>{cls.subjectCode}</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                            {isClassMakeup(cls) && (
-                              <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-                                <Text style={[styles.practicalBadgeText, { color: '#ffffff' }]}>MAKEUP</Text>
-                              </View>
-                            )}
-                            {isPractical && (
-                              <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}>
-                                <Text style={[styles.practicalBadgeText, { color: '#ffffff' }]}>LAB</Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                        <Text style={[styles.subjectName, { fontSize: 18, color: '#ffffff', fontWeight: '800' }]}>{cls.subject}</Text>
+                      <Text style={[styles.subjectName, { fontSize: 16, color: colors.text, fontWeight: '800', marginBottom: 12 }]}>{cls.subject}</Text>
 
-                        <View style={[styles.badgeRow, { marginTop: 8 }]}>
-                          <View style={[styles.roomBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                            <MapPin size={12} color="#ffffff" />
-                            <Text style={[styles.roomText, { color: '#ffffff', fontWeight: '700' }]}>{cls.room || 'TBA'}</Text>
-                          </View>
-                          <View style={[styles.typeBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                            <Tag size={12} color="#ffffff" />
-                            <Text style={[styles.typeText, { color: '#ffffff', fontWeight: '700' }]}>{cls.type}</Text>
-                          </View>
+                      <View style={styles.badgeRow}>
+                        <View style={[styles.roomBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
+                          <MapPin size={11} color={accentColor} />
+                          <Text style={[styles.roomText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.room || 'TBA'}</Text>
                         </View>
-
-                        {cls.faculty ? (
-                          <View style={[styles.metaRow, { marginTop: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-                            <User size={14} color="rgba(255,255,255,0.8)" />
-                            <Text style={[styles.metaText, { color: 'rgba(255,255,255,0.85)', fontWeight: '600' }]} numberOfLines={1}>
-                              {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
-                            </Text>
-                          </View>
-                        ) : null}
+                        <View style={[styles.typeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }]}>
+                          <Tag size={11} color={accentColor} />
+                          <Text style={[styles.typeText, { color: colors.textSecondary, fontWeight: '700', fontSize: 11 }]}>{cls.type}</Text>
+                        </View>
                       </View>
-                    </LinearGradient>
+
+                      {cls.faculty ? (
+                        <View style={[styles.metaRow, { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: accentColor + '15', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                            <User size={11} color={accentColor} />
+                          </View>
+                          <Text style={[styles.metaText, { color: colors.textSecondary, fontWeight: '700', fontSize: 12 }]} numberOfLines={1}>
+                            {cls.faculty.includes(')') ? cls.faculty.split(')')[0] + ')' : cls.faculty}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 </Animated.View>
               );
@@ -492,20 +530,21 @@ const styles = StyleSheet.create({
   makeupSection: {
     marginBottom: 0,
   },
-  makeupHeader: {
+    makeupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    marginBottom: 5,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    marginBottom: 12,
     overflow: 'hidden',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 22,
-    elevation: 7,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   makeupHeaderLeft: {
     flexDirection: 'row',
@@ -537,18 +576,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  makeupGridCard: {
+    makeupGridCard: {
     width: (Dimensions.get('window').width - 52) / 2,
+    aspectRatio: 1,
     flexDirection: 'column',
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: '#FF9500',
-    borderRadius: 16,
     marginBottom: 12,
   },
   makeupSingleCard: {
-    borderWidth: 1.5,
-    borderColor: '#FF9500',
+    width: '100%',
+    flexDirection: 'row',
+    marginBottom: 12,
   },
   makeupBadge: {
     backgroundColor: '#FF9500',
@@ -661,19 +698,8 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
-  classCard: {
+    classCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    paddingLeft: 24,
-    marginBottom: 15,
-    borderWidth: 1.5,
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 9,
     overflow: 'hidden',
   },
   cardAccent: {

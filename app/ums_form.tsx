@@ -8,7 +8,7 @@ import { useScraper } from '../context/ScraperContext';
 
 export default function UmsFormScreen() {
   const { url, title } = useLocalSearchParams<{ url: string; title: string }>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [loading, setLoading] = React.useState(true);
   
   // Get the base UMS URL
@@ -18,8 +18,17 @@ export default function UmsFormScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.primary} />
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={[
+            styles.backButton, 
+            { 
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            }
+          ]}
+        >
+          <ChevronLeft size={20} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>{title || 'UMS Portal'}</Text>
         <View style={{ width: 40 }} />
@@ -83,16 +92,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 28,
-    elevation: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     zIndex: 5,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   title: {
     fontSize: 18,
@@ -118,11 +131,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 30,
-    elevation: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
   },
   iconBg: {
     width: 64,
