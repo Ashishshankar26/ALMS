@@ -1709,7 +1709,7 @@ export default function DashboardScreen() {
                                   </Animated.View>
                                 )}
 
-                                {/* Bottom Metadata Row (Date & Initials Badge) */}
+                                {/* Bottom Metadata Row (By Name Left / Date Right) */}
                                 <View 
                                   style={{ 
                                     flexDirection: 'row', 
@@ -1718,23 +1718,7 @@ export default function DashboardScreen() {
                                     marginTop: 4
                                   }}
                                 >
-                                  <Text style={{ fontSize: 11.5, fontWeight: '600', color: cardTheme.textSecondary }}>
-                                    {item.date || 'Recently'}
-                                  </Text>
-
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Text 
-                                      style={{ 
-                                        fontSize: 11.5, 
-                                        fontWeight: '700', 
-                                        color: cardTheme.text,
-                                        opacity: 0.85
-                                      }} 
-                                      numberOfLines={1}
-                                    >
-                                      {sender}
-                                    </Text>
-
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 12 }}>
                                     {/* Circle Initials Avatar matching User UI layout */}
                                     <View 
                                       style={{ 
@@ -1750,7 +1734,23 @@ export default function DashboardScreen() {
                                         {sender.charAt(0).toUpperCase()}
                                       </Text>
                                     </View>
+
+                                    <Text 
+                                      style={{ 
+                                        fontSize: 11.5, 
+                                        fontWeight: '700', 
+                                        color: cardTheme.text,
+                                        opacity: 0.85
+                                      }} 
+                                      numberOfLines={1}
+                                    >
+                                      by {sender}
+                                    </Text>
                                   </View>
+
+                                  <Text style={{ fontSize: 11.5, fontWeight: '600', color: cardTheme.textSecondary }}>
+                                    {item.date || 'Recently'}
+                                  </Text>
                                 </View>
                               </TouchableOpacity>
                             </Animated.View>
