@@ -37,6 +37,7 @@ export interface ScrapedData {
   exams: any[];
   makeupClasses: any[];
   roomBooking: any;
+  lastUpdated?: string;
 }
 
 type ScraperContextType = {
@@ -104,7 +105,7 @@ const DASHBOARD_SCRIPT = `
       var hasCgpa  = cgpaEl  && /[0-9]+\\.[0-9]+/.test(cgpaEl.innerText);
       var hasAtt   = attPerEl && /[0-9]+/.test(attPerEl.innerText);
 
-      if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 20) {
+      if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 12) {
         clearInterval(poll);
         var fetchTarget = sessionStorage.getItem('fetch_attendance_for');
         if (fetchTarget) {
@@ -144,7 +145,7 @@ const DASHBOARD_SCRIPT = `
                 var closeBtn = document.querySelector('.modal.show .close, .modal.show [data-dismiss="modal"]');
                 if (closeBtn) closeBtn.click();
                 window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: logs } }));
-              } else if (apoll > 40) {
+              } else if (apoll > 20) {
                 clearInterval(ap);
                 window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ATTENDANCE_LOGS', payload: { subjectCode: fetchTarget, logs: [] } }));
               }
@@ -157,7 +158,7 @@ const DASHBOARD_SCRIPT = `
           scrapeAll();
         }
       }
-    }, 500);
+    }, 300);
 
     function scrapeAll() {
       try {
@@ -173,7 +174,7 @@ const DASHBOARD_SCRIPT = `
         function startScrape() {
           log("Dashboard: Starting Scrape...");
           triggerAtt();
-          var pollCount = 0;
+            var pollCount = 0;
           var poll = setInterval(function() {
             pollCount++;
             var summaryTable = document.getElementById("AttSummary");
@@ -198,14 +199,14 @@ const DASHBOARD_SCRIPT = `
                 }
               }
               scrapeResults();
-            } else if (pollCount >= 30) {
+            } else if (pollCount >= 15) {
               clearInterval(poll);
               log("scrapeAll: Attendance timeout, moving to results...");
               scrapeResults();
-            } else if (pollCount % 10 === 0) {
+            } else if (pollCount % 5 === 0) {
               triggerAtt();
             }
-          }, 500);
+          }, 300);
         }
 
         // Step 2: Results
@@ -230,9 +231,9 @@ const DASHBOARD_SCRIPT = `
                }
             }
             
-            if (modal && gradeContent && (gradeContent.innerHTML.length > 50 || rAttempts >= 30)) {
+            if (modal && gradeContent && (gradeContent.innerHTML.length > 50 || rAttempts >= 15)) {
               clearInterval(rPoll);
-              if (rAttempts >= 30) { 
+              if (rAttempts >= 15) { 
                 log("scrapeResults: Timeout waiting for modal content."); 
                 finalize([]); 
                 return; 
@@ -421,9 +422,9 @@ const DASHBOARD_SCRIPT = `
                   log("scrapeResults: Final results count=" + results.length);
                   finalize(results);
                 } catch(e) { log("scrapeResults Error: " + e.toString()); finalize([]); }
-              }, 1500);
+              }, 500);
             }
-          }, 500);
+          }, 300);
         }
 
         // Step 3: Finalize and Send
@@ -692,14 +693,14 @@ const ROOM_BOOKING_SCRIPT = `
     var attempts = 0;
     var interval = setInterval(function() {
       attempts++;
-      if (tryScrape() || attempts > 10) {
+      if (tryScrape() || attempts > 8) {
         clearInterval(interval);
         // If still no booking after 10 attempts, send the "None" signal
         if (!booking) {
            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ROOM_BOOKING_DATA', payload: null }));
         }
       }
-    }, 1000);
+    }, 500);
   } catch(e) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "RoomBooking: " + e.toString() }));
   }
@@ -725,7 +726,7 @@ const TIMETABLE_SCRIPT = `
         if (txt.includes('Adjustment Date')) t3 = t;
       });
 
-      if ((t1 && t2) || t_attempts >= 16) {
+      if ((t1 && t2) || t_attempts >= 10) {
         clearInterval(t_poll);
         try {
           var res = { schedule: {}, courses: [] };
@@ -815,7 +816,7 @@ const TIMETABLE_SCRIPT = `
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: 'Timetable parse: ' + e.toString() }));
         }
       }
-    }, 500);
+    }, 300);
   } catch(e) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: 'TimetableOuter: ' + e.toString() }));
   }
@@ -842,7 +843,7 @@ const MAKEUP_SCRIPT = `
         }
       }
       
-      if (table || m_attempts >= 20) {
+      if (table || m_attempts >= 12) {
         clearInterval(m_poll);
         if (!table) {
            log('Makeup: Table not found (Scheduled Date header missing)');
@@ -906,7 +907,7 @@ const MAKEUP_SCRIPT = `
         log('Makeup: Found ' + data.length + ' rows');
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAKEUP_DATA', payload: data }));
       }
-    }, 1000);
+    }, 500);
   } catch(e) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "Makeup: " + e.toString() }));
   }
@@ -933,7 +934,7 @@ const EXAMS_SCRIPT = `
         return (txt.includes('2026') || txt.includes('2025')) && (txt.includes('Term') || txt.includes('Exam'));
       });
       
-      if (cards.length > 0 || e_attempts >= 20) {
+      if (cards.length > 0 || e_attempts >= 12) {
         clearInterval(e_poll);
         
         if (cards.length === 0) {
@@ -1018,7 +1019,7 @@ const EXAMS_SCRIPT = `
         log('Exams: Scraped ' + finalData.length + ' unique exams');
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXAMS_DATA', payload: finalData }));
       }
-    }, 1000);
+    }, 500);
   } catch(e) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "Exams Card Scraper: " + e.toString() }));
   }
@@ -1026,50 +1027,8 @@ const EXAMS_SCRIPT = `
 `;
 
 
-const RESULTS_SCRIPT = `
-(function() {
-  try {
-    var log = function(msg) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
-    };
-    log('Results: Starting poll...');
-    var attempts = 0;
-    var poll = setInterval(function() {
-      attempts++;
-      var tabs = Array.from(document.querySelectorAll('button[role="tab"]'));
-      var gradesTab = tabs.find(function(t) { return /Grades/i.test(t.innerText); });
-      
-      if (gradesTab || attempts >= 16) {
-        clearInterval(poll);
-        if (gradesTab) {
-          gradesTab.click();
-          log('Results: Grades tab clicked');
-          setTimeout(function() {
-             var rows = Array.from(document.querySelectorAll('tr'));
-             var results = [];
-             rows.forEach(function(row) {
-                var cells = row.querySelectorAll('td');
-                if (cells.length > 5) {
-                    results.push({
-                      code: cells[1].innerText.trim(),
-                      name: cells[2].innerText.trim(),
-                      grade: cells[4].innerText.trim()
-                    });
-                }
-             });
-             log('Results: Extracted ' + results.length + ' rows');
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'RESULTS_DATA', payload: results }));
-          }, 1500);
-        } else {
-           log('Results: Grades tab not found');
-        }
-      }
-    }, 500);
-  } catch(e) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: 'Results Error: ' + e.toString() }));
-  }
-})(); true;
-`;
+
+
 
 export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, authData } = useAuth();
@@ -1149,7 +1108,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Safety watchdog: force stop loading after 15s
       setTimeout(() => {
         setIsScraping(false);
-      }, 15000);
+      }, 20000);
 
       // Force navigate back to dashboard to start sync
       setTimeout(() => { 
@@ -1175,23 +1134,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     console.log('WEBVIEW LOAD END:', url);
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
-    // Auto-inject scripts based on URL
-    if (url.includes('StudentDashboard.aspx')) {
-      console.log('INJECTING DASHBOARD_SCRIPT...');
-      webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
-    } else if (url.includes('frmRoomBooking.aspx')) {
-      console.log('INJECTING ROOM_BOOKING_SCRIPT...');
-      webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
-    } else if (url.includes('frmStudentTimeTable.aspx')) {
-      console.log('INJECTING TIMETABLE_SCRIPT...');
-      webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
-    } else if (url.includes('Student-MakeupAdjustment')) {
-      console.log('INJECTING MAKEUP_SCRIPT...');
-      webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
-    } else if (url.includes('seatingplan')) {
-      console.log('INJECTING EXAMS_SCRIPT...');
-      webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
-    }
+    // Script injection is handled by the guarded block below (with dedup refs)
 
     // Recovery Logic: If redirected to login while we should be authenticated
     if (url.includes('LoginNew.aspx') && isAuthenticated) {
@@ -1235,7 +1178,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsScraping(true);
       setTimeout(() => {
         webViewRef.current?.injectJavaScript(DASHBOARD_SCRIPT);
-      }, 1000);
+      }, 400);
     } else if (url.includes('frmStudentTimeTable.aspx') && !didTimetable.current) {
       didTimetable.current = true;
       isProcessingPhase.current = true;
@@ -1247,6 +1190,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log('INJECTING MAKEUP_SCRIPT...');
       didMakeup.current = true;
       webViewRef.current?.injectJavaScript(MAKEUP_SCRIPT);
+    } else if (url.includes('frmRoomBooking.aspx')) {
+      console.log('INJECTING ROOM_BOOKING_SCRIPT...');
+      webViewRef.current?.injectJavaScript(ROOM_BOOKING_SCRIPT);
     } else if (url.includes('Login.aspx') || url.includes('login.aspx') || url.includes('LoginNew.aspx') || url.includes('index.aspx')) {
       console.warn('SCRAPER: Redirected to Login! Session might be expired.');
       setIsScraping(false);
@@ -1464,17 +1410,25 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Session Keep-Alive Heartbeat
+  // Session Keep-Alive Heartbeat (lightweight XHR ping instead of full page reload)
   useEffect(() => {
     if (!isAuthenticated) return;
     
     const heartbeat = setInterval(() => {
       if (!isScraping) {
-        console.log('SESSION HEARTBEAT: Touching dashboard...');
-        // Just reload the dashboard to reset server-side timeout
-        webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/StudentDashboard.aspx'; true;`);
+        console.log('SESSION HEARTBEAT: Sending lightweight ping...');
+        webViewRef.current?.injectJavaScript(`
+          (function() {
+            try {
+              var xhr = new XMLHttpRequest();
+              xhr.open('GET', 'https://ums.lpu.in/lpuums/StudentDashboard.aspx', true);
+              xhr.timeout = 5000;
+              xhr.send();
+            } catch(e) {}
+          })(); true;
+        `);
       }
-    }, 4 * 60 * 1000); // Every 4 minutes
+    }, 5 * 60 * 1000); // Every 5 minutes (was 4 min with full reload)
 
     return () => clearInterval(heartbeat);
   }, [isAuthenticated, isScraping]);
