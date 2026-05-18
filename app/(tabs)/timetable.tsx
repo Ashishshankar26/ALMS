@@ -115,7 +115,7 @@ export default function TimetableScreen() {
   makeupClasses.push({
     id: "m1",
     subjectCode: "MTH101",
-    subject: "Advanced Calculus (Makeup)",
+    subject: "ADVANCED CALCULUS AND DIFFERENTIAL EQUATIONS",
     time: "10:00 AM - 11:50 AM",
     type: "Makeup",
     room: "28-101",
@@ -142,7 +142,7 @@ export default function TimetableScreen() {
     {
       id: "d1",
       subjectCode: "CSE310",
-      subject: "Programming in Java",
+      subject: "OBJECT ORIENTED PROGRAMMING USING JAVA",
       time: "09:00 AM - 10:50 AM",
       type: "Lecture",
       room: "34-301",
@@ -151,7 +151,7 @@ export default function TimetableScreen() {
     {
       id: "d2",
       subjectCode: "CSE101",
-      subject: "Computer Networks",
+      subject: "DATA COMMUNICATION AND COMPUTER NETWORKS",
       time: "11:00 AM - 12:50 PM",
       type: "Practical",
       room: "34-211",
@@ -160,7 +160,7 @@ export default function TimetableScreen() {
     {
       id: "d3",
       subjectCode: "INT428",
-      subject: "Artificial Intelligence",
+      subject: "INTRODUCTION TO ARTIFICIAL INTELLIGENCE AND EXPERT SYSTEMS",
       time: "02:00 PM - 02:50 PM",
       type: "Tutorial",
       room: "28-401",
@@ -169,7 +169,7 @@ export default function TimetableScreen() {
     {
       id: "d4",
       subjectCode: "CSE320",
-      subject: "Software Engineering",
+      subject: "SOFTWARE ENGINEERING AND PROJECT MANAGEMENT",
       time: "03:00 PM - 04:50 PM",
       type: "Adjustment",
       room: "34-101",
