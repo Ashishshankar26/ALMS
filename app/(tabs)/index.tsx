@@ -1379,12 +1379,12 @@ export default function DashboardScreen() {
 
       </View>
     </ScrollView>
-      {/* Modal for My Messages - WORLD-CLASS PREMIUM & MINIMAL REMAKE */}
+      {/* Modal for My Messages - WORLD-CLASS PASTEL MINIMAL REMAKE */}
       <Modal visible={showMessages} animationType="slide" transparent={true} onRequestClose={() => setShowMessages(false)}>
         <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)' }]}>
           <BlurView intensity={35} style={StyleSheet.absoluteFill} tint={isDark ? 'dark' : 'light'} />
 
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#14161A' : '#F4F4EF' }]}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#14161A' : '#F7F7F9' }]}>
             <View style={styles.modalHandle} />
 
             <View style={[styles.modalHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomWidth: 1 }]}>
@@ -1397,339 +1397,380 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Premium Category Filter Tabs */}
-            <View style={{ paddingTop: 14, paddingBottom: 6 }}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-              >
-                {[
-                  { key: 'ALL', label: 'All' },
-                  { key: 'ACADEMIC', label: 'Academics' },
-                  { key: 'EXAMINATIONS', label: 'Exams' },
-                  { key: 'ATTENDANCE', label: 'Attendance' },
-                  { key: 'FINANCIAL', label: 'Financial' },
-                  { key: 'PLACEMENT', label: 'Placement' },
-                  { key: 'LEAVE/OD', label: 'Leaves' },
-                  { key: 'ANNOUNCEMENT', label: 'Announcements' },
-                ].map((tab) => {
-                  const count = (() => {
-                    if (!data.messages) return 0;
-                    if (tab.key === 'ALL') return data.messages.length;
-                    return data.messages.filter((item: any) => getMessageConfig(item.title).label === tab.key).length;
-                  })();
+            {(() => {
+              // High-end pastel theme mapper matching the uploaded UI design exactly
+              const getCardTheme = (label: string) => {
+                switch (label) {
+                  case 'ACADEMIC':
+                    return {
+                      bg: isDark ? '#142517' : '#E8F5E9',
+                      text: isDark ? '#A5D6A7' : '#0B5D2E',
+                      textSecondary: isDark ? 'rgba(165, 214, 167, 0.7)' : 'rgba(11, 93, 46, 0.7)',
+                      accent: '#34C759'
+                    };
+                  case 'ATTENDANCE':
+                    return {
+                      bg: isDark ? '#2E1E12' : '#FFF3E0',
+                      text: isDark ? '#FFE0B2' : '#5D360B',
+                      textSecondary: isDark ? 'rgba(255, 224, 178, 0.7)' : 'rgba(93, 54, 11, 0.7)',
+                      accent: '#FF9500'
+                    };
+                  case 'EXAMINATIONS':
+                    return {
+                      bg: isDark ? '#2D1A1A' : '#FFEBEE',
+                      text: isDark ? '#FFCDD2' : '#B71C1C',
+                      textSecondary: isDark ? 'rgba(255, 205, 210, 0.7)' : 'rgba(183, 28, 28, 0.7)',
+                      accent: '#FF3B30'
+                    };
+                  case 'FINANCIAL':
+                    return {
+                      bg: isDark ? '#112A2E' : '#E0F7FA',
+                      text: isDark ? '#B2EBF2' : '#006064',
+                      textSecondary: isDark ? 'rgba(178, 235, 242, 0.7)' : 'rgba(0, 96, 100, 0.7)',
+                      accent: '#5856D6'
+                    };
+                  case 'PLACEMENT':
+                    return {
+                      bg: isDark ? '#161B2E' : '#E8EAF6',
+                      text: isDark ? '#C5CAE9' : '#1A237E',
+                      textSecondary: isDark ? 'rgba(197, 202, 233, 0.7)' : 'rgba(26, 35, 126, 0.7)',
+                      accent: '#007AFF'
+                    };
+                  case 'LEAVE/OD':
+                    return {
+                      bg: isDark ? '#231A2D' : '#F3E5F5',
+                      text: isDark ? '#E1BEE7' : '#4A148C',
+                      textSecondary: isDark ? 'rgba(225, 190, 231, 0.7)' : 'rgba(74, 20, 140, 0.7)',
+                      accent: '#AF52DE'
+                    };
+                  default: // ANNOUNCEMENT / OTHERS
+                    return {
+                      bg: isDark ? '#1D2226' : '#ECEFF1',
+                      text: isDark ? '#CFD8DC' : '#263238',
+                      textSecondary: isDark ? 'rgba(207, 216, 220, 0.7)' : 'rgba(38, 50, 56, 0.7)',
+                      accent: colors.primary
+                    };
+                }
+              };
 
-                  if (count === 0 && tab.key !== 'ALL') return null; // Hide empty filters
-                  const isActive = activeCategoryTab === tab.key;
-
-                  return (
-                    <TouchableOpacity
-                      key={tab.key}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        setActiveCategoryTab(tab.key);
-                        setExpandedMessageIdx(null);
-                      }}
-                      style={[
-                        {
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingHorizontal: 16,
-                          paddingVertical: 8,
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          gap: 6,
-                        },
-                        isActive
-                          ? { 
-                              backgroundColor: colors.primary + '12', 
-                              borderColor: colors.primary + '40',
-                            }
-                          : {
-                              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                              borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                            },
-                      ]}
+              return (
+                <>
+                  {/* Premium Category Filter Tabs */}
+                  <View style={{ paddingTop: 14, paddingBottom: 6 }}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
                     >
-                      <Text
-                        style={[
-                          {
-                            fontSize: 13,
-                            fontWeight: '700',
-                          },
-                          { color: isActive ? colors.primary : colors.textSecondary },
-                        ]}
-                      >
-                        {tab.label}
-                      </Text>
-                      <View
-                        style={[
-                          {
-                            paddingHorizontal: 6,
-                            paddingVertical: 1.5,
-                            borderRadius: 10,
-                            minWidth: 18,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          },
-                          isActive
-                            ? { backgroundColor: colors.primary + '18' }
-                            : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            {
-                              fontSize: 10,
-                              fontWeight: '800',
-                            },
-                            { color: isActive ? colors.primary : colors.textSecondary },
-                          ]}
-                        >
-                          {count}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+                      {[
+                        { key: 'ALL', label: 'All' },
+                        { key: 'ACADEMIC', label: 'Academics' },
+                        { key: 'EXAMINATIONS', label: 'Exams' },
+                        { key: 'ATTENDANCE', label: 'Attendance' },
+                        { key: 'FINANCIAL', label: 'Financial' },
+                        { key: 'PLACEMENT', label: 'Placement' },
+                        { key: 'LEAVE/OD', label: 'Leaves' },
+                        { key: 'ANNOUNCEMENT', label: 'Announcements' },
+                      ].map((tab) => {
+                        const count = (() => {
+                          if (!data.messages) return 0;
+                          if (tab.key === 'ALL') return data.messages.length;
+                          return data.messages.filter((item: any) => getMessageConfig(item.title).label === tab.key).length;
+                        })();
 
-            <ScrollView 
-              style={styles.messagesList} 
-              showsVerticalScrollIndicator={false} 
-              contentContainerStyle={{ paddingBottom: 60, paddingHorizontal: 20 }}
-            >
-              {(() => {
-                const filtered = (data.messages || []).filter((item: any) => {
-                  if (activeCategoryTab === 'ALL') return true;
-                  return getMessageConfig(item.title).label === activeCategoryTab;
-                });
+                        if (count === 0 && tab.key !== 'ALL') return null; // Hide empty filters
+                        const isActive = activeCategoryTab === tab.key;
+                        const tabTheme = getCardTheme(tab.key);
 
-                if (filtered.length > 0) {
-                  return filtered.map((item, idx) => {
-                    const isExpanded = expandedMessageIdx === idx;
-                    const config = getMessageConfig(item.title);
-                    const Icon = config.icon;
-
-                    // Extract sender and clean subject title for hyper-minimalism
-                    const titleParts = (item.title || "").split(/[-:]/);
-                    const sender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
-                    const cleanTitle = titleParts.length > 1 ? titleParts.slice(1).join('-').trim() : item.title;
-
-                    return (
-                      <Animated.View
-                        key={item.id || idx}
-                        layout={Layout.springify()}
-                        entering={FadeInDown.delay(idx * 50)}
-                      >
-                        <TouchableOpacity
-                          onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
-                          activeOpacity={0.88}
-                          style={[
-                            {
-                              borderRadius: 20,
-                              borderWidth: 1,
-                              marginBottom: 12,
-                              shadowColor: '#000000',
-                              shadowOffset: { width: 0, height: 4 },
-                              shadowOpacity: isDark ? 0.08 : 0.03,
-                              shadowRadius: 8,
-                              elevation: 2,
-                              overflow: 'hidden',
-                              position: 'relative',
-                            },
-                            {
-                              backgroundColor: isDark ? 'rgba(28, 31, 38, 0.85)' : '#FFFFFF',
-                              borderColor: isExpanded 
-                                ? config.color + '40' 
-                                : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'),
-                            }
-                          ]}
-                        >
-                          {/* Subtle Frosted Dynamic Color Tint Overlay */}
-                          <View 
-                            style={{ 
-                              ...StyleSheet.absoluteFillObject, 
-                              backgroundColor: config.color, 
-                              opacity: isDark ? 0.05 : 0.02,
-                              zIndex: -1 
-                            }} 
-                          />
-
-                          {/* Sleek Accent Indicator Left Border with Rounded Corners */}
-                          <View 
-                            style={{ 
-                              position: 'absolute', 
-                              left: 0, 
-                              top: 0, 
-                              bottom: 0, 
-                              width: 3.5, 
-                              borderTopRightRadius: 4,
-                              borderBottomRightRadius: 4,
-                              backgroundColor: config.color 
-                            }} 
-                          />
-
-                          <View style={{ padding: 18, paddingLeft: 22 }}>
-                            {/* Main Top Header Details */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                              <View 
-                                style={{ 
-                                  width: 32, 
-                                  height: 32, 
-                                  borderRadius: 10, 
-                                  alignItems: 'center', 
+                        return (
+                          <TouchableOpacity
+                            key={tab.key}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              setActiveCategoryTab(tab.key);
+                              setExpandedMessageIdx(null);
+                            }}
+                            style={[
+                              {
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingHorizontal: 16,
+                                paddingVertical: 8,
+                                borderRadius: 20,
+                                borderWidth: 1,
+                                gap: 6,
+                              },
+                              isActive
+                                ? { 
+                                    backgroundColor: tabTheme.bg,
+                                    borderColor: tabTheme.text + '25',
+                                  }
+                                : {
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                                    borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                                  },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                {
+                                  fontSize: 13,
+                                  fontWeight: '700',
+                                },
+                                { color: isActive ? tabTheme.text : colors.textSecondary },
+                              ]}
+                            >
+                              {tab.label}
+                            </Text>
+                            <View
+                              style={[
+                                {
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 10,
+                                  minWidth: 18,
+                                  alignItems: 'center',
                                   justifyContent: 'center',
-                                  backgroundColor: config.color + '10'
-                                }}
+                                },
+                                isActive
+                                  ? { backgroundColor: tabTheme.text + '18' }
+                                  : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  {
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                  },
+                                  { color: isActive ? tabTheme.text : colors.textSecondary },
+                                ]}
                               >
-                                <Icon size={14} color={config.color} />
-                              </View>
+                                {count}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
 
-                              <View style={{ flex: 1 }}>
+                  <ScrollView 
+                    style={styles.messagesList} 
+                    showsVerticalScrollIndicator={false} 
+                    contentContainerStyle={{ paddingBottom: 60, paddingHorizontal: 20 }}
+                  >
+                    {(() => {
+                      const filtered = (data.messages || []).filter((item: any) => {
+                        if (activeCategoryTab === 'ALL') return true;
+                        return getMessageConfig(item.title).label === activeCategoryTab;
+                      });
+
+                      if (filtered.length > 0) {
+                        return filtered.map((item, idx) => {
+                          const isExpanded = expandedMessageIdx === idx;
+                          const config = getMessageConfig(item.title);
+                          const Icon = config.icon;
+                          const cardTheme = getCardTheme(config.label);
+
+                          // Extract sender and clean subject title for hyper-minimalism
+                          const titleParts = (item.title || "").split(/[-:]/);
+                          const sender = titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
+                          const cleanTitle = titleParts.length > 1 ? titleParts.slice(1).join('-').trim() : item.title;
+
+                          return (
+                            <Animated.View
+                              key={item.id || idx}
+                              layout={Layout.springify()}
+                              entering={FadeInDown.delay(idx * 50)}
+                            >
+                              <TouchableOpacity
+                                onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
+                                activeOpacity={0.92}
+                                style={[
+                                  {
+                                    borderRadius: 24,
+                                    marginBottom: 14,
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    padding: 20,
+                                    shadowColor: cardTheme.accent,
+                                    shadowOffset: { width: 0, height: 6 },
+                                    shadowOpacity: isExpanded ? (isDark ? 0.2 : 0.08) : 0,
+                                    shadowRadius: 12,
+                                    elevation: isExpanded ? 3 : 0,
+                                  },
+                                  {
+                                    backgroundColor: cardTheme.bg,
+                                  }
+                                ]}
+                              >
+                                {/* Top Category / Label Row */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Icon size={12} color={cardTheme.text} style={{ opacity: 0.85 }} />
+                                    <Text 
+                                      style={{ 
+                                        fontSize: 11.5, 
+                                        fontWeight: '700', 
+                                        color: cardTheme.text, 
+                                        opacity: 0.85, 
+                                        letterSpacing: 0.2,
+                                        textTransform: 'capitalize' 
+                                      }}
+                                    >
+                                      {config.label.toLowerCase().replace('/', ' / ')}
+                                    </Text>
+                                  </View>
+
+                                  <View 
+                                    style={{ 
+                                      width: 22, 
+                                      height: 22, 
+                                      borderRadius: 11, 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center', 
+                                      backgroundColor: cardTheme.text + '10'
+                                    }}
+                                  >
+                                    <ChevronRight
+                                      size={11}
+                                      color={cardTheme.text}
+                                      style={{ 
+                                        opacity: 0.85,
+                                        transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] 
+                                      }}
+                                    />
+                                  </View>
+                                </View>
+
+                                {/* Middle Bold Title matching image style exactly */}
                                 <Text 
                                   style={{ 
-                                    fontSize: 14, 
-                                    fontWeight: '700', 
-                                    lineHeight: 20, 
-                                    color: colors.text,
-                                    letterSpacing: -0.1
+                                    fontSize: 18, 
+                                    fontWeight: '800', 
+                                    lineHeight: 24, 
+                                    color: cardTheme.text,
+                                    marginTop: 16,
+                                    marginBottom: 16,
+                                    letterSpacing: -0.2
                                   }} 
-                                  numberOfLines={isExpanded ? undefined : 1}
+                                  numberOfLines={isExpanded ? undefined : 2}
                                 >
                                   {cleanTitle}
                                 </Text>
-                              </View>
 
-                              <View 
-                                style={{ 
-                                  width: 24, 
-                                  height: 24, 
-                                  borderRadius: 12, 
-                                  alignItems: 'center', 
-                                  justifyContent: 'center', 
-                                  backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)' 
-                                }}
-                              >
-                                <ChevronRight
-                                  size={12}
-                                  color={colors.textSecondary}
-                                  style={{ transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }}
-                                />
-                              </View>
-                            </View>
+                                {/* Expandable Content */}
+                                {(isExpanded || item.content) && (
+                                  <Animated.View entering={FadeInUp.duration(300)}>
+                                    <View 
+                                      style={{ 
+                                        height: 1, 
+                                        backgroundColor: cardTheme.text + '15', 
+                                        marginBottom: 14 
+                                      }} 
+                                    />
+                                    <Text
+                                      style={{ 
+                                        fontSize: 13.5, 
+                                        lineHeight: 21, 
+                                        color: cardTheme.text, 
+                                        opacity: 0.9,
+                                        marginBottom: 16
+                                      }}
+                                      numberOfLines={isExpanded ? undefined : 2}
+                                    >
+                                      {item.content}
+                                    </Text>
+                                    {isExpanded && (
+                                      <View style={{ flexDirection: 'row', marginBottom: 14, gap: 10 }}>
+                                        <TouchableOpacity 
+                                          activeOpacity={0.7}
+                                          onPress={async () => {
+                                            const Clipboard = await import('expo-clipboard');
+                                            await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
+                                          }}
+                                          style={{ 
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            paddingHorizontal: 12, 
+                                            paddingVertical: 6, 
+                                            borderRadius: 8, 
+                                            backgroundColor: cardTheme.text + '15',
+                                            borderWidth: 1,
+                                            borderColor: cardTheme.text + '25'
+                                          }}
+                                        >
+                                          <Text style={{ fontSize: 11, fontWeight: '700', color: cardTheme.text }}>Copy Alert</Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    )}
+                                  </Animated.View>
+                                )}
 
-                            {/* Expandable Alert Content */}
-                            {(isExpanded || item.content) && (
-                              <Animated.View entering={FadeInUp.duration(300)}>
+                                {/* Bottom Metadata Row (Date & Initials Badge) */}
                                 <View 
                                   style={{ 
-                                    height: 1, 
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', 
-                                    marginVertical: 14 
-                                  }} 
-                                />
-                                <Text
-                                  style={{ 
-                                    fontSize: 13.5, 
-                                    lineHeight: 21, 
-                                    color: colors.text, 
-                                    opacity: 0.9 
+                                    flexDirection: 'row', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    marginTop: 4
                                   }}
-                                  numberOfLines={isExpanded ? undefined : 2}
                                 >
-                                  {item.content}
-                                </Text>
-                                {isExpanded && (
-                                  <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
-                                    <TouchableOpacity 
-                                      activeOpacity={0.7}
-                                      onPress={async () => {
-                                        const Clipboard = await import('expo-clipboard');
-                                        await Clipboard.setStringAsync(item.title + '\n\n' + item.content);
-                                      }}
+                                  <Text style={{ fontSize: 11.5, fontWeight: '600', color: cardTheme.textSecondary }}>
+                                    {item.date || 'Recently'}
+                                  </Text>
+
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text 
                                       style={{ 
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        paddingHorizontal: 12, 
-                                        paddingVertical: 6, 
-                                        borderRadius: 8, 
-                                        backgroundColor: config.color + '10',
-                                        borderWidth: 1,
-                                        borderColor: config.color + '20'
+                                        fontSize: 11.5, 
+                                        fontWeight: '700', 
+                                        color: cardTheme.text,
+                                        opacity: 0.85
+                                      }} 
+                                      numberOfLines={1}
+                                    >
+                                      {sender}
+                                    </Text>
+
+                                    {/* Circle Initials Avatar matching User UI layout */}
+                                    <View 
+                                      style={{ 
+                                        width: 18, 
+                                        height: 18, 
+                                        borderRadius: 9, 
+                                        backgroundColor: cardTheme.text + '18',
+                                        alignItems: 'center', 
+                                        justifyContent: 'center' 
                                       }}
                                     >
-                                      <Text style={{ fontSize: 11, fontWeight: '700', color: config.color }}>Copy Alert</Text>
-                                    </TouchableOpacity>
+                                      <Text style={{ fontSize: 9, fontWeight: '800', color: cardTheme.text }}>
+                                        {sender.charAt(0).toUpperCase()}
+                                      </Text>
+                                    </View>
                                   </View>
-                                )}
-                              </Animated.View>
-                            )}
-
-                            {/* Premium Minimal Bottom Info */}
-                            <View 
-                              style={{ 
-                                flexDirection: 'row', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                marginTop: 12,
-                                paddingTop: 10,
-                                borderTopWidth: 1,
-                                borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
-                                {/* Translucent Category Pill Tag */}
-                                <View 
-                                  style={{ 
-                                    paddingHorizontal: 8, 
-                                    paddingVertical: 3, 
-                                    borderRadius: 6, 
-                                    backgroundColor: config.color + '10',
-                                    borderWidth: 1,
-                                    borderColor: config.color + '20'
-                                  }} 
-                                >
-                                  <Text style={{ fontSize: 9, fontWeight: '800', color: config.color, letterSpacing: 0.2, textTransform: 'uppercase' }}>
-                                    {config.label}
-                                  </Text>
                                 </View>
-
-                                <Text 
-                                  style={{ 
-                                    fontSize: 11, 
-                                    fontWeight: '600', 
-                                    color: colors.textSecondary,
-                                  }} 
-                                  numberOfLines={1}
-                                >
-                                  {sender}
-                                </Text>
-                              </View>
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
-                                {item.date || 'Recently'}
-                              </Text>
+                              </TouchableOpacity>
+                            </Animated.View>
+                          );
+                        });
+                      } else {
+                        return (
+                          <View style={styles.emptyStateCompact}>
+                            <View style={[styles.emptyIconBg, { backgroundColor: colors.primary + '10' }]}>
+                              <Bell size={32} color={colors.primary} />
                             </View>
+                            <Text style={[styles.emptyTextCompact, { color: colors.textSecondary }]}>No new alerts in this section</Text>
                           </View>
-                        </TouchableOpacity>
-                      </Animated.View>
-                    );
-                  });
-                } else {
-                  return (
-                    <View style={styles.emptyStateCompact}>
-                      <View style={[styles.emptyIconBg, { backgroundColor: colors.primary + '10' }]}>
-                        <Bell size={32} color={colors.primary} />
-                      </View>
-                      <Text style={[styles.emptyTextCompact, { color: colors.textSecondary }]}>No new alerts in this section</Text>
-                    </View>
-                  );
-                }
-              })()}
-            </ScrollView>
+                        );
+                      }
+                    })()}
+                  </ScrollView>
+                </>
+              );
+            })()}
           </View>
         </View>
       </Modal>
