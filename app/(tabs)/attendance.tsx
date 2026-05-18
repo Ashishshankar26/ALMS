@@ -496,59 +496,95 @@ export default function AttendanceScreen() {
             const skipTodayPct = Math.round(((openedSubject.attendedClasses + (openedSubject.dutyLeaves || 0)) / (openedSubject.totalClasses + 1)) * 100);
 
             return (
-              <Animated.View entering={FadeInUp.duration(280)} style={[styles.attendanceWindow, { backgroundColor: isDark ? '#171A20' : '#FFFFFF', borderColor: colors.border }]}>
-                <LinearGradient colors={isDark ? ['rgba(26,28,32,0.96)', 'rgba(18,21,26,0.94)'] : [base, '#FFFFFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.windowHero}>
+              <Animated.View 
+                entering={FadeInUp.duration(280)} 
+                style={[
+                  styles.attendanceWindow, 
+                  { 
+                    backgroundColor: isDark ? '#111419' : '#FFFFFF', 
+                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    shadowColor: accent 
+                  }
+                ]}
+              >
+                <View style={styles.windowHero}>
                   <View style={styles.windowTop}>
-                    <View style={[styles.subjectCodeBadge, { backgroundColor: accent + '18', borderColor: accent + '30' }]}>
-                      <Text style={[styles.subjectCode, { color: isDark ? '#FFFFFF' : '#111111' }]}>{openedSubject.subjectCode}</Text>
+                    <View style={[styles.subjectCodeBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', borderWidth: 1 }]}>
+                      <Text style={[styles.subjectCode, { color: isDark ? '#A0AEC0' : '#4A5568', fontWeight: '800' }]}>{openedSubject.subjectCode}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => setSelectedSubject(null)} activeOpacity={0.8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
-                      <X size={17} color={colors.text} />
+                    <TouchableOpacity onPress={() => setSelectedSubject(null)} activeOpacity={0.8} style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: 'transparent' }]}>
+                      <X size={15} color={colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                   <View style={styles.windowHeroRow}>
                     <View style={styles.windowHeroCopy}>
-                      <Text style={[styles.windowSubject, { color: colors.text }]} numberOfLines={2}>{openedSubject.subjectName}</Text>
-                      <Text style={[styles.windowStatusText, { color: accent }]}>{status.text}</Text>
+                      <Text style={[styles.windowSubject, { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: -0.3 }]} numberOfLines={2}>{openedSubject.subjectName}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
+                        <Text style={[styles.windowStatusText, { color: accent, fontSize: 10, fontWeight: '800', marginTop: 0 }]}>{status.text}</Text>
+                      </View>
                     </View>
-                    <Text style={[styles.windowPercent, { color: colors.text }]}>{effectivePct}%</Text>
+                    <Text style={[styles.windowPercent, { color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: -1 }]}>{effectivePct}%</Text>
                   </View>
-                  <View style={[styles.windowProgress, { backgroundColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(17,17,17,0.08)' }]}>
-                    <View style={[styles.widgetProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: accent }]} />
+                  <View style={[styles.windowProgress, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', height: 5, borderRadius: 2.5, marginTop: 16 }]}>
+                    <View style={[styles.widgetProgressFill, { width: `${Math.min(effectivePct, 100)}%`, backgroundColor: accent, borderRadius: 2.5 }]} />
                   </View>
-                </LinearGradient>
+                </View>
 
-                <View style={styles.windowBody}>
+                <View style={[styles.windowBody, { padding: 18, paddingTop: 10 }]}>
+                  {/* Section Label */}
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                    Class Statistics
+                  </Text>
+                  
                   <View style={styles.windowMetricGrid}>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.attendedClasses}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Attended</Text>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.attendedClasses}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Attended</Text>
                     </View>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.totalClasses}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Total</Text>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.totalClasses}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Total</Text>
                     </View>
-                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <Text style={[styles.windowMetricValue, { color: colors.text }]}>{openedSubject.dutyLeaves || 0}</Text>
-                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary }]}>Leaves</Text>
+                    <View style={[styles.windowMetric, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 64 }]}>
+                      <Text style={[styles.windowMetricValue, { color: colors.text, fontSize: 20, fontWeight: '800' }]}>{openedSubject.dutyLeaves || 0}</Text>
+                      <Text style={[styles.windowMetricLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Duty Leaves</Text>
                     </View>
                   </View>
 
-                  <View style={styles.compactForecastGrid}>
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <Target size={15} color={proj.isSafe ? '#34C759' : '#FF3B30'} />
-                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{proj.value}</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Missable</Text>
+                  {/* Section Label */}
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase', marginTop: 12, marginBottom: 8 }}>
+                    Attendance Predictor
+                  </Text>
+
+                  <View style={[styles.compactForecastGrid, { gap: 8 }]}>
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Target size={14} color={proj.isSafe ? '#34C759' : '#FF3B30'} />
+                        {proj.isSafe && (
+                          <View style={{ backgroundColor: '#34C75915', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                            <Text style={{ color: '#34C759', fontSize: 7, fontWeight: '900' }}>SAFE</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{proj.value}</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Missable</Text>
                     </View>
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <AlertTriangle size={15} color={skipTodayPct < targetPct ? '#FF3B30' : '#34C759'} />
-                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{skipTodayPct}%</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Skip 1</Text>
+
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <AlertTriangle size={14} color={skipTodayPct < targetPct ? '#FF3B30' : '#34C759'} />
+                      </View>
+                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{skipTodayPct}%</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Skip 1 Class</Text>
                     </View>
-                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#22262E' : '#F4F6FA', borderColor: colors.border }]}>
-                      <Award size={15} color={proj.forecast < targetPct ? '#FF3B30' : '#34C759'} />
-                      <Text style={[styles.compactForecastValue, { color: colors.text }]}>{proj.forecast}%</Text>
-                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary }]}>Forecast</Text>
+
+                    <View style={[styles.compactForecastTile, { backgroundColor: isDark ? '#1A1E26' : '#F8F9FB', borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 80 }]}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Award size={14} color={proj.forecast < targetPct ? '#FF3B30' : '#34C759'} />
+                      </View>
+                      <Text style={[styles.compactForecastValue, { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 8 }]}>{proj.forecast}%</Text>
+                      <Text style={[styles.compactForecastLabel, { color: colors.textSecondary, fontSize: 8, fontWeight: '800' }]}>Term Forecast</Text>
                     </View>
                   </View>
                 </View>
@@ -1005,16 +1041,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350,
     borderRadius: 30,
-    borderWidth: 1.5,
+    borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#34C759',
-    shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.24,
-    shadowRadius: 36,
-    elevation: 16,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.12,
+    shadowRadius: 28,
+    elevation: 12,
   },
   windowHero: {
-    padding: 14,
+    padding: 18,
+    paddingTop: 20,
     minHeight: 122,
   },
   windowTop: {
