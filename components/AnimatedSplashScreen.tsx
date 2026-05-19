@@ -162,10 +162,10 @@ const styles = StyleSheet.create({
   },
   mainLetter: {
     color: '#FFFFFF',
-    fontSize: 54,
-    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
-    fontWeight: '500', // Sleek elegant weight
-    letterSpacing: 6,
+    fontSize: 60,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
+    fontWeight: '800', // Fuller, solid bold weight
+    letterSpacing: 4,
     textTransform: 'lowercase',
     includeFontPadding: false,
   },
@@ -180,11 +180,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 1,
   },
   subLetter: {
-    color: 'rgba(255,255,255,0.55)', // Dimmer grey/white for hierarchy
-    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)', // Brighter, fuller grey/white
+    fontSize: 12, // Slightly larger
     fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
-    fontWeight: '700', // Bold confident subtitle
-    letterSpacing: 4,
+    fontWeight: '800', // Fully bold confident subtitle
+    letterSpacing: 5,
     textTransform: 'uppercase',
     includeFontPadding: false,
   },
