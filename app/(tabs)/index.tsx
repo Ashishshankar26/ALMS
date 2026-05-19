@@ -2054,14 +2054,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 25,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#C7C7CC',
-  },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2075,12 +2067,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
   },
   welcomeText: {
     fontSize: 12.5,
@@ -3042,33 +3028,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 60,
   },
-  emptyIconBg: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
   emptyTextCompact: {
     fontSize: 15,
     fontWeight: '600',
-  },
-  content: {
-    padding: 20,
-    paddingTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
-    marginTop: 12,
-    letterSpacing: -0.3,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 0,
   },
   gridCardShadow: {
     flex: 1,
@@ -3087,42 +3049,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
-  gridCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 24,
-    minHeight: 140,
-    justifyContent: 'space-between',
-    position: 'relative',
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  gridCardLabel: {
-    color: 'rgba(255,255,255,0.95)',
-    fontSize: 12,
-    fontWeight: '700',
-    flex: 1,
-    letterSpacing: 0.2,
   },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 6,
     marginVertical: 4,
-  },
-  gridCardValue: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '800',
   },
   glassBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -3156,23 +3092,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  feeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginBottom: 0,
-  },
-  examsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginTop: 12,
   },
   // ── Utility Grid (side-by-side square cards) ──
   utilityGrid: {
@@ -3651,10 +3570,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  horizontalScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
   assignmentCardPremium: {
     width: 260,
     padding: 20,
@@ -3728,23 +3643,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
-  announcementCard: {
-    padding: 18,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 80,
-  },
-  assignmentCard: {
-    width: 280,
-    padding: 18,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginRight: 12,
-    justifyContent: 'space-between',
-    minHeight: 140,
-  },
   updateCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3801,12 +3699,6 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  profileModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
   },
   profileModalBackground: {
     position: 'absolute',
