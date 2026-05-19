@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -989,10 +989,10 @@ export default function DashboardScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={logout}
+              onPress={() => setShowProfileMenu(true)}
               style={[styles.headerIconBtn]}
             >
-              <LogOut size={22} color={colors.error} />
+              <Menu size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1961,6 +1961,11 @@ export default function DashboardScreen() {
             <View style={[styles.profileMenuHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
             </View>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowProfileMenu(false); router.push('/announcements'); }}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Announcements</Text>
+              <Bell size={18} color={colors.primary} />
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
               <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
