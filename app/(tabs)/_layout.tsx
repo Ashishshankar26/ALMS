@@ -16,7 +16,6 @@ const ICON_MAP: Record<string, any> = {
   attendance: CheckCircle,
   results: Award,
   leave: FileText,
-  rms: MessageSquare,
 };
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -83,7 +82,6 @@ export default function TabLayout() {
       <Tabs.Screen name="attendance" options={{ title: 'Attendance' }} />
       <Tabs.Screen name="results" options={{ title: 'Results' }} />
       <Tabs.Screen name="leave" options={{ title: 'Leave' }} />
-      <Tabs.Screen name="rms" options={{ title: 'RMS' }} />
     </Tabs>
   );
 }

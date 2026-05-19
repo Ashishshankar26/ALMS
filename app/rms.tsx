@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { MessageSquare, Search, PlusCircle, RefreshCcw } from 'lucide-react-native';
+import { MessageSquare, Search, PlusCircle, RefreshCcw, ChevronLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
+import { router } from 'expo-router';
 
 type TabType = 'TRACK' | 'LOG';
 
@@ -53,7 +54,10 @@ export default function RMSScreen() {
         ]}
       >
         <View style={styles.heroContent}>
-          <View>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: colors.primary + '15' }]}>
+            <ChevronLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.heroLabel, { color: colors.textSecondary }]}>Request Management</Text>
             <Text style={[styles.heroValue, { color: colors.text }]}>RMS Portal</Text>
           </View>
@@ -180,9 +184,16 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 25,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   heroLabel: {
     fontSize: 14,

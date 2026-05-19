@@ -1895,6 +1895,11 @@ export default function DashboardScreen() {
               <Bell size={18} color={colors.primary} />
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowProfileMenu(false); router.push('/rms'); }}>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>RMS Portal</Text>
+              <MessageSquare size={18} color={colors.primary} />
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
               <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
               <Lock size={18} color={colors.primary} />
