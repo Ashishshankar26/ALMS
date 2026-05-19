@@ -534,21 +534,55 @@ const DASHBOARD_SCRIPT = `
             }
 
             var announc = [];
-            var annContainer = document.querySelector(".TodayAnnouncements");
+            var annContainer = document.querySelector(".TodayAnnouncements") || document.getElementById("TodayAnnouncements") || document.getElementById("Announcements");
+            
+            // Smart discovery if IDs fail
+            if (!annContainer) {
+              var headers = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,span,b,p'));
+              var annHeader = headers.find(function(el) { 
+                var txt = el.innerText.trim();
+                return txt === "Today's Announcements" || txt === "Today Announcements" || txt === "Announcements" || txt === "University Announcements" || (txt.toLowerCase().includes("announcements") && el.children.length === 0);
+              });
+              if (annHeader) {
+                annContainer = annHeader.closest('.card, .box, .panel, div[class*="container"]') || annHeader.parentElement;
+                log("SCRAPER DEBUG: Smart Discovery found announcement header, using container: " + annContainer.tagName);
+              }
+            }
+
             if (annContainer) {
-              var annRows = annContainer.querySelectorAll(".row");
+              var annRows = annContainer.querySelectorAll(".row, li, .mycoursesdiv, div[class*='item']");
               for (var i = 0; i < annRows.length; i++) {
                 var row = annRows[i];
-                var subjEl = row.querySelector(".announcement-subject");
-                var dateEl = row.querySelector(".announcement-date");
-                if (subjEl) {
+                // Ignore the header itself
+                if (row.innerText.toLowerCase().includes("announcements") && row.querySelectorAll('li, .row, .mycoursesdiv').length > 0) continue;
+
+                var subjEl = row.querySelector(".announcement-subject") || row.querySelector(".font-weight-medium") || row.querySelector("b") || row.querySelector("strong") || row.querySelector(".right-arrow") || row.querySelector("a");
+                var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date") || row.querySelector("small");
+                
+                if (subjEl && subjEl.innerText.trim().length > 2) {
+                  var fullText = row.innerText.trim();
                   announc.push({ 
-                    id: Math.random().toString(), title: subjEl.innerText.trim(), 
-                    content: subjEl.innerText.trim(), date: dateEl ? dateEl.innerText.trim() : "Today" 
+                    id: Math.random().toString(), 
+                    title: subjEl.innerText.trim().substring(0, 100).split('-')[0].trim(), 
+                    content: fullText, 
+                    date: dateEl ? dateEl.innerText.trim() : "Today" 
+                  });
+                } else if (row.innerText.trim().length > 5) {
+                  var t = row.innerText.trim();
+                  announc.push({
+                    id: Math.random().toString(),
+                    title: t.substring(0, 60),
+                    content: t,
+                    date: "Today"
                   });
                 }
               }
             }
+            // Filter out duplicates and empty entries
+            announc = announc.filter(function(m, index, self) {
+              return m.title.length > 1 && self.findIndex(function(t) { return t.title === m.title; }) === index;
+            });
+            log("SCRAPER DEBUG: Found " + announc.length + " announcements");
 
             var messages = [];
             // Try original explicit IDs from Git history first
