@@ -1310,12 +1310,7 @@ export default function DashboardScreen() {
           elevation: 4,
           maxHeight: 280, // Show roughly 3.5 items
         }]}>
-          <LinearGradient
-            colors={['#4A1D5B', '#2D1237']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ flex: 1 }}
-          >
+          <View style={{ flex: 1, backgroundColor: '#3A1747' }}>
             {data.announcements && data.announcements.length > 0 ? (
               <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
                 {data.announcements.map((item: any, index: number) => (
@@ -1336,7 +1331,7 @@ export default function DashboardScreen() {
                 <Text style={[styles.emptyText, { color: 'rgba(255, 255, 255, 0.8)' }]}>No new announcements.</Text>
               </View>
             )}
-          </LinearGradient>
+          </View>
         </View>
           {/* Update Manager */}
           <View style={[styles.updateCard, { padding: 0, overflow: 'hidden', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1.5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, marginTop: 20 }]}>
