@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1878,49 +1878,105 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      {/* Modal for Profile Options */}
-      <Modal visible={showProfileMenu} animationType="fade" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
-        <TouchableOpacity
-          style={styles.profileModalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowProfileMenu(false)}
-        >
-          <View style={[styles.profileMenuContent, { backgroundColor: isDark ? '#1C1F26' : '#FFFFFF' }]}>
-            <View style={[styles.profileMenuHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.profileMenuTitle, { color: colors.text }]}>Account Settings</Text>
+      {/* Modal for Profile Options - SIDEBAR DRAWERS */}
+      <Modal visible={showProfileMenu} animationType="none" transparent={true} onRequestClose={() => setShowProfileMenu(false)}>
+        <View style={styles.profileModalOverlay}>
+          <TouchableOpacity
+            style={styles.profileModalBackground}
+            activeOpacity={1}
+            onPress={() => setShowProfileMenu(false)}
+          />
+          <Animated.View
+            entering={SlideInRight.duration(300).springify().damping(20)}
+            exiting={SlideOutRight.duration(250)}
+            style={[styles.profileMenuContentSidebar, { backgroundColor: isDark ? '#12141C' : '#FFFFFF' }]}
+          >
+            {/* Header / Brand */}
+            <View style={[styles.sidebarHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+              <View style={styles.sidebarUserSection}>
+                <View style={[styles.sidebarAvatarBg, { backgroundColor: colors.primary + '15' }]}>
+                  <User size={24} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sidebarWelcomeText, { color: colors.textSecondary }]}>Account Settings</Text>
+                  <Text style={[styles.sidebarNameText, { color: colors.text }]} numberOfLines={1}>
+                    {data.studentName || 'Student Portal'}
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowProfileMenu(false); router.push('/announcements'); }}>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Announcements</Text>
-              <Bell size={18} color={colors.primary} />
-            </TouchableOpacity>
+            {/* Menu Items Section */}
+            <ScrollView 
+              style={styles.sidebarScrollView} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 10 }}
+            >
+              <Text style={[styles.sidebarSectionTitle, { color: colors.textSecondary }]}>General</Text>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setShowProfileMenu(false); router.push('/rms'); }}>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>RMS Portal</Text>
-              <MessageSquare size={18} color={colors.primary} />
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.sidebarMenuItem} onPress={() => { setShowProfileMenu(false); router.push('/announcements'); }}>
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#34C75915' }]}>
+                    <Bell size={18} color="#34C759" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>Announcements</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmchangepassword.aspx', 'Change Password')}>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Change Password</Text>
-              <Lock size={18} color={colors.primary} />
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.sidebarMenuItem} onPress={() => { setShowProfileMenu(false); router.push('/rms'); }}>
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#007AFF15' }]}>
+                    <MessageSquare size={18} color="#007AFF" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>RMS Portal</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('frmAdPassword.aspx', 'Wifi Password')}>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Wifi Password</Text>
-              <Wifi size={18} color={colors.primary} />
-            </TouchableOpacity>
+              <Text style={[styles.sidebarSectionTitle, { color: colors.textSecondary, marginTop: 20 }]}>Security & Profile</Text>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update')}>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Profile Update</Text>
-              <UserCheck size={18} color={colors.primary} />
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.sidebarMenuItem} onPress={() => { setShowProfileMenu(false); openUmsForm('frmchangepassword.aspx', 'Change Password'); }}>
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#FF950015' }]}>
+                    <Lock size={18} color="#FF9500" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>Change Password</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => { setShowProfileMenu(false); logout(); }}>
-              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign out</Text>
-              <LogOut size={18} color={colors.error} />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+              <TouchableOpacity style={styles.sidebarMenuItem} onPress={() => { setShowProfileMenu(false); openUmsForm('frmAdPassword.aspx', 'Wifi Password'); }}>
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#5856D615' }]}>
+                    <Wifi size={18} color="#5856D6" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>Wifi Password</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.sidebarMenuItem} onPress={() => { setShowProfileMenu(false); openUmsForm('openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile', 'Profile Update'); }}>
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#AF52DE15' }]}>
+                    <UserCheck size={18} color="#AF52DE" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>Profile Update</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
+            </ScrollView>
+
+            {/* Footer / Sign Out */}
+            <View style={[styles.sidebarFooter, { borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+              <TouchableOpacity style={styles.sidebarSignOutBtn} onPress={() => { setShowProfileMenu(false); logout(); }}>
+                <LogOut size={18} color="#FF3B30" />
+                <Text style={styles.sidebarSignOutText}>Sign Out</Text>
+              </TouchableOpacity>
+              <Text style={[styles.sidebarVersionText, { color: colors.textSecondary }]}>v{version}</Text>
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
     </View>
   );
@@ -3678,37 +3734,116 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileMenuContent: {
-    width: '75%',
-    borderRadius: 24,
-    padding: 10,
+  profileModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  profileModalBackground: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  profileMenuContentSidebar: {
+    width: '80%',
+    height: '100%',
+    borderTopLeftRadius: 32,
+    borderBottomLeftRadius: 32,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: -8, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    paddingHorizontal: 20,
   },
-  profileMenuHeader: {
-    padding: 15,
+  sidebarHeader: {
+    paddingVertical: 25,
     borderBottomWidth: 1,
-    marginBottom: 5,
+    marginTop: Platform.OS === 'ios' ? 50 : 20,
   },
-  profileMenuTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  sidebarUserSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
   },
-  menuItem: {
+  sidebarAvatarBg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarWelcomeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sidebarNameText: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  sidebarScrollView: {
+    flex: 1,
+  },
+  sidebarSectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginTop: 15,
+  },
+  sidebarMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F2F2F7',
+    paddingVertical: 12,
   },
-  menuItemText: {
+  sidebarMenuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  sidebarIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarMenuItemText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  sidebarFooter: {
+    paddingVertical: 25,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Platform.OS === 'ios' ? 30 : 15,
+  },
+  sidebarSignOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sidebarSignOutText: {
+    color: '#FF3B30',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  sidebarVersionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.6,
   },
   gridCardWrapper: {
     flex: 1,
