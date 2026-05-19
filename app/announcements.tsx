@@ -15,7 +15,7 @@ export default function AnnouncementsScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [activeCategoryTab, setActiveCategoryTab] = useState('ALL');
-  const [expandedMessageIdx, setExpandedMessageIdx] = useState<number | null>(null);
+  const [expandedAnnouncementIdx, setExpandedAnnouncementIdx] = useState<number | null>(null);
 
   const getMessageConfig = (title: string) => {
     const t = (title || "").toLowerCase();
@@ -98,7 +98,7 @@ export default function AnnouncementsScreen() {
     }
   };
 
-  const messages = data.messages || [];
+  const announcements = data.announcements || [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -109,7 +109,7 @@ export default function AnnouncementsScreen() {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.title, { color: colors.text }]}>Announcements</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>University Messages & Alerts</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>University Announcements & Board</Text>
         </View>
       </View>
 
@@ -131,8 +131,8 @@ export default function AnnouncementsScreen() {
             { key: 'ANNOUNCEMENT', label: 'Announcements' },
           ].map((tab) => {
             const count = tab.key === 'ALL' 
-              ? messages.length 
-              : messages.filter((item: any) => getMessageConfig(item.title).label === tab.key).length;
+              ? announcements.length 
+              : announcements.filter((item: any) => getMessageConfig(item.title).label === tab.key).length;
 
             if (count === 0 && tab.key !== 'ALL') return null;
             const isActive = activeCategoryTab === tab.key;
@@ -144,7 +144,7 @@ export default function AnnouncementsScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   setActiveCategoryTab(tab.key);
-                  setExpandedMessageIdx(null);
+                  setExpandedAnnouncementIdx(null);
                 }}
                 style={[
                   styles.tabButton,
@@ -176,84 +176,19 @@ export default function AnnouncementsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {(() => {
-          const filtered = messages.filter((item: any) => {
+          const filtered = announcements.filter((item: any) => {
             if (activeCategoryTab === 'ALL') return true;
             return getMessageConfig(item.title).label === activeCategoryTab;
           });
 
           if (filtered.length > 0) {
             return filtered.map((item: any, idx: number) => {
-              const isExpanded = expandedMessageIdx === idx;
+              const isExpanded = expandedAnnouncementIdx === idx;
               const config = getMessageConfig(item.title);
               const Icon = config.icon;
               const cardTheme = getCardTheme(config.label);
 
-              const titleParts = (item.title || "").split(/[-:]/);
-              
-              const getSenderName = () => {
-                const txt = (item.content || '') + ' ' + (item.title || '');
-                const byPatterns = [
-                  /\bBy\s*:\s*([A-Za-z\s\.\,\-]+)/i,
-                  /\bBy\s+([A-Za-z\s\.\,\-]+)/i
-                ];
-
-                for (const pattern of byPatterns) {
-                  const match = txt.match(pattern);
-                  if (match && match[1]) {
-                    const name = match[1].trim().split(/[\n\r]/)[0].trim();
-                    const cleaned = name
-                      .replace(/\([^)]*\)/g, '')
-                      .replace(/\[[^\]]*\]/g, '')
-                      .replace(/\([^\)]*$/, '')
-                      .replace(/\[[^\]]*$/, '')
-                      .replace(/[\:\-\.\,\s]+$/, '')
-                      .trim();
-                    if (cleaned.length > 2 && 
-                        !cleaned.toLowerCase().startsWith('http') &&
-                        !['announcement', 'important', 'recently', 'today', 'notification'].some(w => cleaned.toLowerCase() === w)) {
-                      return cleaned;
-                    }
-                  }
-                }
-                return titleParts.length > 1 ? titleParts[0].trim() : (config.label || "LPU UMS");
-              };
-
-              const rawSender = getSenderName();
-              const sender = rawSender
-                .toLowerCase()
-                .replace('exmamination', 'examination')
-                .split(' ')
-                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' ');
-
-              const cleanTitle = titleParts.length > 1 ? titleParts.slice(1).join('-').trim() : item.title;
-
-              const extractProperDate = (txt: string, fallback: string) => {
-                if (!txt) return fallback;
-                const match1 = txt.match(/(\d{1,2})[\/\-\s]([A-Za-z]{3,9}|\d{1,2})[\/\-\s](\d{4})/i);
-                if (match1) return match1[0];
-                const match2 = txt.match(/([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/i);
-                if (match2) return match2[0];
-                const match3 = txt.match(/(\d{1,2})(?:st|nd|rd|th)\s+([A-Za-z]{3,9})\s+(\d{4})/i);
-                if (match3) return match3[0];
-                if (fallback === 'Recently' || !fallback) return '18 May 2026';
-                return fallback;
-              };
-
-              const extractParenthesisDate = (txt: string) => {
-                if (!txt) return null;
-                const match = txt.match(/\bBy\s*(?:\:\s*)?[A-Za-z\s\.\,\-]+\(\s*([A-Za-z0-9\s\,\-\/]{4,20})/i);
-                if (match && match[1]) {
-                  const d = match[1].trim().replace(/\)$/, '').trim();
-                  if (d.match(/\d{4}/) && (d.match(/[0-9]/) || d.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i))) {
-                    return d;
-                  }
-                }
-                return null;
-              };
-
-              const pDate = extractParenthesisDate((item.content || '') + ' ' + (item.title || ''));
-              const properDate = pDate || extractProperDate((item.content || '') + ' ' + (item.title || ''), item.date);
+              const cleanTitle = item.title ? item.title.trim() : 'Announcement';
 
               return (
                 <Animated.View
@@ -262,7 +197,7 @@ export default function AnnouncementsScreen() {
                   entering={FadeInDown.delay(idx * 50)}
                 >
                   <TouchableOpacity
-                    onPress={() => setExpandedMessageIdx(isExpanded ? null : idx)}
+                    onPress={() => setExpandedAnnouncementIdx(isExpanded ? null : idx)}
                     activeOpacity={0.92}
                     style={[
                       styles.card,
@@ -279,7 +214,7 @@ export default function AnnouncementsScreen() {
                       <View style={styles.cardHeaderLeft}>
                         <Icon size={12} color={cardTheme.text} style={{ opacity: 0.85 }} />
                         <Text style={[styles.cardLabel, { color: cardTheme.text }]}>
-                          {config.label.toLowerCase().replace('/', ' / ')}
+                          University Announcement
                         </Text>
                       </View>
                       <View style={[styles.chevronBg, { backgroundColor: cardTheme.text + '10' }]}>
@@ -312,37 +247,13 @@ export default function AnnouncementsScreen() {
                         >
                           {item.content}
                         </Text>
-                        {isExpanded && (
-                          <View style={styles.cardActionRow}>
-                            <TouchableOpacity 
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                const { Clipboard } = require('react-native');
-                                Clipboard.setString(item.title + '\n\n' + item.content);
-                              }}
-                              style={[styles.copyBtn, { backgroundColor: cardTheme.text + '15', borderColor: cardTheme.text + '25' }]}
-                            >
-                              <Text style={[styles.copyBtnText, { color: cardTheme.text }]}>Copy Alert</Text>
-                            </TouchableOpacity>
-                          </View>
-                        )}
                       </Animated.View>
                     )}
 
                     {/* Footer Row */}
                     <View style={styles.cardFooter}>
-                      <View style={styles.senderContainer}>
-                        <View style={[styles.senderAvatar, { backgroundColor: cardTheme.text + '18' }]}>
-                          <Text style={[styles.senderAvatarText, { color: cardTheme.text }]}>
-                            {sender.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                        <Text style={[styles.senderText, { color: cardTheme.text }]} numberOfLines={1}>
-                          {sender}
-                        </Text>
-                      </View>
                       <Text style={[styles.dateText, { color: cardTheme.textSecondary }]}>
-                        {properDate}
+                        {item.date}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -355,7 +266,7 @@ export default function AnnouncementsScreen() {
                 <View style={[styles.emptyIconBg, { backgroundColor: colors.primary + '10' }]}>
                   <Bell size={32} color={colors.primary} />
                 </View>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No new alerts in this section</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No new announcements in this section</Text>
               </View>
             );
           }
@@ -473,52 +384,11 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginBottom: 16,
   },
-  cardActionRow: {
-    flexDirection: 'row',
-    marginBottom: 14,
-    gap: 10,
-  },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  copyBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: 4,
-  },
-  senderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-    marginRight: 12,
-  },
-  senderAvatar: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  senderAvatarText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  senderText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    opacity: 0.85,
   },
   dateText: {
     fontSize: 11.5,
