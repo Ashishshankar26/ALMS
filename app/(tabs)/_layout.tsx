@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet, Platform, Dimensions, TouchableOpacity } from 'react-native';
-import { Home, Calendar, Award, CheckCircle, FileText } from 'lucide-react-native';
+import { Home, Calendar, Award, CheckCircle, FileText, MessageSquare } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '../../context/AuthContext';
 import { registerForPushNotificationsAsync } from '../../utils/notifications';
@@ -16,6 +16,7 @@ const ICON_MAP: Record<string, any> = {
   attendance: CheckCircle,
   results: Award,
   leave: FileText,
+  rms: MessageSquare,
 };
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,6 +83,7 @@ export default function TabLayout() {
       <Tabs.Screen name="attendance" options={{ title: 'Attendance' }} />
       <Tabs.Screen name="results" options={{ title: 'Results' }} />
       <Tabs.Screen name="leave" options={{ title: 'Leave' }} />
+      <Tabs.Screen name="rms" options={{ title: 'RMS' }} />
     </Tabs>
   );
 }
