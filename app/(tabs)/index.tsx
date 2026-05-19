@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
+
 
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
@@ -15,7 +15,7 @@ import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
-import { updateStickyClassNotification } from '../../utils/notifications';
+import { updateStickyClassNotification, cancelAllNotifications } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 const CARD_HEIGHT = 200;
@@ -24,14 +24,11 @@ const SWIPE_THRESHOLD = 25;
 function CardGradient({ colors, style, children, id, borderStyle }: { colors: string[]; style?: any; children?: React.ReactNode; id: string; borderStyle?: any }) {
   const r = style?.borderRadius || 32;
   return (
-    <LinearGradient
-      colors={colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[style, { overflow: 'hidden', borderRadius: r }, borderStyle]}
+    <View
+      style={[style, { overflow: 'hidden', borderRadius: r, backgroundColor: colors[0] || '#1E293B' }, borderStyle]}
     >
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -409,7 +406,7 @@ export default function DashboardScreen() {
   const overallAttendance = data.overallAttendance ? Math.ceil(parseFloat(data.overallAttendance)).toString() : calculatedAttendance.toString();
 
   // Helper to find "Next Class" dynamically
-  const getNextClass = () => {
+  const getNextClass = (getAll?: boolean): any => {
     const timetable = data.timetable || {};
     const makeupClasses = data.makeupClasses || [];
 
@@ -1013,7 +1010,7 @@ export default function DashboardScreen() {
                 >
                   <View style={[styles.profileCardGlow, { backgroundColor: theme.accent, opacity: isTop ? 0.18 : 0 }]} />
                   <View style={[styles.premiumProfileCard, { padding: 0, overflow: 'hidden', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 }]}>
-                    <LinearGradient colors={theme.colors as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
+                    <View style={[styles.profileCardGradient, { backgroundColor: theme.colors ? theme.colors[0] : '#1E222B' }]}>
                       <View style={[styles.profileCardHandle, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.24)' : 'rgba(17,17,17,0.12)' }]} />
                       <View style={[styles.masterShapeLeft, { backgroundColor: theme.accent }]} />
                       <View style={[styles.masterShapeMid, { backgroundColor: theme.accent }]} />
@@ -1067,7 +1064,7 @@ export default function DashboardScreen() {
                           ))}
                         </View>
                       )}
-                    </LinearGradient>
+                    </View>
                   </View>
                 </Animated.View>
               );
@@ -1138,7 +1135,7 @@ export default function DashboardScreen() {
                   <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE</Text>
                   <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{overallAttendance}%</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%` as any, backgroundColor: '#fff' }]} />
                   </View>
                 </View>
               </CardGradient>
@@ -1239,11 +1236,8 @@ export default function DashboardScreen() {
                   shadowRadius: 16,
                   elevation: 4
                 }]}>
-                  <LinearGradient
-                    colors={['#0E7490', '#1D4ED8']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{ padding: 20, flex: 1, justifyContent: 'space-between' }}
+                  <View
+                    style={{ padding: 20, flex: 1, justifyContent: 'space-between', backgroundColor: '#0E7490' }}
                   >
                     <View style={styles.assignmentHeaderRow}>
                       <View style={[styles.typeIconBg, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
@@ -1275,7 +1269,7 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
 
                     <View style={[styles.assignmentGlow, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
-                  </LinearGradient>
+                  </View>
                 </View>
               );
             })}
@@ -1310,11 +1304,8 @@ export default function DashboardScreen() {
           elevation: 4,
           maxHeight: 280, // Show roughly 3.5 items
         }]}>
-          <LinearGradient
-            colors={['#4A1D5B', '#2D1237']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ flex: 1 }}
+          <View
+            style={{ flex: 1, backgroundColor: '#4A1D5B' }}
           >
             {data.announcements && data.announcements.length > 0 ? (
               <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
@@ -1336,15 +1327,12 @@ export default function DashboardScreen() {
                 <Text style={[styles.emptyText, { color: 'rgba(255, 255, 255, 0.8)' }]}>No new announcements.</Text>
               </View>
             )}
-          </LinearGradient>
+          </View>
         </View>
           {/* Update Manager */}
           <View style={[styles.updateCard, { padding: 0, overflow: 'hidden', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1.5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, marginTop: 20 }]}>
-            <LinearGradient
-              colors={['#2D2D2D', '#1A1A1A']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ padding: 18, width: '100%', flexDirection: 'column', alignItems: 'center' }}
+            <View
+              style={{ padding: 18, width: '100%', flexDirection: 'column', alignItems: 'center', backgroundColor: '#2D2D2D' }}
             >
               <View style={[styles.updateInfo, { marginBottom: 15, flexDirection: 'column', alignItems: 'center' }]}>
                 <View style={[styles.versionBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', marginBottom: 8 }]}>
@@ -1384,7 +1372,7 @@ export default function DashboardScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </LinearGradient>
+            </View>
           </View>
 
       </View>
@@ -1962,20 +1950,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 25,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#C7C7CC',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : Constants.statusBarHeight,
     paddingHorizontal: 20,
@@ -2399,7 +2374,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  feeCard: {
+  feeCard_old: {
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 20,
@@ -2454,15 +2429,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#5856D6',
   },
-  content: {
+  content_old: {
     padding: 20,
   },
-  gridContainer: {
+  gridContainer_old: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  gridCard: {
+  gridCard_old: {
     width: (width - 55) / 2,
     padding: 20,
     borderRadius: 20,
@@ -2476,18 +2451,18 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     opacity: 0.9,
   },
-  gridCardLabel: {
+  gridCardLabel_old: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
     fontWeight: '600',
   },
-  gridCardValue: {
+  gridCardValue_old: {
     color: '#fff',
     fontSize: 32,
     fontWeight: 'bold',
     marginTop: 5,
   },
-  examsBanner: {
+  examsBanner_old: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E5F1FF',
@@ -2516,19 +2491,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#005BB5',
   },
-  sectionTitle: {
+  sectionTitle_old: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#000',
     marginBottom: 15,
     letterSpacing: -0.5,
   },
-  horizontalScroll: {
+  horizontalScroll_old: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
     paddingBottom: 10, // Shadow clipping
   },
-  assignmentCard: {
+  assignmentCard_old: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 15,
@@ -2592,7 +2567,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     gap: 15,
   },
-  emptyIconBg: {
+  emptyIconBg_old: {
     width: 56,
     height: 56,
     borderRadius: 18,
@@ -2706,7 +2681,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 40,
   },
-  announcementCard: {
+  announcementCard_old: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 18,

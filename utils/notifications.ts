@@ -61,7 +61,7 @@ export async function updateStickyClassNotification(subject: string, timeStr: st
       data: { route: 'timetable' },
       color: '#007AFF', // Standard app accent
     },
-    trigger: trigger, 
+    trigger: trigger as any, 
   });
 }
 

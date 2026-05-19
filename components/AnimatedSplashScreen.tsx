@@ -9,7 +9,6 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
   onAnimationComplete: () => void;
@@ -90,14 +89,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
     <Animated.View style={[styles.container, containerStyle]} pointerEvents="none">
       
       {/* Deep purple/black gradient aura that pulses behind the logo */}
-      <Animated.View style={[styles.auraContainer, auraStyle]}>
-        <LinearGradient
-          colors={['rgba(147, 51, 234, 0.5)', 'rgba(0, 0, 0, 0)']}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0.5, y: 0.5 }}
-          end={{ x: 1, y: 1 }}
-        />
-      </Animated.View>
+      <Animated.View style={[styles.auraContainer, auraStyle, { backgroundColor: 'rgba(147, 51, 234, 0.15)', borderRadius: width * 0.75 }]} />
 
       {/* The Particle Swarm */}
       {particles.map((p, i) => {
@@ -132,11 +124,8 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
       {/* The Constructed ALMS Logo */}
       <Animated.View style={[styles.logoWrapper, logoStyle]}>
         <View style={styles.logoBox}>
-          <LinearGradient
-            colors={['#2E0B5C', '#000000', '#100224']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
+          <View
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1C063D' }]} // Fallback solid deep purple
           />
           {/* Texture overlay from the real ALMS icon.png, rotated and scaled */}
           <Image 

@@ -23,7 +23,7 @@ export default function ExamsScreen() {
     try {
       setLoading(true);
       const filename = 'LPU_Admit_Card_' + new Date().getTime() + '.pdf';
-      const docDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+      const docDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory;
       if (!docDir) throw new Error('No writable directory available');
       const fileUri = docDir + filename;
       

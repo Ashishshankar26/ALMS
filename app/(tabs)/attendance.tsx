@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+
 import { useScraper } from '../../context/ScraperContext';
 import { CheckCircle, AlertTriangle, XCircle, Plus, Minus, Calendar, Award, X, Target } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
@@ -445,11 +445,8 @@ export default function AttendanceScreen() {
               onPress={() => setSelectedSubject(item.subjectCode)}
               activeOpacity={0.82}
             >
-              <LinearGradient
-                colors={isDark ? ['rgba(26,28,32,0.92)', 'rgba(18,21,26,0.88)'] : [base, '#FFFFFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.widgetCard, { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.62)' }]}
+              <View
+                style={[styles.widgetCard, { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.62)', backgroundColor: isDark ? 'rgba(26,28,32,0.92)' : base }]}
               >
                 <View style={styles.widgetHandle} />
                 <View style={styles.widgetTopRow}>
@@ -477,7 +474,7 @@ export default function AttendanceScreen() {
                     <Text style={[styles.widgetMiniValue, { color: isDark ? '#FFFFFF' : '#111111', textAlign: 'right' }]}>DL {item.dutyLeaves || 0}</Text>
                   </View>
                 </View>
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -866,7 +863,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  heroValueRow: {
+  heroValueRow_old: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -903,23 +900,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  syncingBadge: {
+  syncingBadge_old: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     marginLeft: 8,
   },
-  syncingText: {
+  syncingText_old: {
     fontSize: 10,
     fontWeight: '800',
   },
-  targetControlCompact: {
+  targetControlCompact_old: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  miniBtn: {
+  miniBtn_old: {
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -965,7 +962,7 @@ const styles = StyleSheet.create({
     ...Typography.h1,
     fontSize: 48, // Keeping this large size for hero
   },
-  syncingText: {
+  syncingText_very_old: {
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1432,14 +1429,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
   },
-  miniProgressBar: {
+  miniProgressBar_old: {
     height: 6,
     borderRadius: 3,
     marginTop: 10,
     width: '100%',
     overflow: 'hidden',
   },
-  miniProgressFill: {
+  miniProgressFill_old: {
     height: '100%',
     borderRadius: 3,
   },

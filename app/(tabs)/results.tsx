@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, Linking, Modal, PanResponder, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+
 import { ArrowDownToLine, Award, GraduationCap, RotateCcw, X } from 'lucide-react-native';
 import { useScraper } from '../../context/ScraperContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -270,12 +270,11 @@ export default function ResultsScreen() {
             <Text style={[styles.heroTitle, { color: palette.ink }]}>Manage</Text>
             <Text style={[styles.heroGhost, { color: palette.ghost }]}>Your Results</Text>
           </View>
-          <LinearGradient
-            colors={isDark ? ['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.05)'] : ['rgba(255,255,255,0.95)', 'rgba(218,223,234,0.62)']}
-            style={[styles.cgpaPlate, { borderColor: palette.line }]}
+          <View
+            style={[styles.cgpaPlate, { borderColor: palette.line, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.9)' }]}
           >
             <Text style={[styles.cgpaValue, { color: palette.ink }]}>{data.cgpa || '0.00'}</Text>
-          </LinearGradient>
+          </View>
         </Animated.View>
 
         {displayData.length === 0 ? (
@@ -348,10 +347,7 @@ export default function ResultsScreen() {
                           setExpandedSubject(null);
                         }}
                       >
-                        <LinearGradient
-                          colors={[base, accent]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
+                        <View
                           style={[
                             styles.semCard,
                             {
@@ -360,6 +356,7 @@ export default function ResultsScreen() {
                                 : isDark
                                   ? 'rgba(255,255,255,0.15)'
                                   : 'rgba(17,17,17,0.1)',
+                              backgroundColor: base,
                             },
                           ]}
                         >
@@ -387,7 +384,7 @@ export default function ResultsScreen() {
                             <Text style={[styles.cardMeta, { color: ink }]}>{subjectCount} subjects</Text>
                             <Text style={[styles.cardMeta, { color: ink }]}>.... {String(index + 1).padStart(4, '0')}</Text>
                           </View>
-                        </LinearGradient>
+                        </View>
                       </TouchableOpacity>
                       </Animated.View>
                     </Animated.View>
@@ -409,9 +406,8 @@ export default function ResultsScreen() {
               <TouchableOpacity activeOpacity={0.75} onPress={() => setDownloadOpen(true)} style={styles.sideAction}>
                 <ArrowDownToLine size={21} color={isDark ? '#FFFFFF' : '#111111'} strokeWidth={2.6} />
               </TouchableOpacity>
-              <LinearGradient
-                colors={isDark ? ['rgba(255,255,255,0.16)', 'rgba(255,255,255,0.05)'] : ['rgba(255,255,255,0.9)', 'rgba(230,232,238,0.56)']}
-                style={[styles.bottomToggle, { borderColor: palette.line }]}
+              <View
+                style={[styles.bottomToggle, { borderColor: palette.line, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.9)' }]}
               >
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -427,7 +423,7 @@ export default function ResultsScreen() {
                 >
                   <Text style={[styles.bottomToggleText, { color: activeTab === 'BACKLOG' ? palette.bg : palette.ink }]}>Back</Text>
                 </TouchableOpacity>
-              </LinearGradient>
+              </View>
               <TouchableOpacity
                 activeOpacity={0.75}
                 accessibilityRole="button"
@@ -450,7 +446,7 @@ export default function ResultsScreen() {
               entering={FadeInUp.duration(280)}
               style={[styles.floatingWindow, { backgroundColor: palette.paper, borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.76)' }]}
             >
-              <LinearGradient colors={isDark ? ['#202329', '#14161A'] : ['#FFFFFF', '#F5F4EF']} style={styles.windowGradient}>
+              <View style={[styles.windowGradient, { backgroundColor: isDark ? '#202329' : '#FFFFFF' }]}>
                 <View style={styles.windowTop}>
                   <View>
                     <Text style={[styles.windowEyebrow, { color: palette.muted }]}>Opened Semester</Text>
@@ -542,7 +538,7 @@ export default function ResultsScreen() {
                     );
                   })}
                 </ScrollView>
-              </LinearGradient>
+              </View>
             </Animated.View>
           ) : null}
         </View>
