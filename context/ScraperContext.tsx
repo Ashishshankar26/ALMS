@@ -223,23 +223,38 @@ const DASHBOARD_SCRIPT = `
             var modal = document.getElementById("modalmarks");
             var gradeContent = document.getElementById("GradeDetails");
             
-            // Try to force click the Marks tab using text content if possible, to trigger any lazy loading
-            var tabs = modal ? modal.querySelectorAll("a, button") : [];
-            for (var t = 0; t < tabs.length; t++) {
-               var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
-               if (tTxt.includes("marks details") && !tabs[t].classList.contains("active")) {
-                  try { tabs[t].click(); } catch(e){}
-               }
+            // Re-click cgpa every 5 polls if modal hasn't appeared yet
+            if (!modal && rAttempts % 5 === 0) {
+              log("scrapeResults: Re-clicking cgpa (attempt " + rAttempts + ")");
+              try { cgpaBox.click(); } catch(e){}
             }
             
-            if (modal && gradeContent && (gradeContent.innerHTML.length > 50 || rAttempts >= 15)) {
+            // Try to force click both tabs to trigger lazy loading
+            if (modal) {
+              var tabs = modal.querySelectorAll("a, button, li, [data-toggle], [role=tab]");
+              for (var t = 0; t < tabs.length; t++) {
+                 var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
+                 if (tTxt.includes("marks details") || tTxt.includes("mark details")) {
+                    try { tabs[t].click(); } catch(e){}
+                 }
+                 if (tTxt.includes("grade details") || tTxt.includes("grade detail")) {
+                    try { tabs[t].click(); } catch(e){}
+                 }
+              }
+            }
+            
+            // Check if content has loaded - increased timeout to 40 polls (12 seconds)
+            var hasContent = gradeContent && gradeContent.innerHTML.length > 50;
+            var hardTimeout = rAttempts >= 40;
+            
+            if (hasContent || hardTimeout) {
               clearInterval(rPoll);
-              if (rAttempts >= 15) { 
-                log("scrapeResults: Timeout waiting for modal content."); 
+              if (hardTimeout && !hasContent) { 
+                log("scrapeResults: Timeout waiting for modal content after " + rAttempts + " attempts."); 
                 finalize([]); 
                 return; 
               }
-              log("scrapeResults: Modal content loaded.");
+              log("scrapeResults: Modal content loaded after " + rAttempts + " polls.");
               
               var marksData = {};
               var backlogTerms = []; 
