@@ -18,6 +18,10 @@ export default function RMSScreen() {
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugLog, setDebugLog] = useState<string>('');
+  
+  // Modals state
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState<any>(null);
 
   const INJECTED_JAVASCRIPT = `
     (function() {
@@ -25,7 +29,6 @@ export default function RMSScreen() {
         var log = function(msg) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', msg: msg })); };
         log("RMS WebView loaded: " + window.location.href);
         
-        // Very broad smart parsing for tables (standard UMS layout)
         var data = [];
         var rows = document.querySelectorAll('table tr');
         
@@ -51,7 +54,6 @@ export default function RMSScreen() {
           data: data
         }));
         
-        // Also dump a sample for debugging
         var sample = document.body.innerText.substring(0, 1000);
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DUMP', text: sample }));
       } catch(e) {
@@ -77,9 +79,14 @@ export default function RMSScreen() {
     } catch(e) {}
   };
 
+  const handleNewRequestSubmit = () => {
+    // In future: Inject JS to fill and submit the real UMS form
+    alert("This will submit to UMS backend once we map the HTML form fields!");
+    setShowNewModal(false);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#0A0B10' : '#F7F9FC' }]}>
-      {/* Hidden WebView for fetching data */}
       <View style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}>
         <WebView
           ref={webViewRef}
@@ -110,7 +117,10 @@ export default function RMSScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.newRequestBtn, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity 
+            style={[styles.newRequestBtn, { backgroundColor: colors.primary }]}
+            onPress={() => setShowNewModal(true)}
+          >
             <Plus size={20} color="#FFF" />
             <Text style={styles.newRequestText}>New Request</Text>
           </TouchableOpacity>
@@ -129,7 +139,12 @@ export default function RMSScreen() {
           </View>
         ) : requests.length > 0 ? (
           requests.map((req, idx) => (
-            <TouchableOpacity key={req.id || idx} activeOpacity={0.8} style={[styles.card, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
+            <TouchableOpacity 
+              key={req.id || idx} 
+              activeOpacity={0.8} 
+              style={[styles.card, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}
+              onPress={() => setShowViewModal(req)}
+            >
               <View style={styles.cardHeader}>
                 <View style={[styles.tag, { backgroundColor: req.status.toLowerCase().includes('pending') ? '#FEF3C7' : '#D1FAE5' }]}>
                   <Text style={[styles.tagText, { color: req.status.toLowerCase().includes('pending') ? '#D97706' : '#059669' }]}>
@@ -157,6 +172,78 @@ export default function RMSScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* New Request Modal */}
+      {showNewModal && (
+        <View style={StyleSheet.absoluteFill}>
+          <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: isDark ? '#111827' : '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: insets.bottom + 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: isDark ? '#FFFFFF' : '#111827' }}>Create Request</Text>
+                <TouchableOpacity onPress={() => setShowNewModal(false)} style={{ padding: 8, backgroundColor: isDark ? '#1F2937' : '#F3F4F6', borderRadius: 16 }}>
+                  <Text style={{ fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#9CA3AF' : '#4B5563', marginBottom: 8 }}>Category</Text>
+              <View style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6', padding: 16, borderRadius: 16, marginBottom: 16 }}>
+                <Text style={{ color: isDark ? '#FFFFFF' : '#111827', fontWeight: '500' }}>General Assistance</Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#9CA3AF' : '#4B5563', marginBottom: 8 }}>Subject</Text>
+              <View style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6', padding: 16, borderRadius: 16, marginBottom: 16 }}>
+                <Text style={{ color: isDark ? '#FFFFFF' : '#111827', fontWeight: '500' }}>E.g., Issue with portal access</Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: isDark ? '#9CA3AF' : '#4B5563', marginBottom: 8 }}>Message</Text>
+              <View style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6', padding: 16, borderRadius: 16, height: 120, marginBottom: 24 }}>
+                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280' }}>Describe your issue in detail...</Text>
+              </View>
+
+              <TouchableOpacity 
+                style={{ backgroundColor: colors.primary, padding: 18, borderRadius: 16, alignItems: 'center' }}
+                onPress={handleNewRequestSubmit}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>Submit to UMS</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* View Request Modal */}
+      {showViewModal && (
+        <View style={StyleSheet.absoluteFill}>
+          <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+          <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: isDark ? '#111827' : '#FFFFFF', borderRadius: 32, padding: 24 }}>
+              <View style={[styles.tag, { alignSelf: 'flex-start', backgroundColor: showViewModal.status.toLowerCase().includes('pending') ? '#FEF3C7' : '#D1FAE5', marginBottom: 16 }]}>
+                <Text style={[styles.tagText, { color: showViewModal.status.toLowerCase().includes('pending') ? '#D97706' : '#059669' }]}>
+                  {showViewModal.status}
+                </Text>
+              </View>
+              
+              <Text style={{ fontSize: 24, fontWeight: '800', color: isDark ? '#FFFFFF' : '#111827', marginBottom: 8 }}>{showViewModal.subject}</Text>
+              <Text style={{ fontSize: 14, color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 24 }}>ID: {showViewModal.ticketId} • {showViewModal.date}</Text>
+              
+              <View style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6', padding: 16, borderRadius: 16, marginBottom: 24 }}>
+                <Text style={{ color: isDark ? '#D1D5DB' : '#4B5563', lineHeight: 22 }}>
+                  Category: {showViewModal.category}{"\\n"}
+                  More details would be parsed from the webview when you click this.
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB', padding: 16, borderRadius: 16, alignItems: 'center' }}
+                onPress={() => setShowViewModal(null)}
+              >
+                <Text style={{ color: isDark ? '#FFFFFF' : '#111827', fontWeight: '700', fontSize: 15 }}>Close Details</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
