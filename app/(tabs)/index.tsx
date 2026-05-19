@@ -1310,7 +1310,7 @@ export default function DashboardScreen() {
           elevation: 4,
           maxHeight: 280, // Show roughly 3.5 items
         }]}>
-          <View style={{ flex: 1, backgroundColor: '#3A1747' }}>
+          <View style={{ width: '100%', backgroundColor: '#3A1747', minHeight: 120 }}>
             {data.announcements && data.announcements.length > 0 ? (
               <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
                 {data.announcements.map((item: any, index: number) => (
