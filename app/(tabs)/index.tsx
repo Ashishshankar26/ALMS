@@ -775,6 +775,7 @@ export default function DashboardScreen() {
 
   const [showMessages, setShowMessages] = React.useState(false);
   const [expandedMessageIdx, setExpandedMessageIdx] = React.useState<number | null>(null);
+  const [expandedAnnouncementIdx, setExpandedAnnouncementIdx] = React.useState<number | null>(null);
   const [activeCategoryTab, setActiveCategoryTab] = React.useState('ALL');
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -1297,41 +1298,75 @@ export default function DashboardScreen() {
 
         {/* Announcements */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
-        <View style={[styles.announcementContainer, {
-          padding: 0,
-          overflow: 'hidden',
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-          borderWidth: 1.5,
-          borderRadius: 24,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.1,
-          shadowRadius: 16,
-          elevation: 4,
-          maxHeight: 280, // Show roughly 3.5 items
-        }]}>
-          <View style={{ width: '100%', backgroundColor: '#3A1747', minHeight: 120 }}>
-            {data.announcements && data.announcements.length > 0 ? (
-              <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                {data.announcements.map((item: any, index: number) => (
-                  <TouchableOpacity key={item.id || index} style={[styles.announcementCard, { borderBottomColor: 'rgba(255, 255, 255, 0.15)', width: '100%', marginRight: 0 }]}>
-                    <View style={styles.announcementInner}>
-                      <View style={[styles.announcementIndicator, { backgroundColor: 'rgba(255, 255, 255, 0.45)' }]} />
-                      <View style={styles.announcementContent}>
-                        <Text style={[styles.announcementTitle, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={2}>{item.title}</Text>
-                        <Text style={[styles.announcementDate, { color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600' }]}>{item.date}</Text>
+        <View style={{ gap: 14, marginBottom: 10 }}>
+          {data.announcements && data.announcements.length > 0 ? (
+            data.announcements.map((item: any, idx: number) => {
+              const isExpanded = expandedAnnouncementIdx === idx;
+              const cardTheme = {
+                bg: isDark ? '#161B2E' : '#E8EAF6',
+                text: isDark ? '#C5CAE9' : '#1A237E',
+                accent: '#007AFF'
+              };
+
+              const cleanTitle = item.title ? item.title.trim() : 'Announcement';
+              
+              return (
+                <Animated.View key={item.id || idx} layout={Layout.springify()} entering={FadeInDown.delay(idx * 50)}>
+                  <TouchableOpacity
+                    onPress={() => setExpandedAnnouncementIdx(isExpanded ? null : idx)}
+                    activeOpacity={0.92}
+                    style={{
+                      borderRadius: 24,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      padding: 20,
+                      shadowColor: cardTheme.accent,
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: isExpanded ? (isDark ? 0.2 : 0.08) : 0,
+                      shadowRadius: 12,
+                      elevation: isExpanded ? 3 : 0,
+                      backgroundColor: cardTheme.bg,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Bell size={12} color={cardTheme.text} style={{ opacity: 0.85 }} />
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: cardTheme.text, opacity: 0.85, letterSpacing: 0.2, textTransform: 'capitalize' }}>
+                          University Announcement
+                        </Text>
+                      </View>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: cardTheme.text + '10' }}>
+                        <ChevronRight size={11} color={cardTheme.text} style={{ opacity: 0.85, transform: [{ rotate: isExpanded ? '90deg' : '0deg' }] }} />
                       </View>
                     </View>
-                    <ChevronRight size={18} color="#ffffff" />
+
+                    <Text style={{ fontSize: 18, fontWeight: '800', lineHeight: 24, color: cardTheme.text, marginTop: 16, marginBottom: 16, letterSpacing: -0.2 }} numberOfLines={isExpanded ? undefined : 2}>
+                      {cleanTitle}
+                    </Text>
+
+                    {(isExpanded || item.content) && (
+                      <Animated.View entering={FadeInUp.duration(300)}>
+                        <View style={{ height: 1, backgroundColor: cardTheme.text + '15', marginBottom: 14 }} />
+                        <Text style={{ fontSize: 13.5, lineHeight: 21, color: cardTheme.text, opacity: 0.9, marginBottom: 16 }} numberOfLines={isExpanded ? undefined : 2}>
+                          {item.content}
+                        </Text>
+                      </Animated.View>
+                    )}
+                    
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: cardTheme.text, opacity: 0.65 }}>
+                        {item.date}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={[styles.emptyCard, { backgroundColor: 'transparent', margin: 15 }]}>
-                <Text style={[styles.emptyText, { color: 'rgba(255, 255, 255, 0.8)' }]}>No new announcements.</Text>
-              </View>
-            )}
-          </View>
+                </Animated.View>
+              );
+            })
+          ) : (
+            <View style={[styles.emptyCard, { backgroundColor: isDark ? '#161B2E' : '#E8EAF6' }]}>
+              <Text style={[styles.emptyText, { color: isDark ? '#C5CAE9' : '#1A237E' }]}>No new announcements.</Text>
+            </View>
+          )}
         </View>
           {/* Update Manager */}
           <View style={[styles.updateCard, { padding: 0, overflow: 'hidden', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1.5, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, marginTop: 20 }]}>
