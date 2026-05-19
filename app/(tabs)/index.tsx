@@ -1886,9 +1886,7 @@ export default function DashboardScreen() {
             activeOpacity={1}
             onPress={() => setShowProfileMenu(false)}
           />
-          <Animated.View
-            entering={SlideInRight.duration(300).springify().damping(20)}
-            exiting={SlideOutRight.duration(250)}
+          <View
             style={[styles.profileMenuContentSidebar, { backgroundColor: isDark ? '#12141C' : '#FFFFFF' }]}
           >
             {/* Header / Brand */}
@@ -1975,7 +1973,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
               <Text style={[styles.sidebarVersionText, { color: colors.textSecondary }]}>v{version}</Text>
             </View>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </View>
