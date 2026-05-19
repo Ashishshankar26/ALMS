@@ -866,10 +866,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  heroValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+
   heroValueCompact: {
     fontSize: 34,
     lineHeight: 36,
@@ -903,29 +900,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  syncingBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  syncingText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  targetControlCompact: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  miniBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
+
+
+
   aggregateBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -965,11 +943,7 @@ const styles = StyleSheet.create({
     ...Typography.h1,
     fontSize: 48, // Keeping this large size for hero
   },
-  syncingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
+
   heroIconCircle: {
     width: 64,
     height: 64,
@@ -1432,17 +1406,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
   },
-  miniProgressBar: {
-    height: 6,
-    borderRadius: 3,
-    marginTop: 10,
-    width: '100%',
-    overflow: 'hidden',
-  },
-  miniProgressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
+
+
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

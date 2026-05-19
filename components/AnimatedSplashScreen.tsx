@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
   Easing,
   interpolate,
+  SharedValue,
 } from 'react-native-reanimated';
 
 interface Props {
@@ -81,7 +82,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
     };
   });
 
-  const getLetterStyle = (progress: Animated.SharedValue<number>, isSub: boolean) => {
+  const getLetterStyle = (progress: SharedValue<number>, isSub: boolean) => {
     return useAnimatedStyle(() => {
       const v = progress.value;
       const startY = isSub ? 10 : 18; // Subtitle pops up from a shorter distance

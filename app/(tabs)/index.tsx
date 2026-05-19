@@ -15,7 +15,7 @@ import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
-import { updateStickyClassNotification } from '../../utils/notifications';
+import { updateStickyClassNotification, cancelAllNotifications } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 const CARD_HEIGHT = 200;
@@ -25,7 +25,7 @@ function CardGradient({ colors, style, children, id, borderStyle }: { colors: st
   const r = style?.borderRadius || 32;
   return (
     <LinearGradient
-      colors={colors}
+      colors={colors as any}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[style, { overflow: 'hidden', borderRadius: r }, borderStyle]}
@@ -409,7 +409,7 @@ export default function DashboardScreen() {
   const overallAttendance = data.overallAttendance ? Math.ceil(parseFloat(data.overallAttendance)).toString() : calculatedAttendance.toString();
 
   // Helper to find "Next Class" dynamically
-  const getNextClass = () => {
+  const getNextClass = (allCandidates?: boolean): any => {
     const timetable = data.timetable || {};
     const makeupClasses = data.makeupClasses || [];
 
@@ -1014,7 +1014,7 @@ export default function DashboardScreen() {
                 >
                   <View style={[styles.profileCardGlow, { backgroundColor: theme.accent, opacity: isTop ? 0.18 : 0 }]} />
                   <View style={[styles.premiumProfileCard, { padding: 0, overflow: 'hidden', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 }]}>
-                    <LinearGradient colors={theme.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
+                    <LinearGradient colors={theme.colors as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
                       <View style={[styles.profileCardHandle, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.24)' : 'rgba(17,17,17,0.12)' }]} />
                       <View style={[styles.masterShapeLeft, { backgroundColor: theme.accent }]} />
                       <View style={[styles.masterShapeMid, { backgroundColor: theme.accent }]} />
@@ -1139,7 +1139,7 @@ export default function DashboardScreen() {
                   <Text style={[styles.stackLabelWhite, { fontSize: 11, opacity: 0.85, letterSpacing: 0.5, marginBottom: 2 }]}>ATTENDANCE</Text>
                   <Text style={[styles.stackBigValue, { fontSize: 34, marginBottom: 8, lineHeight: 38 }]}>{overallAttendance}%</Text>
                   <View style={[styles.miniProgress, { width: '100%', backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%`, backgroundColor: '#fff' }]} />
+                    <View style={[styles.miniProgressBar, { width: `${overallAttendance}%` as any, backgroundColor: '#fff' }]} />
                   </View>
                 </View>
               </CardGradient>
@@ -2054,12 +2054,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+
+
   header: {
     paddingTop: Platform.OS === 'ios' ? 50 : Constants.statusBarHeight,
     paddingHorizontal: 20,
@@ -2067,6 +2063,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   welcomeText: {
     fontSize: 12.5,
@@ -2477,22 +2479,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  feeCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#F2F2F7',
-  },
+
   feeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2532,49 +2519,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#5856D6',
   },
-  content: {
-    padding: 20,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  gridCard: {
-    width: (width - 55) / 2,
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
-  },
+
+
+
   cardIcon: {
     marginBottom: 15,
     opacity: 0.9,
   },
-  gridCardLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  gridCardValue: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  examsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E5F1FF',
-    padding: 15,
-    borderRadius: 16,
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: '#CCE0FF',
-  },
+
+
+
   examsBannerIcon: {
     backgroundColor: '#007AFF',
     padding: 10,
@@ -2594,32 +2548,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#005BB5',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 15,
-    letterSpacing: -0.5,
-  },
-  horizontalScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-    paddingBottom: 10, // Shadow clipping
-  },
-  assignmentCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 15,
-    width: 190,
-    minHeight: 160,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    justifyContent: 'space-between',
-  },
+
+
+
   assignmentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2670,13 +2601,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     gap: 15,
   },
-  emptyIconBg: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   emptyTextContainer: {
     flex: 1,
   },
@@ -2784,13 +2709,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 40,
   },
-  announcementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+
   announcementInner: {
     flex: 1,
     flexDirection: 'row',
@@ -2834,12 +2753,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  profileModalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
+
   modalContent: {
     height: '85%',
     borderTopLeftRadius: 32,
@@ -3028,9 +2942,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 60,
   },
+  emptyIconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   emptyTextCompact: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  content: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+    marginTop: 12,
+    letterSpacing: -0.3,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 0,
   },
   gridCardShadow: {
     flex: 1,
@@ -3049,16 +2987,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
+  gridCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 24,
+    minHeight: 140,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  gridCardLabel: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+    letterSpacing: 0.2,
   },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 6,
     marginVertical: 4,
+  },
+  gridCardValue: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '800',
   },
   glassBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -3092,6 +3056,23 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  feeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 0,
+  },
+  examsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 12,
   },
   // ── Utility Grid (side-by-side square cards) ──
   utilityGrid: {
@@ -3570,6 +3551,10 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
+  horizontalScroll: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
   assignmentCardPremium: {
     width: 260,
     padding: 20,
@@ -3643,6 +3628,23 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
+  announcementCard: {
+    padding: 18,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 80,
+  },
+  assignmentCard: {
+    width: 280,
+    padding: 18,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginRight: 12,
+    justifyContent: 'space-between',
+    minHeight: 140,
+  },
   updateCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3699,6 +3701,12 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   profileModalBackground: {
     position: 'absolute',

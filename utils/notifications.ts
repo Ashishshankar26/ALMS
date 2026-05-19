@@ -51,7 +51,7 @@ export async function updateStickyClassNotification(subject: string, timeStr: st
   const trigger = triggerDate && triggerDate > new Date() ? triggerDate : null;
 
   // Schedule or update the sticky notification
-  await Notifications.scheduleNotificationAsync({
+  const options: any = {
     identifier: STICKY_NOTIFICATION_ID,
     content: {
       title: `Next Class: ${timeStr}`,
@@ -61,8 +61,11 @@ export async function updateStickyClassNotification(subject: string, timeStr: st
       data: { route: 'timetable' },
       color: '#007AFF', // Standard app accent
     },
-    trigger: trigger, 
-  });
+  };
+  if (trigger) {
+    options.trigger = trigger;
+  }
+  await Notifications.scheduleNotificationAsync(options);
 }
 
 export async function registerForPushNotificationsAsync(): Promise<void> {

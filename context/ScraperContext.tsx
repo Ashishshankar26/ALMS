@@ -179,7 +179,7 @@ const DASHBOARD_SCRIPT = `
         function startScrape() {
           log("Dashboard: Starting Scrape...");
           triggerAtt();
-            var pollCount = 0;
+          var pollCount = 0;
           var poll = setInterval(function() {
             pollCount++;
             var summaryTable = document.getElementById("AttSummary");
@@ -204,17 +204,19 @@ const DASHBOARD_SCRIPT = `
                 }
               }
               scrapeResults();
-            } else if (pollCount >= 15) {
+            } else if (pollCount >= 80) {
               clearInterval(poll);
               log("scrapeAll: Attendance timeout, moving to results...");
               scrapeResults();
-            } else if (pollCount % 5 === 0) {
+            } else if (pollCount === 20) {
+              log("scrapeAll: Retrying AttPercent click once");
               triggerAtt();
             }
           }, 300);
         }
 
         // Step 2: Results
+        var tabsClicked = false;
         function scrapeResults() {
           log("scrapeResults: Starting...");
           var cgpaBox = document.getElementById("cgpa");
@@ -227,14 +229,16 @@ const DASHBOARD_SCRIPT = `
             var modal = document.getElementById("modalmarks");
             var gradeContent = document.getElementById("GradeDetails");
             
-            // Re-click cgpa every 5 polls if modal hasn't appeared yet
-            if (!modal && rAttempts % 5 === 0) {
-              log("scrapeResults: Re-clicking cgpa (attempt " + rAttempts + ")");
+            // Re-click cgpa only once after 20 attempts if modal hasn't appeared yet
+            if (!modal && rAttempts === 20) {
+              log("scrapeResults: Retrying cgpa click once");
               try { cgpaBox.click(); } catch(e){}
             }
             
-            // Try to force click both tabs to trigger lazy loading
-            if (modal) {
+            // Try to force click both tabs to trigger lazy loading ONCE when modal first appears
+            if (modal && !tabsClicked) {
+              tabsClicked = true;
+              log("scrapeResults: Modal found, clicking tabs once to trigger load");
               var tabs = modal.querySelectorAll("a, button, li, [data-toggle], [role=tab]");
               for (var t = 0; t < tabs.length; t++) {
                  var tTxt = (tabs[t].textContent || "").trim().toLowerCase();
@@ -247,9 +251,9 @@ const DASHBOARD_SCRIPT = `
               }
             }
             
-            // Check if content has loaded - increased timeout to 40 polls (12 seconds)
+            // Check if content has loaded - increased timeout to 80 polls (24 seconds)
             var hasContent = gradeContent && gradeContent.innerHTML.length > 50;
-            var hardTimeout = rAttempts >= 40;
+            var hardTimeout = rAttempts >= 80;
             
             if (hasContent || hardTimeout) {
               clearInterval(rPoll);

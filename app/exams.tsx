@@ -23,11 +23,11 @@ export default function ExamsScreen() {
     try {
       setLoading(true);
       const filename = 'LPU_Admit_Card_' + new Date().getTime() + '.pdf';
-      const fileUri = FileSystem.documentDirectory + filename;
+      const fileUri = (FileSystem as any).documentDirectory + filename;
       
       console.log('Downloading admit card from:', downloadUrl);
       
-      const downloadRes = await FileSystem.downloadAsync(downloadUrl, fileUri);
+      const downloadRes = await (FileSystem as any).downloadAsync(downloadUrl, fileUri);
       
       if (downloadRes.status === 200) {
         console.log('Download complete:', downloadRes.uri);
