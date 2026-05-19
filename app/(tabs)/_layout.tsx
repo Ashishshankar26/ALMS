@@ -8,7 +8,7 @@ import { registerForPushNotificationsAsync } from '../../utils/notifications';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const TAB_BAR_W = Math.min(SCREEN_W * 0.85, 380);
+const TAB_BAR_W = Math.min(SCREEN_W * 0.75, 380);
 
 const ICON_MAP: Record<string, any> = {
   index: Home,

@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone } from 'lucide-react-native';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -1892,16 +1892,86 @@ export default function DashboardScreen() {
             {/* Header / Brand */}
             <View style={[styles.sidebarHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
               <View style={styles.sidebarUserSection}>
-                <View style={[styles.sidebarAvatarBg, { backgroundColor: colors.primary + '15' }]}>
-                  <User size={24} color={colors.primary} />
-                </View>
+                {data.personalInfo?.avatarUrl ? (
+                  <Image source={{ uri: data.personalInfo.avatarUrl }} style={styles.sidebarAvatarImage} />
+                ) : (
+                  <View style={[styles.sidebarAvatarBg, { backgroundColor: colors.primary + '15' }]}>
+                    <User size={24} color={colors.primary} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.sidebarWelcomeText, { color: colors.textSecondary }]}>Account Settings</Text>
                   <Text style={[styles.sidebarNameText, { color: colors.text }]} numberOfLines={1}>
-                    {data.studentName || 'Student Portal'}
+                    {data.personalInfo?.name || data.profile?.name || data.studentName || 'Student Portal'}
                   </Text>
+                  {(data.personalInfo?.program || data.profile?.program || data.profile?.section) && (
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
+                      {data.personalInfo?.program || data.profile?.program || `Section: ${data.profile?.section}`}
+                    </Text>
+                  )}
                 </View>
               </View>
+
+              {/* Personal Info Box */}
+              {data.personalInfo?.email || data.personalInfo?.phone || data.personalInfo?.address || data.personalInfo?.hostel || data.personalInfo?.batch ? (
+                <View style={[styles.personalInfoCard, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+                  {data.personalInfo?.email && (
+                    <View style={styles.infoRow}>
+                      <Mail size={14} color={colors.textSecondary} style={styles.infoIcon} />
+                      <Text style={[styles.infoValueText, { color: colors.text }]} numberOfLines={1}>
+                        {data.personalInfo.email}
+                      </Text>
+                    </View>
+                  )}
+                  {data.personalInfo?.phone && (
+                    <View style={styles.infoRow}>
+                      <Phone size={14} color={colors.textSecondary} style={styles.infoIcon} />
+                      <Text style={[styles.infoValueText, { color: colors.text }]}>
+                        {data.personalInfo.phone}
+                      </Text>
+                    </View>
+                  )}
+                  {data.personalInfo?.address && (
+                    <View style={styles.infoRow}>
+                      <MapPin size={14} color={colors.textSecondary} style={styles.infoIcon} />
+                      <Text style={[styles.infoValueText, { color: colors.text }]} numberOfLines={1}>
+                        {data.personalInfo.address}
+                      </Text>
+                    </View>
+                  )}
+                  {data.personalInfo?.hostel && (
+                    <View style={styles.infoRow}>
+                      <Coffee size={14} color={colors.textSecondary} style={styles.infoIcon} />
+                      <Text style={[styles.infoValueText, { color: colors.text }]}>
+                        Hostel: {data.personalInfo.hostel}
+                      </Text>
+                    </View>
+                  )}
+                  {data.personalInfo?.batch && (
+                    <View style={styles.infoRow}>
+                      <Calendar size={14} color={colors.textSecondary} style={styles.infoIcon} />
+                      <Text style={[styles.infoValueText, { color: colors.text }]}>
+                        Batch: {data.personalInfo.batch}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={[styles.personalInfoCardEmpty, { borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+                  {isScraping ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={[styles.personalInfoEmptyText, { color: colors.textSecondary }]}>
+                        Syncing personal info...
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.personalInfoEmptyText, { color: colors.textSecondary }]}>
+                      Personal info not loaded. Pull down to sync.
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Menu Items Section */}
@@ -3855,5 +3925,42 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 6,
     elevation: 4,
+  },
+  sidebarAvatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  personalInfoCard: {
+    marginTop: 15,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+  },
+  personalInfoCardEmpty: {
+    marginTop: 15,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  personalInfoEmptyText: {
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoIcon: {
+    opacity: 0.7,
+  },
+  infoValueText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
   },
 });

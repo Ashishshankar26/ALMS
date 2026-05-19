@@ -10,10 +10,207 @@ export default function UmsFormScreen() {
   const { url, title } = useLocalSearchParams<{ url: string; title: string }>();
   const { colors, isDark } = useTheme();
   const [loading, setLoading] = React.useState(true);
+  const { updateProfile } = useScraper();
+  const webViewRef = React.useRef<WebView>(null);
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
+  const profileScraperScript = `
+    (function() {
+      var log = function(msg) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
+      };
+      log("Profile Update Scraper Loaded");
+      
+      var pollCount = 0;
+      var poll = setInterval(function() {
+        pollCount++;
+        
+        var hasPersonalInfo = false;
+        var allElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, td, li'));
+        var personalInfoHeader = allElements.find(function(el) {
+          return el.innerText && el.innerText.trim() === "Personal Information";
+        });
+        
+        if (personalInfoHeader) {
+          var cardContainer = personalInfoHeader.closest('.card, .box, div') || personalInfoHeader.parentElement;
+          if (cardContainer) {
+            var text = cardContainer.innerText || "";
+            var hasEmail = text.indexOf("@") !== -1;
+            var hasPhone = /\\d{10}/.test(text);
+            if (hasEmail || hasPhone) {
+              hasPersonalInfo = true;
+            }
+          }
+        }
+        
+        if (hasPersonalInfo || pollCount >= 25) {
+          clearInterval(poll);
+          log("Scraper: starting extraction. PollCount=" + pollCount);
+          
+          try {
+            var profile = {};
+            
+            if (personalInfoHeader) {
+              log("Found Personal Information heading!");
+              var cardContainer = personalInfoHeader.closest('.card, .box, div') || personalInfoHeader.parentElement;
+              if (cardContainer) {
+                log("Found card container");
+                var items = Array.from(cardContainer.querySelectorAll('div, p, span, td, li'));
+                
+                // Clean up text content
+                var textValues = items.map(function(el) {
+                  return el.innerText ? el.innerText.trim() : "";
+                }).filter(function(txt) {
+                  return txt.length > 0 && txt !== "Personal Information";
+                });
+                
+                // Deduplicate text values while preserving order
+                var uniqueTexts = [];
+                for (var i = 0; i < textValues.length; i++) {
+                  if (uniqueTexts.indexOf(textValues[i]) === -1) {
+                    uniqueTexts.push(textValues[i]);
+                  }
+                }
+                log("Unique texts inside card: " + JSON.stringify(uniqueTexts));
+                
+                for (var i = 0; i < uniqueTexts.length; i++) {
+                  var txt = uniqueTexts[i];
+                  
+                  // Email check
+                  if (txt.indexOf("@") !== -1 && txt.indexOf(".") !== -1) {
+                    profile.email = txt;
+                  }
+                  // Phone check: 10 digits
+                  else if (/^\\d{10}$/.test(txt)) {
+                    profile.phone = txt;
+                  }
+                  // Hostel check
+                  else if (txt.indexOf("Hostel:") !== -1 || txt.indexOf("Hostel") !== -1) {
+                    profile.hostel = txt.replace(/Hostel\\s*:\\s*/i, "").trim();
+                  }
+                  // Batch check
+                  else if (txt.indexOf("Batch:") !== -1 || txt.indexOf("Batch") !== -1) {
+                    profile.batch = txt.replace(/Batch\\s*:\\s*/i, "").trim();
+                  }
+                }
+                
+                // Address check
+                var addressCandidate = uniqueTexts.find(function(txt) {
+                  var isEmail = txt.indexOf("@") !== -1;
+                  var isPhone = /^\\d{10}$/.test(txt);
+                  var isHostel = txt.indexOf("Hostel") !== -1;
+                  var isBatch = txt.indexOf("Batch") !== -1;
+                  return !isEmail && !isPhone && !isHostel && !isBatch && txt.indexOf(",") !== -1;
+                });
+                if (addressCandidate) {
+                  profile.address = addressCandidate;
+                }
+                
+                // Name candidate
+                var nameCandidate = uniqueTexts.find(function(txt) {
+                  var isEmail = txt.indexOf("@") !== -1;
+                  var isPhone = /^\\d{10}$/.test(txt);
+                  var isHostel = txt.indexOf("Hostel") !== -1;
+                  var isBatch = txt.indexOf("Batch") !== -1;
+                  var isAddress = txt.indexOf(",") !== -1;
+                  return !isEmail && !isPhone && !isHostel && !isBatch && !isAddress && /^[a-zA-Z\\s\\.]+$/.test(txt) && txt.length > 2;
+                });
+                if (nameCandidate) {
+                  profile.name = nameCandidate;
+                }
+              }
+            }
+            
+            // 2. Scrape Profile Image
+            var images = Array.from(document.querySelectorAll('img'));
+            log("Found " + images.length + " images");
+            
+            var candidates = images.filter(function(img) {
+              var src = img.src || "";
+              var matchesKeyword = src.indexOf("Photo") !== -1 || src.indexOf("Student") !== -1 || src.indexOf("Profile") !== -1;
+              if (!matchesKeyword) return false;
+              
+              var parent = img.parentElement;
+              while (parent) {
+                var id = (parent.id || "").toLowerCase();
+                var className = parent.className || "";
+                if (typeof className !== 'string') {
+                  className = className.baseVal || "";
+                }
+                className = className.toLowerCase();
+                var tag = parent.tagName.toLowerCase();
+                
+                if (tag === 'header' || tag === 'nav' || 
+                    id.indexOf('header') !== -1 || id.indexOf('nav') !== -1 || id.indexOf('topbar') !== -1 || id.indexOf('navbar') !== -1 ||
+                    className.indexOf('header') !== -1 || className.indexOf('nav') !== -1 || className.indexOf('topbar') !== -1 || className.indexOf('navbar') !== -1 ||
+                    className.indexOf('user-menu') !== -1 || className.indexOf('dropdown') !== -1) {
+                  return false;
+                }
+                parent = parent.parentElement;
+              }
+              return true;
+            });
+            
+            candidates.sort(function(a, b) {
+              var rectA = a.getBoundingClientRect();
+              var rectB = b.getBoundingClientRect();
+              var areaA = (rectA.width || a.width || 0) * (rectA.height || a.height || 0);
+              var areaB = (rectB.width || b.width || 0) * (rectB.height || b.height || 0);
+              return areaB - areaA;
+            });
+            
+            var studentImg = candidates.length > 0 ? candidates[0] : null;
+            
+            if (studentImg) {
+              log("Found avatar image: " + studentImg.src);
+              profile.avatarUrl = studentImg.src;
+            } else {
+              var allDivs = Array.from(document.querySelectorAll('div'));
+              var bgImgDiv = allDivs.find(function(div) {
+                var bg = window.getComputedStyle(div).backgroundImage;
+                return bg && bg !== 'none' && (bg.indexOf('Photo') !== -1 || bg.indexOf('Student') !== -1);
+              });
+              if (bgImgDiv) {
+                var bg = window.getComputedStyle(bgImgDiv).backgroundImage;
+                var match = bg.match(/url\\(["']?([^"']+)["']?\\)/);
+                if (match && match[1]) {
+                  log("Found bg image avatar: " + match[1]);
+                  profile.avatarUrl = match[1];
+                }
+              }
+            }
+            
+            // 3. Fallback Name & Program
+            var mainNameEl = document.querySelector('h1, h2, h3, h4, h5');
+            if (mainNameEl && !profile.name) {
+              profile.name = mainNameEl.innerText.trim();
+            }
+            
+            var programCandidate = allElements.find(function(el) {
+              var txt = el.innerText ? el.innerText.trim() : "";
+              return (txt.indexOf("B.Tech") !== -1 || txt.indexOf("M.Tech") !== -1 || txt.indexOf("MBA") !== -1 || txt.indexOf("B.Sc") !== -1 || txt.indexOf("Bachelor") !== -1 || txt.indexOf("Master") !== -1) && txt.length < 150;
+            });
+            if (programCandidate && !profile.program) {
+              profile.program = programCandidate.innerText.trim();
+            }
+            
+            log("Scraping complete, sending profile data: " + JSON.stringify(profile));
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: "PROFILE_UPDATE_SCRAPE",
+              payload: profile
+            }));
+            
+          } catch(e) {
+            log("Scraping error: " + e.toString());
+          }
+        }
+      }, 500);
+    })();
+    true;
+  `;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -33,7 +230,7 @@ export default function UmsFormScreen() {
         <Text style={[styles.title, { color: colors.text }]}>{title || 'UMS Portal'}</Text>
         <View style={{ width: 40 }} />
       </View>
-
+ 
       <View style={{ flex: 1 }}>
         {Platform.OS === 'web' ? (
           <View style={styles.webFallbackContainer}>
@@ -57,10 +254,29 @@ export default function UmsFormScreen() {
         ) : (
           <>
             <WebView
+              ref={webViewRef}
               source={{ uri: fullUrl }}
               style={{ flex: 1, backgroundColor: colors.background }}
               onLoadStart={() => setLoading(true)}
-              onLoadEnd={() => setLoading(false)}
+              onLoadEnd={(event) => {
+                setLoading(false);
+                if (title === 'Profile Update' || (event.nativeEvent.url && event.nativeEvent.url.includes('user-profile'))) {
+                  webViewRef.current?.injectJavaScript(profileScraperScript);
+                }
+              }}
+              onMessage={(event) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  if (data.type === 'PROFILE_UPDATE_SCRAPE') {
+                    console.log('UMS_FORM SCRAPE SUCCESS:', data.payload);
+                    updateProfile(data.payload);
+                  } else if (data.type === 'DEBUG') {
+                    console.log('UMS_FORM SCRAPER DEBUG:', data.message);
+                  }
+                } catch (e) {
+                  console.error('Failed to parse webview message in ums_form:', e);
+                }
+              }}
               incognito={false}
               domStorageEnabled={true}
               javaScriptEnabled={true}

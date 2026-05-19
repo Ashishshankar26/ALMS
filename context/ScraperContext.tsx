@@ -23,6 +23,7 @@ export interface SemesterResult {
 
 export interface ScrapedData {
   profile: any;
+  personalInfo?: any;
   timetable: any;
   attendance: SubjectAttendance[];
   attendanceLogs: Record<string, any[]>;
@@ -39,6 +40,7 @@ export interface ScrapedData {
   roomBooking: any;
   lastUpdated?: string;
   makeupUrl?: string;
+  studentName?: string;
 }
 
 type ScraperContextType = {
@@ -47,6 +49,7 @@ type ScraperContextType = {
   refreshData: (webUsername?: string) => void;
   dumpHtml: () => void;
   fetchAttendanceLogs: (subjectCode: string) => void;
+  updateProfile: (profileData: any) => void;
 };
 
 const MOCK_DATA: ScrapedData = {
@@ -79,6 +82,7 @@ const ScraperContext = createContext<ScraperContextType>({
   refreshData: () => {},
   dumpHtml: () => {},
   fetchAttendanceLogs: () => {},
+  updateProfile: () => {},
 });
 
 export const useScraper = () => useContext(ScraperContext);
@@ -1080,6 +1084,182 @@ const EXAMS_SCRIPT = `
 
 
 
+export const BACKGROUND_PROFILE_SCRAPER_SCRIPT = `
+(function() {
+  try {
+    var log = function(msg) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
+    };
+    log("Background Profile Scraper Running...");
+    
+    var pollCount = 0;
+    var poll = setInterval(function() {
+      pollCount++;
+      
+      var hasPersonalInfo = false;
+      var allElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, td, li'));
+      var personalInfoHeader = allElements.find(function(el) {
+        return el.innerText && el.innerText.trim() === "Personal Information";
+      });
+      
+      if (personalInfoHeader) {
+        var cardContainer = personalInfoHeader.closest('.card, .box, div') || personalInfoHeader.parentElement;
+        if (cardContainer) {
+          var text = cardContainer.innerText || "";
+          var hasEmail = text.indexOf("@") !== -1;
+          var hasPhone = /\\d{10}/.test(text);
+          if (hasEmail || hasPhone) {
+            hasPersonalInfo = true;
+          }
+        }
+      }
+      
+      if (hasPersonalInfo || pollCount >= 25) {
+        clearInterval(poll);
+        log("Background Scraper: starting extraction. PollCount=" + pollCount);
+        
+        try {
+          var profile = {};
+          
+          if (personalInfoHeader) {
+            var cardContainer = personalInfoHeader.closest('.card, .box, div') || personalInfoHeader.parentElement;
+            if (cardContainer) {
+              var items = Array.from(cardContainer.querySelectorAll('div, p, span, td, li'));
+              var textValues = items.map(function(el) {
+                return el.innerText ? el.innerText.trim() : "";
+              }).filter(function(txt) {
+                return txt.length > 0 && txt !== "Personal Information";
+              });
+              
+              var uniqueTexts = [];
+              for (var i = 0; i < textValues.length; i++) {
+                if (uniqueTexts.indexOf(textValues[i]) === -1) {
+                  uniqueTexts.push(textValues[i]);
+                }
+              }
+              
+              for (var i = 0; i < uniqueTexts.length; i++) {
+                var txt = uniqueTexts[i];
+                if (txt.indexOf("@") !== -1 && txt.indexOf(".") !== -1) {
+                  profile.email = txt;
+                } else if (/^\\d{10}$/.test(txt)) {
+                  profile.phone = txt;
+                } else if (txt.indexOf("Hostel:") !== -1 || txt.indexOf("Hostel") !== -1) {
+                  profile.hostel = txt.replace(/Hostel\\s*:\\s*/i, "").trim();
+                } else if (txt.indexOf("Batch:") !== -1 || txt.indexOf("Batch") !== -1) {
+                  profile.batch = txt.replace(/Batch\\s*:\\s*/i, "").trim();
+                }
+              }
+              
+              var addressCandidate = uniqueTexts.find(function(txt) {
+                var isEmail = txt.indexOf("@") !== -1;
+                var isPhone = /^\\d{10}$/.test(txt);
+                var isHostel = txt.indexOf("Hostel") !== -1;
+                var isBatch = txt.indexOf("Batch") !== -1;
+                return !isEmail && !isPhone && !isHostel && !isBatch && txt.indexOf(",") !== -1;
+              });
+              if (addressCandidate) {
+                profile.address = addressCandidate;
+              }
+              
+              var nameCandidate = uniqueTexts.find(function(txt) {
+                var isEmail = txt.indexOf("@") !== -1;
+                var isPhone = /^\\d{10}$/.test(txt);
+                var isHostel = txt.indexOf("Hostel") !== -1;
+                var isBatch = txt.indexOf("Batch") !== -1;
+                var isAddress = txt.indexOf(",") !== -1;
+                return !isEmail && !isPhone && !isHostel && !isBatch && !isAddress && /^[a-zA-Z\\s\\.]+$/.test(txt) && txt.length > 2;
+              });
+              if (nameCandidate) {
+                profile.name = nameCandidate;
+              }
+            }
+          }
+          
+          var images = Array.from(document.querySelectorAll('img'));
+          
+          var candidates = images.filter(function(img) {
+            var src = img.src || "";
+            var matchesKeyword = src.indexOf("Photo") !== -1 || src.indexOf("Student") !== -1 || src.indexOf("Profile") !== -1;
+            if (!matchesKeyword) return false;
+            
+            var parent = img.parentElement;
+            while (parent) {
+              var id = (parent.id || "").toLowerCase();
+              var className = parent.className || "";
+              if (typeof className !== 'string') {
+                className = className.baseVal || "";
+              }
+              className = className.toLowerCase();
+              var tag = parent.tagName.toLowerCase();
+              
+              if (tag === 'header' || tag === 'nav' || 
+                  id.indexOf('header') !== -1 || id.indexOf('nav') !== -1 || id.indexOf('topbar') !== -1 || id.indexOf('navbar') !== -1 ||
+                  className.indexOf('header') !== -1 || className.indexOf('nav') !== -1 || className.indexOf('topbar') !== -1 || className.indexOf('navbar') !== -1 ||
+                  className.indexOf('user-menu') !== -1 || className.indexOf('dropdown') !== -1) {
+                return false;
+              }
+              parent = parent.parentElement;
+            }
+            return true;
+          });
+          
+          candidates.sort(function(a, b) {
+            var rectA = a.getBoundingClientRect();
+            var rectB = b.getBoundingClientRect();
+            var areaA = (rectA.width || a.width || 0) * (rectA.height || a.height || 0);
+            var areaB = (rectB.width || b.width || 0) * (rectB.height || b.height || 0);
+            return areaB - areaA;
+          });
+          
+          var studentImg = candidates.length > 0 ? candidates[0] : null;
+          
+          if (studentImg) {
+            profile.avatarUrl = studentImg.src;
+          } else {
+            var allDivs = Array.from(document.querySelectorAll('div'));
+            var bgImgDiv = allDivs.find(function(div) {
+              var bg = window.getComputedStyle(div).backgroundImage;
+              return bg && bg !== 'none' && (bg.indexOf('Photo') !== -1 || bg.indexOf('Student') !== -1);
+            });
+            if (bgImgDiv) {
+              var bg = window.getComputedStyle(bgImgDiv).backgroundImage;
+              var match = bg.match(/url\\(["']?([^"']+)["']?\\)/);
+              if (match && match[1]) {
+                profile.avatarUrl = match[1];
+              }
+            }
+          }
+          
+          var mainNameEl = document.querySelector('h1, h2, h3, h4, h5');
+          if (mainNameEl && !profile.name) {
+            profile.name = mainNameEl.innerText.trim();
+          }
+          
+          var programCandidate = allElements.find(function(el) {
+            var txt = el.innerText ? el.innerText.trim() : "";
+            return (txt.indexOf("B.Tech") !== -1 || txt.indexOf("M.Tech") !== -1 || txt.indexOf("MBA") !== -1 || txt.indexOf("B.Sc") !== -1 || txt.indexOf("Bachelor") !== -1 || txt.indexOf("Master") !== -1) && txt.length < 150;
+          });
+          if (programCandidate && !profile.program) {
+            profile.program = programCandidate.innerText.trim();
+          }
+          
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: "BACKGROUND_PROFILE_UPDATE_SCRAPE",
+            payload: profile
+          }));
+          
+        } catch(e) {
+          log("Background Scraping error: " + e.toString());
+        }
+      }
+    }, 500);
+  } catch(e) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ERROR", message: "Background Profile Scraper: " + e.toString() }));
+  }
+})(); true;
+`;
+
 export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, authData } = useAuth();
   const [data, setData] = useState<ScrapedData>(MOCK_DATA);
@@ -1088,6 +1268,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const didDashboard = useRef(false);
   const didTimetable = useRef(false);
   const didMakeup = useRef(false);
+  const didProfile = useRef(false);
 
   // Load initial data from storage
   useEffect(() => {
@@ -1115,6 +1296,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didMakeup.current = false;
       didExams.current = false;
       didRoomBooking.current = false;
+      didProfile.current = false;
     }
   }, [isAuthenticated]);
   const didExams = useRef(false);
@@ -1231,6 +1413,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didMakeup.current = false;
       didExams.current = false;
       didRoomBooking.current = false;
+      didProfile.current = false;
       isProcessingPhase.current = false;
       isFullyDone.current = false;
       retriedSections.current.clear(); // Reset retries on full refresh
@@ -1303,7 +1486,11 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Allow selective retry to pass through even after initial scrape is done
     if (isFullyDone.current && !isRetrying.current) return;
 
-    if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
+    if (url.includes('user-profile') && !url.includes('openapp.aspx') && !didProfile.current) {
+      console.log('INJECTING BACKGROUND_PROFILE_SCRAPER_SCRIPT...');
+      didProfile.current = true;
+      webViewRef.current?.injectJavaScript(BACKGROUND_PROFILE_SCRAPER_SCRIPT);
+    } else if (url.includes('StudentDashboard.aspx') && !didDashboard.current) {
       console.log('INJECTING DASHBOARD_SCRIPT...');
       didDashboard.current = true;
       isProcessingPhase.current = true;
@@ -1381,17 +1568,36 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.makeupUrl) merged.makeupUrl = p.makeupUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
-          // Trigger Makeup Scraping if URL found (Continues in background)
-          if (p.makeupUrl) {
-            webViewRef.current?.injectJavaScript(`window.location.href = '${p.makeupUrl}'; true;`);
-          } else if (p.examUrl) {
-            webViewRef.current?.injectJavaScript(`window.location.href = '${p.examUrl}'; true;`);
+          // Trigger Profile page scraping next
+          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile'; true;`);
+
+          merged.lastUpdated = new Date().toISOString();
+          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+          return merged;
+        });
+
+      } else if (msg.type === 'BACKGROUND_PROFILE_UPDATE_SCRAPE') {
+        const payload = msg.payload || {};
+        console.log('BACKGROUND PROFILE DATA RECEIVED:', JSON.stringify(payload));
+        setData(prev => {
+          const merged = {
+            ...prev,
+            personalInfo: {
+              ...prev.personalInfo,
+              ...payload
+            }
+          };
+          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+
+          // Now resume the normal sync chain
+          if (prev.makeupUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${prev.makeupUrl}'; true;`);
+          } else if (prev.examUrl) {
+            webViewRef.current?.injectJavaScript(`window.location.href = '${prev.examUrl}'; true;`);
           } else {
             webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
           }
 
-          merged.lastUpdated = new Date().toISOString();
-          AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
           return merged;
         });
 
@@ -1574,6 +1780,20 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(heartbeat);
   }, [isAuthenticated, isScraping]);
 
+  const updateProfile = (profileData: any) => {
+    setData(prev => {
+      const merged = {
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          ...profileData
+        }
+      };
+      AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+      return merged;
+    });
+  };
+
   const fetchAttendanceLogs = (subjectCode: string) => {
     if (!webViewRef.current) return;
     const script = `
@@ -1595,7 +1815,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs }}>
+    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs, updateProfile }}>
       {children}
       {isAuthenticated && (
         <View style={{ height: 0, width: 0, overflow: 'hidden', position: 'absolute', opacity: 0 }}>
