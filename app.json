@@ -14,8 +14,13 @@
       "backgroundColor": "#4C0099"
     },
     "ios": {
-      "supportsTablet": true
-    },
+    "bundleIdentifier": "com.ashish.alms",
+    "buildNumber": "1",
+    "supportsTablet": true,
+    "infoPlist": {
+      "ITSAppUsesNonExemptEncryption": false
+    }
+  },
     "android": {
       "package": "com.ashish.alms",
       "softwareKeyboardLayoutMode": "pan",
@@ -73,6 +78,8 @@
     "updates": {
       "url": "https://u.expo.dev/d4673d8c-1de3-450a-bc76-184ac8280f88"
     },
-    "runtimeVersion": "1.0.0"
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    }
   }
 }
