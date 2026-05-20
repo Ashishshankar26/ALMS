@@ -4,12 +4,25 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
+
+// Determine if rescue UI should be shown based on app version
+const shouldShowRescue = (() => {
+  const current = Constants.expoConfig?.version || '0.0.0';
+  const required = '1.0.3';
+  const parse = (v) => v.split('.').map(n => parseInt(n, 10));
+  const [cMaj, cMin, cPatch] = parse(current);
+  const [rMaj, rMin, rPatch] = parse(required);
+  if (cMaj > rMaj) return false;
+  if (cMaj < rMaj) return true;
+  if (cMin > rMin) return false;
+  if (cMin < rMin) return true;
+  return cPatch < rPatch;
+})();
+import { Alert, Platform, View, StyleSheet, TouchableOpacity, Text, Linking } from 'react-native';
 import * as Updates from 'expo-updates';
-import { Alert, Platform, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import * as Linking from 'expo-linking';
 import 'react-native-reanimated';
 
-const IS_RESCUE_BUILD = false;
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '../context/AuthContext';
@@ -81,7 +94,7 @@ export default function RootLayout() {
     return null;
   }
 
-  if (IS_RESCUE_BUILD) {
+  if (shouldShowRescue) {
     return (
       <SafeAreaProvider>
         <View style={rescueStyles.container}>
