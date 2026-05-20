@@ -1005,7 +1005,7 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               onPress={() => setShowProfileMenu(true)}
-              style={[styles.headerIconBtn]}
+              style={[styles.headerIconBtn, { backgroundColor: isDark ? 'rgba(255,183,28,0.15)' : 'rgba(99,102,241,0.12)' }]}
             >
               <Menu size={22} color={colors.text} />
             </TouchableOpacity>
