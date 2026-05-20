@@ -330,16 +330,24 @@ export default function ResultsScreen() {
                           },
                         ]}
                       >
-                      <View
-                        style={[
-                          styles.semCardGlow,
-                          {
-                            backgroundColor: accent,
-                            opacity: isActive ? 0.22 : 0.1,
-                            transform: [{ scale: isActive ? 1.02 : 0.96 }],
-                          },
-                        ]}
-                      />
+                      {Platform.OS === 'android' ? (
+                        <>
+                          <View style={[styles.semCardGlow, { backgroundColor: accent, opacity: isActive ? 0.08 : 0.03, transform: [{ scale: isActive ? 1.15 : 1.04 }], borderRadius: 42 }]} />
+                          <View style={[styles.semCardGlow, { backgroundColor: accent, opacity: isActive ? 0.15 : 0.06, transform: [{ scale: isActive ? 1.08 : 1.00 }], borderRadius: 38 }]} />
+                          <View style={[styles.semCardGlow, { backgroundColor: accent, opacity: isActive ? 0.25 : 0.1, transform: [{ scale: isActive ? 1.02 : 0.96 }], borderRadius: 34 }]} />
+                        </>
+                      ) : (
+                        <View
+                          style={[
+                            styles.semCardGlow,
+                            {
+                              backgroundColor: accent,
+                              opacity: isActive ? 0.22 : 0.1,
+                              transform: [{ scale: isActive ? 1.02 : 0.96 }],
+                            },
+                          ]}
+                        />
+                      )}
                       <TouchableOpacity
                         activeOpacity={0.92}
                         onPress={() => {

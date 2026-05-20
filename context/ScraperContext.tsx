@@ -107,8 +107,8 @@ const DASHBOARD_SCRIPT = `
       var attPerEl    = document.getElementById("AttPercent");
 
       var hasCoursesLoaded = coursesList && coursesList.querySelectorAll(".mycoursesdiv").length > 0;
-      var hasCgpa  = cgpaEl  && /[0-9]+\\.[0-9]+/.test(cgpaEl.innerText);
-      var hasAtt   = attPerEl && /[0-9]+/.test(attPerEl.innerText);
+      var hasCgpa  = cgpaEl  && /[0-9]+\\.[0-9]+/.test(cgpaEl.innerText || cgpaEl.textContent || "");
+      var hasAtt   = attPerEl && /[0-9]+/.test(attPerEl.innerText || attPerEl.textContent || "");
 
       if ((hasCoursesLoaded && hasCgpa && hasAtt) || pollCount >= 12) {
         clearInterval(poll);
@@ -457,10 +457,10 @@ const DASHBOARD_SCRIPT = `
           try {
             var prof = { name: "Unknown", vid: "", section: "", program: "", avatarUrl: "" };
             var nameEl = document.getElementById("p_name");
-            if (nameEl) prof.name = nameEl.innerText.trim();
+            if (nameEl) prof.name = (nameEl.innerText || nameEl.textContent || "").trim();
             var infoEl = document.getElementById("p_info");
             if (infoEl) {
-              var infoTxt = infoEl.innerText || "";
+              var infoTxt = infoEl.innerText || infoEl.textContent || "";
               log("SCRAPER DEBUG: Profile Info Raw: " + infoTxt);
               var vidM = infoTxt.match(/VID\\s*:\\s*([0-9]+)/i); if (vidM) prof.vid = vidM[1];
               var secM = infoTxt.match(/Section\\s*:\\s*([A-Z0-9]+)/i); if (secM) prof.section = secM[1];
@@ -485,13 +485,21 @@ const DASHBOARD_SCRIPT = `
             var picEl = document.getElementById("p_picture");
             if (picEl && picEl.src) prof.avatarUrl = picEl.src;
 
-            var qC = "--", qA = "", fV = "0";
+            // Extract CGPA and Attendance
+            var qC = "--", qA = "";
             var cgpaEl = document.getElementById("cgpa");
-            if (cgpaEl) { var cm = cgpaEl.innerText.match(/([0-9]+\\.[0-9]+)/); if (cm) qC = cm[1]; }
+            if (cgpaEl) { var cm = (cgpaEl.innerText || cgpaEl.textContent || "").match(/([0-9]+\.[0-9]+)/); if (cm) qC = cm[1]; }
             var attEl = document.getElementById("AttPercent");
-            if (attEl) { var am = attEl.innerText.match(/([0-9]+(?:\\.[0-9]+)?)/); if (am) qA = am[1]; }
+            if (attEl) { var am = (attEl.innerText || attEl.textContent || "").match(/([0-9]+(?:\.[0-9]+)?)/); if (am) qA = am[1]; }
+
+            // Simplified fee extraction
+            var fV = "0";
             var feeEl = document.getElementById("feebalance");
-            if (feeEl) { var fm = feeEl.innerText.match(/([0-9,]+)/); if (fm) fV = fm[1]; }
+            if (feeEl) {
+              var fm = (feeEl.innerText || feeEl.textContent || "").match(/([0-9,]+)/);
+              if (fm) fV = fm[1];
+            }
+            // No additional fallback scanning to keep scraper robust
 
             var att = [];
             var cl = document.getElementById("CoursesList");
@@ -500,13 +508,13 @@ const DASHBOARD_SCRIPT = `
               for (var i = 0; i < rows.length; i++) {
                 var row = rows[i];
                 var pctSpan = row.querySelector(".c100 span");
-                var pctText = (pctSpan ? pctSpan.innerText : "0").replace(/%/g, "");
+                var pctText = (pctSpan ? (pctSpan.innerText || pctSpan.textContent || "0") : "0").replace(/%/g, "");
                 var bTag = row.querySelector("b");
-                var code = bTag ? bTag.innerText.trim().replace(/\\s*:$/, "") : "";
+                var code = bTag ? (bTag.innerText || bTag.textContent || "").trim().replace(/\\s*:$/, "") : "";
                 var pTag = row.querySelector("p.font-weight-medium");
                 var name = "";
                 if (pTag) {
-                  var parts = pTag.innerText.split(":");
+                  var parts = (pTag.innerText || pTag.textContent || "").split(":");
                   if (parts.length > 1) name = parts[1].split("\\n")[0].trim();
                 }
                 if (code && code.length > 2) {
@@ -528,9 +536,9 @@ const DASHBOARD_SCRIPT = `
               for (var i = 0; i < aRows.length; i++) {
                 var row = aRows[i];
                 var cols = row.querySelectorAll("div[class*='col']");
-                var code = cols.length > 0 ? cols[0].innerText.trim() : "";
+                var code = cols.length > 0 ? (cols[0].innerText || cols[0].textContent || "").trim() : "";
                 var pTag = row.querySelector("p.font-weight-medium");
-                var detail = pTag ? pTag.innerText : "";
+                var detail = pTag ? (pTag.innerText || pTag.textContent || "") : "";
                 var ldM = detail.match(/Last\\s*Date\\s*:\\s*([0-9\\-\\/]+)/i);
                 if (code && code.length > 1) {
                   assignments.push({ 
@@ -548,7 +556,7 @@ const DASHBOARD_SCRIPT = `
             if (!annContainer) {
               var headers = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,span,b,p'));
               var annHeader = headers.find(function(el) { 
-                var txt = el.innerText.trim();
+                var txt = (el.innerText || el.textContent || "").trim();
                 return txt === "Today's Announcements" || txt === "Today Announcements" || txt === "Announcements" || txt === "University Announcements" || (txt.toLowerCase().includes("announcements") && el.children.length === 0);
               });
               if (annHeader) {
@@ -562,21 +570,21 @@ const DASHBOARD_SCRIPT = `
               for (var i = 0; i < annRows.length; i++) {
                 var row = annRows[i];
                 // Ignore the header itself
-                if (row.innerText.toLowerCase().includes("announcements") && row.querySelectorAll('li, .row, .mycoursesdiv').length > 0) continue;
+                if ((row.innerText || row.textContent || "").toLowerCase().includes("announcements") && row.querySelectorAll('li, .row, .mycoursesdiv').length > 0) continue;
 
                 var subjEl = row.querySelector(".announcement-subject") || row.querySelector(".font-weight-medium") || row.querySelector("b") || row.querySelector("strong") || row.querySelector(".right-arrow") || row.querySelector("a");
                 var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date") || row.querySelector("small");
                 
-                if (subjEl && subjEl.innerText.trim().length > 2) {
-                  var fullText = row.innerText.trim();
+                if (subjEl && (subjEl.innerText || subjEl.textContent || "").trim().length > 2) {
+                  var fullText = (row.innerText || row.textContent || "").trim();
                   announc.push({ 
                     id: Math.random().toString(), 
-                    title: subjEl.innerText.trim().substring(0, 100).split('-')[0].trim(), 
+                    title: (subjEl.innerText || subjEl.textContent || "").trim().substring(0, 100).split('-')[0].trim(), 
                     content: fullText, 
-                    date: dateEl ? dateEl.innerText.trim() : "Today" 
+                    date: dateEl ? (dateEl.innerText || dateEl.textContent || "").trim() : "Today" 
                   });
-                } else if (row.innerText.trim().length > 5) {
-                  var t = row.innerText.trim();
+                } else if ((row.innerText || row.textContent || "").trim().length > 5) {
+                  var t = (row.innerText || row.textContent || "").trim();
                   announc.push({
                     id: Math.random().toString(),
                     title: t.substring(0, 60),
@@ -600,7 +608,7 @@ const DASHBOARD_SCRIPT = `
             if (!msgContainer) {
               var headers = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,span,b,p'));
               var msgHeader = headers.find(function(el) { 
-                var txt = el.innerText.trim();
+                var txt = (el.innerText || el.textContent || "").trim();
                 return txt === "My Messages" || txt === "Personal Messages" || (txt.includes("My Messages") && el.children.length === 0);
               });
               if (msgHeader) {
@@ -615,22 +623,22 @@ const DASHBOARD_SCRIPT = `
               for (var i = 0; i < msgRows.length; i++) {
                 var row = msgRows[i];
                 // Ignore the header itself
-                if (row.innerText.includes("My Messages") && row.querySelectorAll('li, .row').length > 0) continue;
+                if ((row.innerText || row.textContent || "").includes("My Messages") && row.querySelectorAll('li, .row').length > 0) continue;
                 
                 var subjEl = row.querySelector(".right-arrow") || row.querySelector(".font-weight-medium") || row.querySelector("b") || row.querySelector("strong") || row.querySelector(".announcement-subject");
                 var dateEl = row.querySelector(".announcement-date") || row.querySelector("span.text-muted") || row.querySelector(".date") || row.querySelector("small");
                 
-                if (subjEl && subjEl.innerText.trim().length > 2) {
-                  var fullText = row.innerText.trim();
+                if (subjEl && (subjEl.innerText || subjEl.textContent || "").trim().length > 2) {
+                  var fullText = (row.innerText || row.textContent || "").trim();
                   messages.push({ 
                     id: Math.random().toString(), 
-                    title: subjEl.innerText.trim().substring(0, 100).split('-')[0].trim(), 
+                    title: (subjEl.innerText || subjEl.textContent || "").trim().substring(0, 100).split('-')[0].trim(), 
                     content: fullText, 
-                    date: dateEl ? dateEl.innerText.trim() : "Recently" 
+                    date: dateEl ? (dateEl.innerText || dateEl.textContent || "").trim() : "Recently" 
                   });
-                } else if (row.innerText.trim().length > 5) {
+                } else if ((row.innerText || row.textContent || "").trim().length > 5) {
                   // Fallback for simple rows
-                  var t = row.innerText.trim();
+                  var t = (row.innerText || row.textContent || "").trim();
                   messages.push({
                     id: Math.random().toString(),
                     title: t.substring(0, 60),
@@ -1835,7 +1843,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             mixedContentMode="always"
             originWhitelist={['*']}
             setSupportMultipleWindows={false}
-            userAgent="Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+            userAgent={Platform.OS === 'ios' ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"}
           />
         </View>
       )}

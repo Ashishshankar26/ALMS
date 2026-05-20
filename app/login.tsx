@@ -39,21 +39,6 @@ export default function LoginScreen() {
       document.addEventListener('focusout', killEvent, true);
       document.addEventListener('change', killEvent, true);
 
-      // --- Hide WebView markers from Turnstile fingerprinting ---
-      // Turnstile checks navigator.webdriver to detect automation
-      Object.defineProperty(navigator, 'webdriver', {
-        get: function() { return false; },
-        configurable: true
-      });
-      // Hide the React Native WebView bridge
-      if (window.ReactNativeWebView) {
-        Object.defineProperty(window, '__RN_WV_REF__', {
-          value: window.ReactNativeWebView,
-          writable: false,
-          configurable: false,
-          enumerable: false
-        });
-      }
     })();
     true;
   `;
@@ -140,8 +125,10 @@ export default function LoginScreen() {
     } catch (e) {}
   };
 
-  // Updated to a recent Chrome version — old Chrome/112 may be flagged by Turnstile
-  const spoofedUserAgent = "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36";
+  // Dynamic UserAgent matching platform OS to prevent Turnstile fingerprinting mismatches
+  const spoofedUserAgent = Platform.OS === 'ios' 
+    ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+    : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
 
   const isDashboardTextFalseError = (message: string) => {
     return /quick links|ums home|lpu touch|lpu live|my class|yourdost|function enabledisable|document\.getelementbyid\('ctl00|go to search menu to add quick link/i.test(message || '');
@@ -202,8 +189,8 @@ export default function LoginScreen() {
           sharedCookiesEnabled={true}
           thirdPartyCookiesEnabled={true}
           mixedContentMode="always"
-          cacheEnabled={false}
-          incognito={true}
+          cacheEnabled={true}
+          androidLayerType="hardware"
           // --- Turnstile compatibility props ---
           originWhitelist={['*']}
           setSupportMultipleWindows={false}

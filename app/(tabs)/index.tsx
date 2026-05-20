@@ -112,9 +112,16 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       color: '#4A1D5B',
       gradient: ['#4A1D5B', '#2D1237'],
       render: (borderStyle?: any) => {
-        const feeVal = parseFloat(data.fee?.replace(/,/g, '') || '0');
-        const isClear = feeVal === 0;
-        const formattedFee = new Intl.NumberFormat('en-IN').format(feeVal);
+          const rawFee = data.fee || '';
+          // Strip any non-numeric characters except dot and comma
+          const cleaned = rawFee.replace(/[^0-9.,]/g, '').replace(/,/g, '');
+          const feeNumber = cleaned ? parseFloat(cleaned) : 0;
+          const isClear = feeNumber === 0;
+          // Format using Indian locale if we have a valid number
+          const formattedFee = feeNumber > 0 ? new Intl.NumberFormat('en-IN').format(feeNumber) : '';
+          // Decide what to display: formatted number or a placeholder
+          const feeDisplay = feeNumber > 0 ? formattedFee : (rawFee.trim() !== '' ? rawFee.replace(/\/-/g, '').trim() : '—');
+        
         return (
           <CardGradient id="grad_fee" colors={['#4A1D5B', '#2D1237']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
@@ -132,9 +139,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 <Text style={styles.stackLabelWhite}>FINANCIAL SUMMARY</Text>
               </View>
               <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
-                Academic Session 2024-25
+                Live Fee Tracking
               </Text>
-              <Text style={[styles.stackBigValue, { fontSize: formattedFee.length > 8 ? 24 : 32 }]}>₹{formattedFee}</Text>
+              <Text style={[styles.stackBigValue]}>₹{feeDisplay}</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
                   <FileText size={11} color="#fff" style={{ opacity: 0.8 }} />
@@ -254,7 +261,10 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
         const totalPresent = attendedClasses + dutyLeaves;
 
-        const attVal = parseFloat(data.overallAttendance);
+        const calculatedAtt = totalClasses > 0 ? Math.ceil((totalPresent / totalClasses) * 100) : 0;
+        const parsedAtt = parseFloat(data.overallAttendance);
+        const attVal = (!isNaN(parsedAtt) && parsedAtt > 0) ? Math.ceil(parsedAtt) : calculatedAtt;
+
         return (
           <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
             <View style={styles.stackHandle} />
@@ -277,7 +287,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
               <Text style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
                 Live Attendance Tracking
               </Text>
-              <Text style={styles.stackBigValue}>{data.overallAttendance}%</Text>
+              <Text style={styles.stackBigValue}>{attVal}%</Text>
               <View style={styles.stackFooterRow}>
                 <View style={styles.footerInfoItem}>
                   <UserCheck size={11} color="#fff" style={{ opacity: 0.8 }} />
@@ -406,7 +416,11 @@ export default function DashboardScreen() {
   const dutyLeaves = data.attendance?.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0) || 0;
 
   const calculatedAttendance = totalClasses > 0 ? Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100) : 0;
-  const overallAttendance = data.overallAttendance ? Math.ceil(parseFloat(data.overallAttendance)).toString() : calculatedAttendance.toString();
+  
+  const parsedOverallAtt = parseFloat(data.overallAttendance);
+  const overallAttendance = (!isNaN(parsedOverallAtt) && parsedOverallAtt > 0) 
+    ? Math.ceil(parsedOverallAtt).toString() 
+    : calculatedAttendance.toString();
 
   // Helper to find "Next Class" dynamically
   const getNextClass = (allCandidates?: boolean): any => {
@@ -946,8 +960,9 @@ export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={styles.container}
       scrollEnabled={scrollEnabled}
+      contentInsetAdjustmentBehavior="automatic"
       refreshControl={
         <RefreshControl
           refreshing={isScraping}
@@ -2057,7 +2072,7 @@ const styles = StyleSheet.create({
 
 
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : Constants.statusBarHeight,
+    paddingTop: Platform.OS === 'ios' ? 10 : Constants.statusBarHeight,
     paddingHorizontal: 20,
     paddingBottom: 15,
     backgroundColor: '#fff',
