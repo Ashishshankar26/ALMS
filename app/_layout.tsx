@@ -9,7 +9,7 @@ import Constants from 'expo-constants';
 // Determine if rescue UI should be shown based on app version
 const shouldShowRescue = (() => {
   const current = Constants.expoConfig?.version || '0.0.0';
-  const required = '1.0.3';
+  const required = '1.0.2';
   const parse = (v) => v.split('.').map(n => parseInt(n, 10));
   const [cMaj, cMin, cPatch] = parse(current);
   const [rMaj, rMin, rPatch] = parse(required);
