@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform, SafeAreaView, ActivityIndicator, Dimensions } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { RefreshCcw, CalendarCheck, FileText, Send } from 'lucide-react-native';
@@ -22,12 +22,52 @@ const injectedJS = `
   })(); true;
 `;
 
+// Kill blur/focusout/change events on UMS login fields to prevent Turnstile reset
+const injectedJSBefore = `
+  (function() {
+    function killEvent(e) {
+      if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+      }
+    }
+    document.addEventListener('blur', killEvent, true);
+    document.addEventListener('focusout', killEvent, true);
+    document.addEventListener('change', killEvent, true);
+  })(); true;
+`;
+
+const spoofedUserAgent = Platform.OS === 'ios'
+  ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+  : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+
+
 export default function LeaveScreen() {
   const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('APPLY');
   const [loadingApply, setLoadingApply] = useState(true);
   const [loadingSlip,  setLoadingSlip]  = useState(true);
   const slipWebViewRef = React.useRef<WebView>(null);
+  const applyWebViewRef = React.useRef<WebView>(null);
+  const [applySource, setApplySource] = useState({ uri: APPLY_URL });
+  const [slipSource, setSlipSource] = useState({ uri: SLIP_URL });
+  const [loginNeededApply, setLoginNeededApply] = useState(false);
+  const [loginNeededSlip, setLoginNeededSlip] = useState(false);
+
+  // Detect when login state changes and ensure the WebView loads the intended page
+  useEffect(() => {
+    if (!loginNeededApply) {
+      // Force reload to apply URL after login completes
+      applyWebViewRef.current?.reload();
+    }
+  }, [loginNeededApply]);
+
+  // Same for slip WebView
+  useEffect(() => {
+    if (!loginNeededSlip) {
+      slipWebViewRef.current?.reload();
+    }
+  }, [loginNeededSlip]);
 
   const refreshSlip = () => {
     setLoadingSlip(true);
@@ -40,6 +80,14 @@ export default function LeaveScreen() {
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
         <View style={[styles.heroHeader, { backgroundColor: colors.card, width: '100%', borderRadius: 24, marginBottom: 0, padding: 24, borderColor: colors.border }]}>
           <View style={styles.heroContent}>
+            {loginNeededApply && (
+              <View style={styles.loginOverlay}>
+                <Text style={styles.loginText}>Session expired. Please log in.</Text>
+                <TouchableOpacity style={styles.loginButton} onPress={() => applyWebViewRef.current?.reload()}>
+                  <Text style={styles.loginButtonText}>Login</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             <View>
               <Text style={[styles.heroLabel, { color: colors.textSecondary }]}>Leave Management</Text>
               <Text style={[styles.heroValue, { color: colors.text }]}>Hostel Leave</Text>
@@ -152,10 +200,28 @@ export default function LeaveScreen() {
             </View>
           )}
           <WebView
-            source={{ uri: APPLY_URL, headers: { 'X-Requested-With': '' } }}
-            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            ref={applyWebViewRef}
+            source={applySource}
+            userAgent={spoofedUserAgent}
+            mixedContentMode="always"
+            cacheEnabled={true}
+            androidLayerType="hardware"
+            originWhitelist={['*']}
+            setSupportMultipleWindows={false}
+            allowsInlineMediaPlayback={true}
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
             style={[styles.webview, loadingApply && { opacity: 0 }]}
-            onLoadEnd={() => setLoadingApply(false)}
+            onLoadEnd={(event) => {
+              setLoadingApply(false);
+              const url = event?.nativeEvent?.url ?? '';
+              if (url.toLowerCase().includes('login')) {
+                setLoginNeededApply(true);
+              } else {
+                setLoginNeededApply(false);
+              }
+            }}
+            injectedJavaScriptBeforeContentLoaded={injectedJSBefore}
             injectedJavaScript={injectedJS}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}
@@ -172,10 +238,27 @@ export default function LeaveScreen() {
           )}
           <WebView
             ref={slipWebViewRef}
-            source={{ uri: SLIP_URL, headers: { 'X-Requested-With': '' } }}
-            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            source={slipSource}
             style={[styles.webview, loadingSlip && { opacity: 0 }]}
-            onLoadEnd={() => setLoadingSlip(false)}
+            onLoadEnd={(event) => {
+              setLoadingSlip(false);
+              const url = event?.nativeEvent?.url ?? '';
+              if (url.toLowerCase().includes('login')) {
+                setLoginNeededSlip(true);
+              } else {
+                setLoginNeededSlip(false);
+              }
+            }}
+            userAgent={spoofedUserAgent}
+            mixedContentMode="always"
+            cacheEnabled={true}
+            androidLayerType="hardware"
+            originWhitelist={['*']}
+            setSupportMultipleWindows={false}
+            allowsInlineMediaPlayback={true}
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
+            injectedJavaScriptBeforeContentLoaded={injectedJSBefore}
             injectedJavaScript={injectedJS}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}
@@ -309,10 +392,32 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 10,
   },
-  refreshFabText: {
-    color: '#fff',
-    fontWeight: '800',
-    marginLeft: 10,
-    fontSize: 15,
+  loginOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
   },
+  loginText: {
+    color: '#fff',
+    fontSize: 18,
+    marginBottom: 12,
+  },
+  loginButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#000',
+    fontWeight: '600',
+  },
+    refreshFabText: {
+      color: '#fff',
+      fontWeight: '800',
+      marginLeft: 10,
+      fontSize: 15,
+    },
 });
