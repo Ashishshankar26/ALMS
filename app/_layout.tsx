@@ -5,8 +5,11 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import * as Updates from 'expo-updates';
-import { Alert, Platform, View } from 'react-native';
+import { Alert, Platform, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import * as Linking from 'expo-linking';
 import 'react-native-reanimated';
+
+const IS_RESCUE_BUILD = false;
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '../context/AuthContext';
@@ -78,6 +81,33 @@ export default function RootLayout() {
     return null;
   }
 
+  if (IS_RESCUE_BUILD) {
+    return (
+      <SafeAreaProvider>
+        <View style={rescueStyles.container}>
+          <View style={rescueStyles.card}>
+            <Text style={rescueStyles.emoji}>🚨</Text>
+            <Text style={rescueStyles.title}>CRITICAL UPDATE REQUIRED</Text>
+            <Text style={rescueStyles.subtitle}>
+              Your current ALMS app version is outdated and has been disabled due to critical package and API updates.
+            </Text>
+            <Text style={rescueStyles.description}>
+              Please download and install the new ALMS v1.0.3 APK immediately to restore service and experience the stunning new premium layout.
+            </Text>
+            
+            <TouchableOpacity 
+              style={rescueStyles.button}
+              onPress={() => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases/download/v1.0.3/ALMS_v1.0.3.apk')}
+              activeOpacity={0.8}
+            >
+              <Text style={rescueStyles.buttonText}>Download ALMS v1.0.3 APK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -137,3 +167,74 @@ function RootLayoutNav() {
     </ThemeProvider>
   );
 }
+
+const rescueStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0F081D',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 24,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  emoji: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FF4D4D',
+    textAlign: 'center',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  description: {
+    fontSize: 14,
+    color: '#B3B3CC',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
+  },
+  button: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#6C5CE7',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6C5CE7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  }
+});
+
