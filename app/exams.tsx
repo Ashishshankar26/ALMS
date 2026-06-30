@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 
-const EXAMS_URL = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
+const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
 
 export default function ExamsScreen() {
   const { data } = useScraper();
