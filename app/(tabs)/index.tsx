@@ -1031,9 +1031,37 @@ export default function DashboardScreen() {
                   <View style={[styles.premiumProfileCard, { padding: 0, overflow: 'hidden', borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', borderWidth: 1.5 }]}>
                     <LinearGradient colors={theme.colors as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCardGradient}>
                       <View style={[styles.profileCardHandle, { backgroundColor: theme.text === '#FFFFFF' ? 'rgba(255,255,255,0.24)' : 'rgba(17,17,17,0.12)' }]} />
-                      <View style={[styles.masterShapeLeft, { backgroundColor: theme.accent }]} />
-                      <View style={[styles.masterShapeMid, { backgroundColor: theme.accent }]} />
-                      <View style={[styles.masterShapeRight, { backgroundColor: theme.accent }]} />
+                      {/* Premium Minimalist Background Doodles */}
+                      <View style={styles.cardDoodleContainer} pointerEvents="none">
+                        {/* Elegant Concentric Rings */}
+                        <View style={[styles.cardDoodleRing, { width: 280, height: 280, borderRadius: 140, right: -60, top: -70, borderColor: theme.accent, opacity: 0.15, borderWidth: 1 }]} />
+                        <View style={[styles.cardDoodleRing, { width: 220, height: 220, borderRadius: 110, right: -30, top: -40, borderColor: theme.accent, opacity: 0.12, borderWidth: 1.2 }]} />
+                        <View style={[styles.cardDoodleRing, { width: 160, height: 160, borderRadius: 80, right: 0, top: -10, borderColor: theme.accent, opacity: 0.08, borderWidth: 1.5 }]} />
+                        
+                        {/* Soft wavy lines or grid patterns */}
+                        <View style={[styles.cardDoodleLine, { width: 300, height: 1, backgroundColor: theme.accent, opacity: 0.08, transform: [{ rotate: '-35deg' }], top: 90, left: -40 }]} />
+                        <View style={[styles.cardDoodleLine, { width: 300, height: 1, backgroundColor: theme.accent, opacity: 0.06, transform: [{ rotate: '-35deg' }], top: 110, left: -20 }]} />
+                        
+                        {/* Tech Dot Grid on the middle-right area */}
+                        <View style={styles.cardDotGrid}>
+                          {[...Array(3)].map((_, r) => (
+                            <View key={r} style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+                              {[...Array(4)].map((_, c) => (
+                                <View 
+                                  key={c} 
+                                  style={{ 
+                                    width: 3, 
+                                    height: 3, 
+                                    borderRadius: 1.5, 
+                                    backgroundColor: theme.accent, 
+                                    opacity: 0.14 - (r * 0.02) - (c * 0.02) 
+                                  }} 
+                                />
+                              ))}
+                            </View>
+                          ))}
+                        </View>
+                      </View>
                       <View style={styles.profileTopLine}>
                         <Text style={[styles.profileEyebrow, { color: theme.text }]}>StudentCard</Text>
                         <TouchableOpacity
@@ -2227,31 +2255,21 @@ const styles = StyleSheet.create({
     height: 170,
     borderRadius: 85,
   },
-  masterShapeLeft: {
-    position: 'absolute',
-    left: 22,
-    top: 58,
-    width: 74,
-    height: 82,
-    borderTopLeftRadius: 42,
-    borderBottomLeftRadius: 42,
+  cardDoodleContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
-  masterShapeMid: {
+  cardDoodleRing: {
     position: 'absolute',
-    left: 72,
-    top: 58,
-    width: 78,
-    height: 82,
-    borderTopLeftRadius: 42,
-    borderBottomLeftRadius: 42,
   },
-  masterShapeRight: {
+  cardDoodleLine: {
     position: 'absolute',
-    right: 28,
-    top: 58,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+  },
+  cardDotGrid: {
+    position: 'absolute',
+    right: 24,
+    top: 52,
+    opacity: 0.8,
   },
   profileContactless: {
     position: 'absolute',
