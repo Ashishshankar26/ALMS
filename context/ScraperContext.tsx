@@ -1629,6 +1629,49 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didRoomBooking.current = false;
       didProfile.current = false;
       isFullyDone.current = false;
+
+      // ── Auto-login in background WebView ──────────────────────────
+      // Load saved credentials and inject auto-fill + auto-submit
+      AsyncStorage.getItem('@credentials').then(stored => {
+        if (stored && webViewRef.current) {
+          try {
+            const creds = JSON.parse(stored);
+            if (creds.u && creds.p) {
+              console.log('SCRAPER: Auto-filling credentials in background WebView...');
+              const autoLoginScript = `
+                (function() {
+                  var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+                  var p = document.querySelector('input[type="password"]');
+                  if (u) { u.value = '` + creds.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
+                  if (p) { p.value = '` + creds.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
+                  // Poll for Turnstile token then auto-submit
+                  var ts = setInterval(function() {
+                    var tok = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
+                    if (tok && tok.value) {
+                      clearInterval(ts);
+                      var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+                      if (btn) btn.click();
+                    }
+                  }, 500);
+                  // Fallback: if no Turnstile within 8s, try clicking anyway
+                  setTimeout(function() {
+                    clearInterval(ts);
+                    var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+                    if (btn) btn.click();
+                  }, 8000);
+                })();
+                true;
+              `;
+              // Small delay to let the login DOM render
+              setTimeout(() => {
+                webViewRef.current?.injectJavaScript(autoLoginScript);
+              }, 1000);
+            }
+          } catch (e) {
+            console.error('SCRAPER: Failed to parse saved credentials', e);
+          }
+        }
+      }).catch(console.error);
     }
 
     if (url.includes('StudentDashboard.aspx')) {
