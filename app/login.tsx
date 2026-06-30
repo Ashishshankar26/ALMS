@@ -115,6 +115,40 @@ export default function LoginScreen() {
         }
       }, 500);
 
+      // ── Auto-click Turnstile checkbox to trigger verification ──
+      var turnstileClicked = false;
+      var clickTurnstile = setInterval(function() {
+        if (turnstileClicked) return;
+        // Try Cloudflare's JS API first
+        if (typeof turnstile !== 'undefined' && turnstile.execute) {
+          try { turnstile.execute(); turnstileClicked = true; clearInterval(clickTurnstile); return; } catch(e) {}
+        }
+        // Find the Turnstile iframe and click its container
+        var iframes = document.querySelectorAll('iframe');
+        for (var i = 0; i < iframes.length; i++) {
+          var src = iframes[i].src || '';
+          if (src.includes('challenges.cloudflare.com') || src.includes('turnstile')) {
+            // Click the iframe's parent container (the clickable checkbox area)
+            var container = iframes[i].parentElement;
+            if (container) {
+              container.click();
+              turnstileClicked = true;
+              clearInterval(clickTurnstile);
+            }
+            break;
+          }
+        }
+        // Also try clicking the .cf-turnstile div directly
+        if (!turnstileClicked) {
+          var cfDiv = document.querySelector('.cf-turnstile, [data-sitekey]');
+          if (cfDiv) {
+            cfDiv.click();
+            turnstileClicked = true;
+            clearInterval(clickTurnstile);
+          }
+        }
+      }, 1000);
+
       // Poll for Turnstile response token and auto-submit if credentials are ready
       var checkTurnstile = setInterval(function() {
         var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
@@ -122,6 +156,7 @@ export default function LoginScreen() {
         var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
         if (responseEl && responseEl.value && u && u.value && p && p.value) {
           clearInterval(checkTurnstile);
+          clearInterval(clickTurnstile);
           var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
           if (btn) {
             btn.click();

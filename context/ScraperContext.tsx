@@ -1644,21 +1644,48 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   var p = document.querySelector('input[type="password"]');
                   if (u) { u.value = '` + creds.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
                   if (p) { p.value = '` + creds.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
-                  // Poll for Turnstile token then auto-submit
+
+                  // ── Auto-click Turnstile checkbox ──
+                  var turnstileClicked = false;
+                  var clickTurnstile = setInterval(function() {
+                    if (turnstileClicked) return;
+                    // Try Cloudflare JS API
+                    if (typeof turnstile !== 'undefined' && turnstile.execute) {
+                      try { turnstile.execute(); turnstileClicked = true; clearInterval(clickTurnstile); return; } catch(e) {}
+                    }
+                    // Find iframe and click its container
+                    var iframes = document.querySelectorAll('iframe');
+                    for (var i = 0; i < iframes.length; i++) {
+                      var src = iframes[i].src || '';
+                      if (src.includes('challenges.cloudflare.com') || src.includes('turnstile')) {
+                        var container = iframes[i].parentElement;
+                        if (container) { container.click(); turnstileClicked = true; clearInterval(clickTurnstile); }
+                        break;
+                      }
+                    }
+                    if (!turnstileClicked) {
+                      var cfDiv = document.querySelector('.cf-turnstile, [data-sitekey]');
+                      if (cfDiv) { cfDiv.click(); turnstileClicked = true; clearInterval(clickTurnstile); }
+                    }
+                  }, 1000);
+
+                  // Poll for Turnstile success token then auto-submit
                   var ts = setInterval(function() {
                     var tok = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
                     if (tok && tok.value) {
                       clearInterval(ts);
+                      clearInterval(clickTurnstile);
                       var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
                       if (btn) btn.click();
                     }
                   }, 500);
-                  // Fallback: if no Turnstile within 8s, try clicking anyway
+                  // Fallback: if no Turnstile within 10s, try clicking login anyway
                   setTimeout(function() {
                     clearInterval(ts);
+                    clearInterval(clickTurnstile);
                     var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
                     if (btn) btn.click();
-                  }, 8000);
+                  }, 10000);
                 })();
                 true;
               `;
