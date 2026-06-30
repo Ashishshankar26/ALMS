@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 // Cache breaker: 2026-04-19 13:16
-import { View, Platform } from 'react-native';
+import { View, Platform, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from './ThemeContext';
 
 export interface SubjectAttendance {
   subjectCode: string;
@@ -1274,6 +1275,8 @@ export const BACKGROUND_PROFILE_SCRAPER_SCRIPT = `
 
 export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, authData } = useAuth();
+  const { colors, isDark } = useTheme();
+  const [showReauthModal, setShowReauthModal] = useState(false);
   const [data, setData] = useState<ScrapedData>(MOCK_DATA);
   const [isScraping, setIsScraping] = useState(false);
   const webViewRef = useRef<WebView>(null);
@@ -1281,6 +1284,88 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const didTimetable = useRef(false);
   const didMakeup = useRef(false);
   const didProfile = useRef(false);
+
+  // Turnstile compatibility & auto-authentication scripts for background WebView
+  const reauthBeforeContent = `
+    (function() {
+      // Save React Native WebView bridge and delete it from window to hide from Turnstile fingerprinting
+      if (window.ReactNativeWebView) {
+        window.__RN_WV_REF__ = window.ReactNativeWebView;
+        delete window.ReactNativeWebView;
+      }
+      
+      // Override webdriver
+      Object.defineProperty(navigator, 'webdriver', {
+        get: function() { return false; }
+      });
+      
+      // Override plugins if empty
+      if (!navigator.plugins || navigator.plugins.length === 0) {
+        Object.defineProperty(navigator, 'plugins', {
+          get: function() { return [1, 2, 3]; }
+        });
+      }
+
+      // Kill blur/focusout/change events on UMS login fields to prevent Turnstile reset
+      function killEvent(e) {
+        if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+        }
+      }
+      document.addEventListener('blur', killEvent, true);
+      document.addEventListener('focusout', killEvent, true);
+      document.addEventListener('change', killEvent, true);
+    })();
+    true;
+  `;
+
+  const reauthInjectedJs = `
+    (function() {
+      // Restore the bridge for communication
+      if (window.__RN_WV_REF__ && !window.ReactNativeWebView) {
+        window.ReactNativeWebView = window.__RN_WV_REF__;
+      }
+
+      var username = '${authData?.username || ''}';
+      var password = '${authData?.password || ''}';
+      
+      if (window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx')) {
+        var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+        var p = document.querySelector('input[type="password"]');
+        if (u && username) {
+          var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nSU.call(u, username);
+          u.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (p && password) {
+          var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nSP.call(p, password);
+          p.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // Poll for Turnstile response token and auto-submit once solved
+        var checkCount = 0;
+        var checkTurnstile = setInterval(function() {
+          checkCount++;
+          var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
+          if (responseEl && responseEl.value) {
+            clearInterval(checkTurnstile);
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'AUTO_LOGIN_SUBMITTING' }));
+            var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+            if (btn) {
+              btn.click();
+            }
+          }
+          // If not solved after 4 seconds, prompt re-auth modal (user manual interaction)
+          if (checkCount === 8) { // 8 * 500ms = 4 seconds
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'REAUTH_REQUIRED' }));
+          }
+        }, 500);
+      }
+    })();
+    true;
+  `;
 
   // Load initial data from storage
   useEffect(() => {
@@ -1462,29 +1547,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     // Script injection is handled by the guarded block below (with dedup refs)
 
-    // Recovery Logic: If redirected to login while we should be authenticated
-    if (url.includes('LoginNew.aspx') && isAuthenticated) {
-      console.warn('SCRAPER: Redirected to Login! Pre-filling credentials...');
-      if (authData?.username && authData?.password) {
-        const fillScript = `
-          (function() {
-            var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
-            var p = document.querySelector('input[type="password"]');
-            if (u) {
-              var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-              nSU.call(u, '${authData.username}');
-              u.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (p) {
-              var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-              nSP.call(p, '${authData.password}');
-              p.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-          })(); true;
-        `;
-        webViewRef.current?.injectJavaScript(fillScript);
-      }
-    }
+    // Recovery Logic & Auto-login is now managed by the background WebView's injected scripts (reauthBeforeContent & reauthInjectedJs)
+
 
     if (url.includes('seatingplan') || url.includes('conduct') || url.includes('datesheet')) {
       console.log('AUTO-CAPTURED EXAM URL:', url);
@@ -1530,6 +1594,19 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('SCRAPER: Redirected to Login! Session might be expired.');
       setIsScraping(false);
       isProcessingPhase.current = false;
+      
+      // Reset did flags to allow full re-scrape upon successful re-authentication
+      didDashboard.current = false;
+      didTimetable.current = false;
+      didMakeup.current = false;
+      didExams.current = false;
+      didRoomBooking.current = false;
+      didProfile.current = false;
+      isFullyDone.current = false;
+    }
+
+    if (url.includes('StudentDashboard.aspx')) {
+      setShowReauthModal(false);
     }
   };
 
@@ -1538,6 +1615,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const msg = JSON.parse(event.nativeEvent.data);
       console.log('MESSAGE FROM WEBVIEW:', msg.type);
+
+      if (msg.type === 'REAUTH_REQUIRED') {
+        setShowReauthModal(true);
+      } else if (msg.type === 'AUTO_LOGIN_SUBMITTING') {
+        console.log('SCRAPER: Auto-login submitted in background WebView!');
+      }
 
       if (msg.type === 'QUICK_PROFILE') {
         // Update profile/attendance immediately — before full dashboard data arrives
@@ -1830,23 +1913,108 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs, updateProfile }}>
       {children}
       {isAuthenticated && (
-        <View style={{ height: 0, width: 0, overflow: 'hidden', position: 'absolute', opacity: 0 }}>
-          <WebView
-            ref={webViewRef}
-            source={{ uri: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx' }}
-            onLoadEnd={handleLoadEnd}
-            onMessage={onMessage}
-            domStorageEnabled={true}
-            javaScriptEnabled={true}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
-            mixedContentMode="always"
-            originWhitelist={['*']}
-            setSupportMultipleWindows={false}
-            userAgent={Platform.OS === 'ios' ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"}
-          />
+        <View 
+          style={
+            showReauthModal 
+              ? {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: isDark ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.55)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: 24,
+                  zIndex: 99999,
+                }
+              : {
+                  height: 0,
+                  width: 0,
+                  overflow: 'hidden',
+                  position: 'absolute',
+                  opacity: 0,
+                }
+          }
+        >
+          <View style={[styles.reauthCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.reauthTitle, { color: colors.text }]}>Connection Interrupted</Text>
+            <Text style={[styles.reauthSubtitle, { color: colors.textSecondary }]}>
+              Your UMS session has expired. Tapping the security checkbox below will log you back in instantly.
+            </Text>
+            <View style={[styles.reauthWebViewWrapper, { borderColor: colors.border }]}>
+              <WebView
+                ref={webViewRef}
+                source={{ uri: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx' }}
+                onLoadEnd={handleLoadEnd}
+                onMessage={onMessage}
+                domStorageEnabled={true}
+                javaScriptEnabled={true}
+                sharedCookiesEnabled={true}
+                thirdPartyCookiesEnabled={true}
+                mixedContentMode="always"
+                originWhitelist={['*']}
+                setSupportMultipleWindows={false}
+                userAgent={Platform.OS === 'ios' ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"}
+                injectedJavaScriptBeforeContentLoaded={reauthBeforeContent}
+                injectedJavaScript={reauthInjectedJs}
+                style={{ flex: 1 }}
+              />
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setShowReauthModal(false)}
+              style={[styles.reauthCancelBtn, { backgroundColor: colors.primary + '10' }]}
+            >
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScraperContext.Provider>
   );
 };
+
+const styles = StyleSheet.create({
+  reauthCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 10,
+    borderWidth: 1.5,
+  },
+  reauthTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  reauthSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  reauthWebViewWrapper: {
+    width: '100%',
+    height: 320,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    backgroundColor: '#FAFAFA',
+  },
+  reauthCancelBtn: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+});

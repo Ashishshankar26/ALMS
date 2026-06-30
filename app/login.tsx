@@ -28,6 +28,24 @@ export default function LoginScreen() {
   //    detect that we're in a WebView and auto-fail.
   const injectedJavaScriptBeforeContentLoaded = `
     (function() {
+      // Save React Native WebView bridge and delete it from window to hide from Turnstile fingerprinting
+      if (window.ReactNativeWebView) {
+        window.__RN_WV_REF__ = window.ReactNativeWebView;
+        delete window.ReactNativeWebView;
+      }
+      
+      // Override webdriver
+      Object.defineProperty(navigator, 'webdriver', {
+        get: function() { return false; }
+      });
+      
+      // Override plugins if empty
+      if (!navigator.plugins || navigator.plugins.length === 0) {
+        Object.defineProperty(navigator, 'plugins', {
+          get: function() { return [1, 2, 3]; }
+        });
+      }
+
       // --- Anti-UMS-bot: kill blur/focusout/change on login inputs ---
       function killEvent(e) {
         if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
@@ -38,7 +56,6 @@ export default function LoginScreen() {
       document.addEventListener('blur', killEvent, true);
       document.addEventListener('focusout', killEvent, true);
       document.addEventListener('change', killEvent, true);
-
     })();
     true;
   `;
@@ -71,6 +88,20 @@ export default function LoginScreen() {
         if (userField) {
           clearInterval(poll);
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY_TO_FILL' }));
+        }
+      }, 500);
+
+      // Poll for Turnstile response token and auto-submit if credentials are ready
+      var checkTurnstile = setInterval(function() {
+        var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+        var p = document.querySelector('input[type="password"]');
+        var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
+        if (responseEl && responseEl.value && u && u.value && p && p.value) {
+          clearInterval(checkTurnstile);
+          var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+          if (btn) {
+            btn.click();
+          }
         }
       }, 500);
     })();

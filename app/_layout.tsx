@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
 const shouldShowRescue = (() => {
   const current = Constants.expoConfig?.version || '0.0.0';
   const required = '1.0.2';
-  const parse = (v) => v.split('.').map(n => parseInt(n, 10));
+  const parse = (v: string) => v.split('.').map((n: string) => parseInt(n, 10));
   const [cMaj, cMin, cPatch] = parse(current);
   const [rMaj, rMin, rPatch] = parse(required);
   if (cMaj > rMaj) return false;
