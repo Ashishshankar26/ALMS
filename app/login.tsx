@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [savedCreds, setSavedCreds] = useState<any>(null);
+  const credsRef = useRef<any>(null);
 
   // ─── BEFORE page loads ─────────────────────────────────────────────────
   // 1. Kill blur/focusout/change on UMS INPUT fields only — this prevents
@@ -131,10 +132,34 @@ export default function LoginScreen() {
     true;
   `;
 
+  // Keep the ref in sync with state so closures/handlers always see latest
+  React.useEffect(() => {
+    credsRef.current = savedCreds;
+  }, [savedCreds]);
+
   React.useEffect(() => {
     const loadCreds = async () => {
       const stored = await AsyncStorage.getItem('@credentials');
-      if (stored) setSavedCreds(JSON.parse(stored));
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setSavedCreds(parsed);
+        credsRef.current = parsed;
+        // WebView may already be loaded — push creds into it now
+        setTimeout(() => {
+          if (webViewRef.current && parsed.u && parsed.p) {
+            const fillScript = `
+              (function() {
+                var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+                var p = document.querySelector('input[type="password"]');
+                if (u && !u.value) { u.value = '` + parsed.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
+                if (p && !p.value) { p.value = '` + parsed.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
+              })();
+              true;
+            `;
+            webViewRef.current.injectJavaScript(fillScript);
+          }
+        }, 800);
+      }
     };
     loadCreds();
   }, []);
@@ -158,20 +183,21 @@ export default function LoginScreen() {
       const msg = JSON.parse(event.nativeEvent.data);
       if (msg.type === 'SAVE_CREDENTIALS') {
         setSavedCreds(msg);
+        credsRef.current = msg;
         AsyncStorage.setItem('@credentials', JSON.stringify(msg)).catch(console.error);
       } else if (msg.type === 'READY_TO_FILL') {
-        if (savedCreds) {
-          webViewRef.current?.injectJavaScript(`
+        const creds = credsRef.current;
+        if (creds && creds.u && creds.p) {
+          const fillScript = `
             (function() {
               var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
               var p = document.querySelector('input[type="password"]');
-              if (u) u.value = '${savedCreds.u}';
-              if (p) p.value = '${savedCreds.p}';
-              u?.dispatchEvent(new Event('change', { bubbles: true }));
-              p?.dispatchEvent(new Event('change', { bubbles: true }));
+              if (u) { u.value = '` + creds.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
+              if (p) { p.value = '` + creds.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
             })();
             true;
-          `);
+          `;
+          webViewRef.current?.injectJavaScript(fillScript);
         }
       }
     } catch (e) {}
