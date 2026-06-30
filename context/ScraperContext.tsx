@@ -1109,7 +1109,7 @@ export const BACKGROUND_PROFILE_SCRAPER_SCRIPT = `
     var poll = setInterval(function() {
       pollCount++;
       
-      var hasPersonalInfo = false;
+      var hasRealData = false;
       var allElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, td, li'));
       var personalInfoHeader = allElements.find(function(el) {
         return el.innerText && el.innerText.trim() === "Personal Information";
@@ -1121,13 +1121,17 @@ export const BACKGROUND_PROFILE_SCRAPER_SCRIPT = `
           var text = cardContainer.innerText || "";
           var hasEmail = text.indexOf("@") !== -1;
           var hasPhone = /\\d{10}/.test(text);
-          if (hasEmail || hasPhone) {
-            hasPersonalInfo = true;
+          
+          // Verify we are not looking at placeholder/skeleton text
+          var isSkeleton = text.indexOf("User") !== -1 || text.indexOf("xxxxxxxxx") !== -1 || text.indexOf("Batch: NA") !== -1;
+          
+          if ((hasEmail || hasPhone) && !isSkeleton) {
+            hasRealData = true;
           }
         }
       }
       
-      if (hasPersonalInfo || pollCount >= 25) {
+      if (hasRealData || pollCount >= 25) {
         clearInterval(poll);
         log("Background Scraper: starting extraction. PollCount=" + pollCount);
         
