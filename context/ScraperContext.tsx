@@ -1379,6 +1379,10 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (json) {
         try {
           const parsed = JSON.parse(json);
+          // Sanitize bad happenings examUrl if it exists in cache
+          if (parsed.examUrl && parsed.examUrl.includes('happenings.lpu.in')) {
+            parsed.examUrl = '';
+          }
           setData(prev => ({ ...prev, ...parsed }));
         } catch (e) {
           console.error('Failed to parse cached data:', e);
@@ -1556,7 +1560,11 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Recovery Logic & Auto-login is now managed by the background WebView's injected scripts (reauthBeforeContent & reauthInjectedJs)
 
 
-    if (url.includes('seatingplan') || url.includes('conduct') || url.includes('datesheet')) {
+    const isRealExamUrl = (url.includes('studentums.lpu.in') || url.includes('ums.lpu.in')) && 
+                          !url.includes('happenings.lpu.in') && 
+                          (url.includes('seatingplan') || url.includes('/conduct/') || url.includes('datesheet'));
+
+    if (isRealExamUrl) {
       console.log('AUTO-CAPTURED EXAM URL:', url);
       setData(prev => {
         const merged = { ...prev, examUrl: url };
@@ -1584,7 +1592,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       didTimetable.current = true;
       isProcessingPhase.current = true;
       webViewRef.current?.injectJavaScript(TIMETABLE_SCRIPT);
-    } else if ((url.includes('seatingplan') || url.includes('seating-plan')) && !didExams.current) {
+    } else if (isRealExamUrl && !didExams.current) {
       console.log('INJECTING EXAMS_SCRIPT...');
       didExams.current = true;
       webViewRef.current?.injectJavaScript(EXAMS_SCRIPT);
