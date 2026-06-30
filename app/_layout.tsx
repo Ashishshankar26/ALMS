@@ -124,16 +124,16 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ScraperProvider>
-          <AppThemeProvider>
+        <AppThemeProvider>
+          <ScraperProvider>
             <View style={{ flex: 1 }}>
               <RootLayoutNav />
               {!splashAnimationComplete && (
                 <AnimatedSplashScreen onAnimationComplete={() => setSplashAnimationComplete(true)} />
               )}
             </View>
-          </AppThemeProvider>
-        </ScraperProvider>
+          </ScraperProvider>
+        </AppThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
