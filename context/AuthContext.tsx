@@ -62,8 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       '@auth_data',
       '@scraped_data',
       '@timetable_data',
-      '@results_json',
-      '@credentials'
+      '@results_json'
     ]);
   };
 
