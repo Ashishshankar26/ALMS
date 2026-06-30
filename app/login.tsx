@@ -96,14 +96,12 @@ export default function LoginScreen() {
         var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
         var p = document.querySelector('input[type="password"]');
         if (u && username && !u.value) {
-          var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-          nSU.call(u, username);
-          u.dispatchEvent(new Event('input', { bubbles: true }));
+          u.value = username;
+          u.dispatchEvent(new Event('change', { bubbles: true }));
         }
         if (p && password && !p.value) {
-          var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-          nSP.call(p, password);
-          p.dispatchEvent(new Event('input', { bubbles: true }));
+          p.value = password;
+          p.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
 
@@ -179,18 +177,10 @@ export default function LoginScreen() {
             (function() {
               var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
               var p = document.querySelector('input[type="password"]');
-              var username = '${savedCreds.u}';
-              var password = '${savedCreds.p}';
-              if (u && username) {
-                var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                nSU.call(u, username);
-                u.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-              if (p && password) {
-                var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                nSP.call(p, password);
-                p.dispatchEvent(new Event('input', { bubbles: true }));
-              }
+              if (u) u.value = '${savedCreds.u}';
+              if (p) p.value = '${savedCreds.p}';
+              u?.dispatchEvent(new Event('change', { bubbles: true }));
+              p?.dispatchEvent(new Event('change', { bubbles: true }));
             })();
             true;
           `);
