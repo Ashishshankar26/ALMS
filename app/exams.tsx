@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { router } from 'expo-router';
@@ -8,16 +8,36 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
 
 export default function ExamsScreen() {
   const { data } = useScraper();
+  const { authData } = useAuth();
   const { colors, isDark } = useTheme();
+  const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
   const [showWebView, setShowWebView] = useState(false);
   const exams = data.exams || [];
   const currentExamsUrl = data.examUrl || EXAMS_URL;
+
+  const reauthBeforeContent = `
+    (function() {
+      var isLoginPage = window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx') || window.location.href.includes('index.aspx');
+      if (isLoginPage) {
+        if (window.ReactNativeWebView) {
+          window.__RN_WV_REF__ = window.ReactNativeWebView;
+          delete window.ReactNativeWebView;
+        }
+      }
+      Object.defineProperty(navigator, 'webdriver', { get: function() { return false; } });
+      if (!navigator.plugins || navigator.plugins.length === 0) {
+        Object.defineProperty(navigator, 'plugins', { get: function() { return [1, 2, 3]; } });
+      }
+    })();
+    true;
+  `;
 
   const handleDownload = async (downloadUrl: string) => {
     try {
@@ -197,14 +217,51 @@ export default function ExamsScreen() {
             </View>
           )}
           <WebView
+            ref={webViewRef}
             source={{ uri: currentExamsUrl }}
             userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
             style={[styles.webview]}
             onLoadEnd={() => setLoading(false)}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}
+            injectedJavaScriptBeforeContentLoaded={reauthBeforeContent}
             injectedJavaScript={`
               (function() {
+                // Restore bridge if hidden
+                if (window.__RN_WV_REF__ && !window.ReactNativeWebView) {
+                  window.ReactNativeWebView = window.__RN_WV_REF__;
+                }
+
+                // Auto-fill & auto-submit on login pages
+                var username = '${authData?.username || ''}';
+                var password = '${authData?.password || ''}';
+                if (window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx')) {
+                  var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+                  var p = document.querySelector('input[type="password"]');
+                  if (u && username) {
+                    var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nSU.call(u, username);
+                    u.dispatchEvent(new Event('input', { bubbles: true }));
+                  }
+                  if (p && password) {
+                    var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nSP.call(p, password);
+                    p.dispatchEvent(new Event('input', { bubbles: true }));
+                  }
+                  
+                  // Poll for Turnstile and click login
+                  var checkTurnstile = setInterval(function() {
+                    var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
+                    if (responseEl && responseEl.value) {
+                      clearInterval(checkTurnstile);
+                      var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+                      if (btn) {
+                        btn.click();
+                      }
+                    }
+                  }, 500);
+                }
+
                 var applyStyles = function() {
                   var s = document.getElementById('alms-injected-styles');
                   if (!s) {
@@ -228,11 +285,9 @@ export default function ExamsScreen() {
 
                 applyStyles();
                 
-                // Monitor for dynamic changes and re-apply
                 var observer = new MutationObserver(applyStyles);
                 observer.observe(document.body, { childList: true, subtree: true });
                 
-                // Also check for redirects to login
                 if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
                   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
                 }
@@ -250,6 +305,11 @@ export default function ExamsScreen() {
               handleDownload(downloadUrl);
             }}
             onShouldStartLoadWithRequest={(request) => {
+              // Block happenings.lpu.in redirects
+              if (request.url.includes('happenings.lpu.in')) {
+                console.log('BLOCKING REDIRECT TO HAPPENINGS:', request.url);
+                return false;
+              }
               // Intercept PDF downloads
               if (request.url.toLowerCase().endsWith('.pdf') || request.url.includes('Download') || request.url.includes('AdmitCard')) {
                 handleDownload(request.url);
@@ -259,6 +319,11 @@ export default function ExamsScreen() {
             }}
             onNavigationStateChange={(navState) => {
               console.log('WebView Nav State Change:', navState.url);
+              // Intercept happenings.lpu.in redirect and route to LoginNew.aspx
+              if (navState.url.includes('happenings.lpu.in')) {
+                console.warn('WebView Redirected to Happenings! Redirecting back to LoginNew.aspx...');
+                webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/LoginNew.aspx'; true;`);
+              }
               if (navState.url.includes('login') || navState.url.includes('Login')) {
                 console.warn('WebView Redirected to Login!');
               }

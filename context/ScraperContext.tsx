@@ -1557,6 +1557,14 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const handleLoadEnd = (event: any) => {
     const url: string = event?.nativeEvent?.url || '';
     console.log('WEBVIEW LOAD END:', url);
+    
+    // Intercept and recover from happenings.lpu.in redirect loops
+    if (url.includes('happenings.lpu.in')) {
+      console.warn('SCRAPER: Redirected to happenings.lpu.in! Redirecting back to LoginNew.aspx...');
+      webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/LoginNew.aspx'; true;`);
+      return;
+    }
+    
     webViewRef.current?.injectJavaScript("window.ReactNativeWebView.postMessage(JSON.stringify({type:'DEBUG', message:'WEBVIEW_READY_SIGNAL'})); true;");
     
     // Script injection is handled by the guarded block below (with dedup refs)
