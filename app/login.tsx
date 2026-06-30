@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const [error, setError] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [savedCreds, setSavedCreds] = useState<any>(null);
 
   // ─── BEFORE page loads ─────────────────────────────────────────────────
   // 1. Kill blur/focusout/change on UMS INPUT fields only — this prevents
@@ -76,6 +77,24 @@ export default function LoginScreen() {
         window.ReactNativeWebView = window.__RN_WV_REF__;
       }
 
+      var username = '${savedCreds?.u || ''}';
+      var password = '${savedCreds?.p || ''}';
+
+      if (window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx')) {
+        var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+        var p = document.querySelector('input[type="password"]');
+        if (u && username && !u.value) {
+          var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nSU.call(u, username);
+          u.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (p && password && !p.value) {
+          var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nSP.call(p, password);
+          p.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
       // Find login button — could be #btnLogin or dynamically-named
       var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
       if (btn) {
@@ -114,8 +133,6 @@ export default function LoginScreen() {
     true;
   `;
 
-  const [savedCreds, setSavedCreds] = useState<any>(null);
-
   React.useEffect(() => {
     const loadCreds = async () => {
       const stored = await AsyncStorage.getItem('@credentials');
@@ -150,10 +167,18 @@ export default function LoginScreen() {
             (function() {
               var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
               var p = document.querySelector('input[type="password"]');
-              if (u) u.value = '${savedCreds.u}';
-              if (p) p.value = '${savedCreds.p}';
-              u?.dispatchEvent(new Event('change', { bubbles: true }));
-              p?.dispatchEvent(new Event('change', { bubbles: true }));
+              var username = '${savedCreds.u}';
+              var password = '${savedCreds.p}';
+              if (u && username) {
+                var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                nSU.call(u, username);
+                u.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+              if (p && password) {
+                var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                nSP.call(p, password);
+                p.dispatchEvent(new Event('input', { bubbles: true }));
+              }
             })();
             true;
           `);
