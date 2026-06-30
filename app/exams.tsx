@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 
-const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan?token=9415acec69a60927c3da42e3621985689168636d12a029bc4fdb0f0ebda14e0f98645af63ac38e1f0a87333767b55e3a235b4167efc803e6741b51382284fbb9a095efba7644972725fd72f655b410f1d2a1b3949e6a5534b23bfd70688037a4';
+const EXAMS_URL = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
 
 export default function ExamsScreen() {
   const { data } = useScraper();
