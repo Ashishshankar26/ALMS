@@ -1693,10 +1693,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           // Now resume the normal sync chain
           if (prev.makeupUrl) {
             webViewRef.current?.injectJavaScript(`window.location.href = '${prev.makeupUrl}'; true;`);
-          } else if (prev.examUrl) {
-            webViewRef.current?.injectJavaScript(`window.location.href = '${prev.examUrl}'; true;`);
           } else {
-            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
+            const targetExamUrl = prev.examUrl || 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
+            webViewRef.current?.injectJavaScript(`window.location.href = '${targetExamUrl}'; true;`);
           }
 
           return merged;
@@ -1734,11 +1733,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const merged = { ...prev, makeupClasses: payload };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
 
-          if (prev.examUrl) {
-            webViewRef.current?.injectJavaScript(`window.location.href = '${prev.examUrl}'; true;`);
-          } else {
-            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
-          }
+          const targetExamUrl = prev.examUrl || 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
+          webViewRef.current?.injectJavaScript(`window.location.href = '${targetExamUrl}'; true;`);
 
           return merged;
         });
