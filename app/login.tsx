@@ -28,10 +28,14 @@ export default function LoginScreen() {
   //    detect that we're in a WebView and auto-fail.
   const injectedJavaScriptBeforeContentLoaded = `
     (function() {
-      // Save React Native WebView bridge and delete it from window to hide from Turnstile fingerprinting
-      if (window.ReactNativeWebView) {
-        window.__RN_WV_REF__ = window.ReactNativeWebView;
-        delete window.ReactNativeWebView;
+      // Only hide the bridge on login/index pages where Turnstile challenge runs
+      var isLoginPage = window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx') || window.location.href.includes('index.aspx');
+      
+      if (isLoginPage) {
+        if (window.ReactNativeWebView) {
+          window.__RN_WV_REF__ = window.ReactNativeWebView;
+          delete window.ReactNativeWebView;
+        }
       }
       
       // Override webdriver
@@ -47,15 +51,17 @@ export default function LoginScreen() {
       }
 
       // --- Anti-UMS-bot: kill blur/focusout/change on login inputs ---
-      function killEvent(e) {
-        if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
-          e.stopImmediatePropagation();
-          e.stopPropagation();
+      if (isLoginPage) {
+        function killEvent(e) {
+          if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+          }
         }
+        document.addEventListener('blur', killEvent, true);
+        document.addEventListener('focusout', killEvent, true);
+        document.addEventListener('change', killEvent, true);
       }
-      document.addEventListener('blur', killEvent, true);
-      document.addEventListener('focusout', killEvent, true);
-      document.addEventListener('change', killEvent, true);
     })();
     true;
   `;

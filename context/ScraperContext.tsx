@@ -1288,10 +1288,14 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Turnstile compatibility & auto-authentication scripts for background WebView
   const reauthBeforeContent = `
     (function() {
-      // Save React Native WebView bridge and delete it from window to hide from Turnstile fingerprinting
-      if (window.ReactNativeWebView) {
-        window.__RN_WV_REF__ = window.ReactNativeWebView;
-        delete window.ReactNativeWebView;
+      // Only hide the bridge on login/index pages where Turnstile challenge runs
+      var isLoginPage = window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx') || window.location.href.includes('index.aspx');
+      
+      if (isLoginPage) {
+        if (window.ReactNativeWebView) {
+          window.__RN_WV_REF__ = window.ReactNativeWebView;
+          delete window.ReactNativeWebView;
+        }
       }
       
       // Override webdriver
@@ -1307,15 +1311,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // Kill blur/focusout/change events on UMS login fields to prevent Turnstile reset
-      function killEvent(e) {
-        if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
-          e.stopImmediatePropagation();
-          e.stopPropagation();
+      if (isLoginPage) {
+        function killEvent(e) {
+          if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+          }
         }
+        document.addEventListener('blur', killEvent, true);
+        document.addEventListener('focusout', killEvent, true);
+        document.addEventListener('change', killEvent, true);
       }
-      document.addEventListener('blur', killEvent, true);
-      document.addEventListener('focusout', killEvent, true);
-      document.addEventListener('change', killEvent, true);
     })();
     true;
   `;
