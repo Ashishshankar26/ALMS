@@ -22,6 +22,17 @@ export interface SemesterResult {
   subjects: any[];
 }
 
+export interface ResultSummaryData {
+  cgpa?: string;
+  latestSemester?: string;
+  latestTermId?: string;
+  latestTgpa?: string;
+  subjectCount?: number;
+  gradeCounts?: Record<string, number>;
+  termCount?: number;
+  lastUpdated: string;
+}
+
 export interface ScrapedData {
   profile: any;
   personalInfo?: any;
@@ -29,6 +40,7 @@ export interface ScrapedData {
   attendance: SubjectAttendance[];
   attendanceLogs: Record<string, any[]>;
   results: SemesterResult[];
+  resultSummary?: ResultSummaryData;
   announcements: any[];
   messages: any[];
   assignments: any[];
@@ -47,10 +59,11 @@ export interface ScrapedData {
 type ScraperContextType = {
   data: ScrapedData;
   isScraping: boolean;
-  refreshData: (webUsername?: string) => void;
+  refreshData: () => void;
   dumpHtml: () => void;
   fetchAttendanceLogs: (subjectCode: string) => void;
   updateProfile: (profileData: any) => void;
+  updateResultSummary: (summary: ResultSummaryData) => void;
 };
 
 const MOCK_DATA: ScrapedData = {
@@ -84,6 +97,7 @@ const ScraperContext = createContext<ScraperContextType>({
   dumpHtml: () => {},
   fetchAttendanceLogs: () => {},
   updateProfile: () => {},
+  updateResultSummary: () => {},
 });
 
 export const useScraper = () => useContext(ScraperContext);
@@ -1491,34 +1505,9 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 1500);
   };
 
-  const refreshData = (webUsername?: string) => {
-    console.log('REFRESH DATA START', { webUsername });
-    // MASTER KEY: On web, we allow refresh even if auth state is still propagating
-    if (isAuthenticated || Platform.OS === 'web') {
-      if (Platform.OS === 'web') {
-        // WEB SYNC: Instant activation for PWA
-        setIsScraping(true);
-        const finalUsername = webUsername || authData?.username || 'Student';
-        console.log('Web Sync: Injecting data for', finalUsername);
-        
-        setData(prev => ({
-          ...prev,
-          profile: {
-            ...prev.profile,
-            name: 'LPU Student',
-            vid: finalUsername,
-            program: 'University Portal Connected',
-            avatarUrl: `https://api.dicebear.com/7.x/bottts/png?seed=${finalUsername}&backgroundColor=4C0099`,
-          },
-          cgpa: '8.5', 
-          overallAttendance: '75',
-        }));
-        
-        setIsScraping(false);
-        isFullyDone.current = true;
-        return;
-      }
-
+  const refreshData = () => {
+    console.log('REFRESH DATA START');
+    if (isAuthenticated) {
       didDashboard.current = false;
       didTimetable.current = false;
       didMakeup.current = false;
@@ -1981,6 +1970,21 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const updateResultSummary = (summary: ResultSummaryData) => {
+    setData(prev => {
+      const merged = {
+        ...prev,
+        ...(summary.cgpa ? { cgpa: summary.cgpa } : {}),
+        resultSummary: {
+          ...prev.resultSummary,
+          ...summary,
+        },
+      };
+      AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+      return merged;
+    });
+  };
+
   const fetchAttendanceLogs = (subjectCode: string) => {
     if (!webViewRef.current) return;
     const script = `
@@ -2002,7 +2006,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs, updateProfile }}>
+    <ScraperContext.Provider value={{ data, isScraping, refreshData, dumpHtml, fetchAttendanceLogs, updateProfile, updateResultSummary }}>
       {children}
       {isAuthenticated && (
         <View 

@@ -265,21 +265,6 @@ export default function LoginScreen() {
             <Text style={styles.loginButtonText}>Retry Connection</Text>
           </TouchableOpacity>
         </View>
-      ) : Platform.OS === 'web' ? (
-        <View style={styles.webContainer}>
-          <Animated.View entering={FadeInDown.duration(600)} style={[styles.customLoginCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
-            <View style={[styles.loginIconBg, { backgroundColor: colors.primary + '15' }]}>
-              <GraduationCap size={40} color={colors.primary} />
-            </View>
-            <Text style={[styles.loginTitle, { color: colors.text }]}>LPU Student Login</Text>
-            <Text style={[styles.loginSubtitle, { color: colors.textSecondary }]}>Please use the Android app to log in. UMS now uses Cloudflare verification.</Text>
-
-            <View style={styles.securityBadge}>
-              <Lock size={12} color="#34C759" />
-              <Text style={styles.securityText}>Download the Android app for full access.</Text>
-            </View>
-          </Animated.View>
-        </View>
       ) : (
         <WebView
           ref={webViewRef}

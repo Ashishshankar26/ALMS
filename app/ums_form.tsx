@@ -236,26 +236,6 @@ export default function UmsFormScreen() {
       </View>
  
       <View style={{ flex: 1 }}>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webFallbackContainer}>
-            <View style={[styles.webFallbackCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1.5 }]}>
-              <View style={[styles.iconBg, { backgroundColor: colors.primary + '15' }]}>
-                <Text style={{ fontSize: 32 }}>🔐</Text>
-              </View>
-              <Text style={[styles.fallbackTitle, { color: colors.text }]}>Secure Access Required</Text>
-              <Text style={[styles.fallbackDesc, { color: colors.textSecondary }]}>
-                For your security, university forms like "{title || 'this portal'}" must be opened in a dedicated secure window.
-              </Text>
-              <TouchableOpacity 
-                style={[styles.webButton, { backgroundColor: colors.primary }]}
-                onPress={() => window.open(fullUrl, '_blank')}
-              >
-                <Text style={styles.webButtonText}>Open Secure Form</Text>
-              </TouchableOpacity>
-              <Text style={styles.webFooterText}>Return here once you're finished.</Text>
-            </View>
-          </View>
-        ) : (
           <>
             <WebView
               ref={webViewRef}
@@ -291,7 +271,6 @@ export default function UmsFormScreen() {
               </View>
             )}
           </>
-        )}
       </View>
     </View>
   );

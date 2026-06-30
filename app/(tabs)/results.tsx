@@ -186,14 +186,6 @@ export default function ResultsScreen() {
     const html = buildResultHtml(semester, index);
     const title = getSemesterTitle(semester.semester, index);
     const fileName = `${title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'result'}-${activeTab.toLowerCase()}-results.pdf`;
-    if (Platform.OS === 'web') {
-      const win = (globalThis as any).window?.open('', '_blank');
-      if (win) {
-        win.document.write(html);
-        win.document.close();
-      }
-      return;
-    }
     try {
       const Print = await import('expo-print');
       const FileSystem = await import('expo-file-system');

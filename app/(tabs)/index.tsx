@@ -21,6 +21,24 @@ const { width } = Dimensions.get('window');
 const CARD_HEIGHT = 200;
 const SWIPE_THRESHOLD = 25;
 
+const isBacklogResult = (semester = '') => {
+  const cleaned = semester
+    .replace(/Term/i, '')
+    .replace(/Semester/i, '')
+    .replace(/Id/i, '')
+    .replace(/:/g, '')
+    .trim()
+    .toUpperCase();
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  if (romanNumerals.includes(cleaned) || /^\d+$/.test(cleaned)) return false;
+  return /[A-Z]/.test(cleaned);
+};
+
+const formatResultSemester = (semester = '') => {
+  const cleaned = semester.replace(/Term/i, '').replace(/Semester/i, '').replace(/Id/i, '').replace(/:/g, '').trim();
+  return cleaned ? `Semester ${cleaned}` : 'Latest Semester';
+};
+
 function CardGradient({ colors, style, children, id, borderStyle }: { colors: string[]; style?: any; children?: React.ReactNode; id: string; borderStyle?: any }) {
   const r = style?.borderRadius || 32;
   return (
@@ -36,17 +54,12 @@ function CardGradient({ colors, style, children, id, borderStyle }: { colors: st
 }
 
 // ── Swipeable Utility Card Stack ──
-function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onLibraryPress, onExamsPress, onScrollToggle }: any) {
+function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onLibraryPress, onExamsPress, onResultSummaryPress, onScrollToggle }: any) {
   const { isScraping, refreshData } = useScraper();
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const activeIndexRef = useRef(0);
   const translateY = useRef(new RNAnimated.Value(0)).current;
-  const cardCount = 4;
-
-  React.useEffect(() => {
-    activeIndexRef.current = activeIndex;
-  }, [activeIndex]);
-
+  const activeCardActionRef = useRef<(() => void) | null>(null);
+  const cardCount = 5;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -64,12 +77,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const isTap = Math.abs(gestureState.dy) < 5 && Math.abs(gestureState.dx) < 5;
 
         if (isTap) {
-          const currentIdx = activeIndexRef.current;
-          const activeCard = cards[currentIdx];
-          if (activeCard.key === 'fee') onFeePress();
-          else if (activeCard.key === 'exams') onExamsPress();
-          else if (activeCard.key === 'attendance') router.push('/attendance' as any);
-          else if (activeCard.key === 'library') onLibraryPress();
+          activeCardActionRef.current?.();
         } else if (gestureState.dy < -SWIPE_THRESHOLD) {
           setActiveIndex((prev: number) => (prev + 1) % cardCount);
         } else if (gestureState.dy > SWIPE_THRESHOLD) {
@@ -109,6 +117,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
   const cards = [
     {
       key: 'fee',
+      peekLabel: 'FEES',
+      onPress: onFeePress,
       color: '#4A1D5B',
       gradient: ['#4A1D5B', '#2D1237'],
       render: (borderStyle?: any) => {
@@ -128,9 +138,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             <View style={styles.stackGlassIcon}>
                <FileText size={20} color="#fff" />
             </View>
-            <TouchableOpacity style={styles.stackFab} onPress={onFeePress}>
+            <View style={styles.stackFab}>
               <ChevronRight size={18} color="#fff" />
-            </TouchableOpacity>
+            </View>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
                 <View style={[styles.miniStatusBadge, { backgroundColor: isClear ? 'rgba(52, 199, 89, 0.2)' : 'rgba(255, 69, 58, 0.2)' }]}>
@@ -160,6 +170,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'library',
+      peekLabel: 'LIBRARY',
+      onPress: onLibraryPress,
       color: '#F7CE5B',
       gradient: ['#F7CE5B', '#F1C40F'],
       render: (borderStyle?: any) => {
@@ -172,9 +184,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             <View style={[styles.stackGlassIcon, { backgroundColor: 'rgba(0, 0, 0, 0.05)', borderColor: 'rgba(0, 0, 0, 0.05)' }]}>
                <BookOpen size={20} color="#000" />
             </View>
-            <TouchableOpacity style={[styles.stackFab, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' }]} onPress={onLibraryPress}>
+            <View style={[styles.stackFab, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' }]}>
               <ChevronRight size={18} color="#000" />
-            </TouchableOpacity>
+            </View>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
                 <View style={[styles.miniStatusBadge, { backgroundColor: booking ? 'rgba(0, 0, 0, 0.1)' : (isOpen ? 'rgba(39, 174, 96, 0.15)' : 'rgba(231, 76, 60, 0.15)') }]}>
@@ -208,6 +220,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
     {
       key: 'exams',
+      peekLabel: 'EXAMS',
+      onPress: onExamsPress,
       color: '#3DBE6B',
       gradient: ['#3DBE6B', '#27AE60'],
       render: (borderStyle?: any) => {
@@ -218,9 +232,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             <View style={styles.stackGlassIcon}>
                <Award size={20} color="#fff" />
             </View>
-            <TouchableOpacity style={styles.stackFab} onPress={onExamsPress}>
+            <View style={styles.stackFab}>
               <ChevronRight size={18} color="#fff" />
-            </TouchableOpacity>
+            </View>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
                 <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
@@ -252,7 +266,129 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
       },
     },
     {
+      key: 'resultSummary',
+      peekLabel: 'RESULTS',
+      onPress: onResultSummaryPress,
+      color: '#3156C8',
+      gradient: ['#3156C8', '#1E3A8A'],
+      render: (borderStyle?: any) => {
+        const pageSummary = data.resultSummary;
+        const results = Array.isArray(data.results) ? data.results : [];
+        const regularResults = results.filter((result: any) => !isBacklogResult(result?.semester || ''));
+        const latestResult = regularResults[regularResults.length - 1];
+        const detailedSubjects = Array.isArray(latestResult?.subjects) ? latestResult.subjects : [];
+        const subjectCount = pageSummary?.subjectCount ?? detailedSubjects.length;
+        const semesterLabel = pageSummary?.latestSemester || (latestResult ? formatResultSemester(latestResult.semester) : 'Official UMS Record');
+        const termLabel = pageSummary?.latestTermId ? `${semesterLabel} · Term ${pageSummary.latestTermId}` : semesterLabel;
+        const detailLine = subjectCount > 0 ? `${termLabel} | ${subjectCount} subjects` : termLabel;
+        const sgpa = String(pageSummary?.latestTgpa || latestResult?.sgpa || '').trim();
+        const cgpa = String(pageSummary?.cgpa || data.cgpa || '').trim();
+        const hasSgpa = /^\d+(?:\.\d+)?$/.test(sgpa);
+        const hasCgpa = /^\d+(?:\.\d+)?$/.test(cgpa);
+        const score = hasSgpa ? sgpa : hasCgpa ? cgpa : '--';
+        const scoreLabel = hasSgpa ? 'TGPA' : 'CGPA';
+        const detailedGradeCounts = detailedSubjects.reduce((counts: Record<string, number>, subject: any) => {
+          const grade = String(subject?.grade || '').trim().toUpperCase();
+          if (grade && grade !== '--') counts[grade] = (counts[grade] || 0) + 1;
+          return counts;
+        }, {});
+        const portalGradeCounts = pageSummary?.gradeCounts || {};
+        const gradeCounts = Object.keys(portalGradeCounts).length > 0 ? portalGradeCounts : detailedGradeCounts;
+        const gradedCount = Object.values(gradeCounts).reduce((total: number, count) => total + Number(count || 0), 0);
+        const failedGrades = new Set(['E', 'F', 'R', 'REAPP', 'FAIL']);
+        const failedCount = Object.entries(gradeCounts).reduce(
+          (total, [grade, count]) => total + (failedGrades.has(grade.toUpperCase()) ? Number(count || 0) : 0),
+          0
+        );
+        const clearedCount = Math.max(gradedCount - failedCount, 0);
+        const gradeOrder = ['O', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'E', 'F', 'R', 'REAPP', 'FAIL', 'PASS'];
+        const orderedGrades = [
+          ...gradeOrder.filter(grade => Number(gradeCounts[grade] || 0) > 0),
+          ...Object.keys(gradeCounts).filter(grade => !gradeOrder.includes(grade) && Number(gradeCounts[grade] || 0) > 0),
+        ];
+        const gradeEntries = orderedGrades.map((grade, index) => ({
+          grade,
+          count: Number(gradeCounts[grade] || 0),
+          color: failedGrades.has(grade) ? '#FF8A78' : ['#76F7A8', '#A3F27C', '#7DD3FC', '#C4B5FD', '#FDE68A'][index % 5],
+        }));
+        const maxGradeCount = Math.max(...gradeEntries.map(entry => entry.count), 1);
+        const progressText = gradedCount > 0
+          ? `${clearedCount}/${gradedCount} Cleared`
+          : pageSummary?.termCount
+            ? `${pageSummary.termCount} Terms`
+            : subjectCount > 0
+              ? `${subjectCount} Subjects`
+              : 'Awaiting Results';
+        const status = isScraping
+          ? 'SYNCING'
+          : pageSummary && latestResult
+            ? 'LIVE + DETAILS'
+            : pageSummary
+              ? 'LIVE UMS'
+              : latestResult
+                ? (hasSgpa ? 'PUBLISHED' : 'IN PROGRESS')
+                : 'OPEN PORTAL';
+
+        return (
+          <CardGradient id="grad_result_summary" colors={['#3156C8', '#1E3A8A']} style={styles.stackCardInner} borderStyle={borderStyle}>
+            <View style={styles.stackHandle} />
+            <View style={styles.stackGlassIcon}>
+              <GraduationCap size={20} color="#fff" />
+            </View>
+            <View style={styles.stackFab}>
+              <ChevronRight size={18} color="#fff" />
+            </View>
+            <View style={styles.stackContentLeft}>
+              <View style={styles.stackBadgeRow}>
+                <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Award size={10} color="#FFFFFF" />
+                  <Text style={[styles.miniStatusText, { color: '#FFFFFF' }]}>{status}</Text>
+                </View>
+                <Text style={styles.stackLabelWhite}>RESULT SUMMARY</Text>
+              </View>
+              <Text numberOfLines={1} style={[styles.stackSubWhite, { opacity: 0.9, fontWeight: '700', fontSize: 13, marginBottom: -2 }]}>
+                {detailLine}
+              </Text>
+              <View style={styles.resultScoreRow}>
+                <Text style={[styles.stackBigValue, { fontSize: 32 }]}>{score}</Text>
+                <Text style={styles.resultScoreLabel}>{scoreLabel}</Text>
+              </View>
+              <View style={styles.gradeDistributionRow}>
+                {gradeEntries.length > 0 ? gradeEntries.map(entry => {
+                  const height = Math.max((entry.count / maxGradeCount) * 12, 3);
+                  return (
+                    <View key={entry.grade} style={styles.gradeBarItem}>
+                      <Text style={styles.gradeBarCount}>{entry.count}</Text>
+                      <View style={styles.gradeBarTrack}>
+                        <View style={[styles.gradeBarFill, { backgroundColor: entry.color, height }]} />
+                      </View>
+                      <Text numberOfLines={1} style={styles.gradeBarLabel}>{entry.grade}</Text>
+                    </View>
+                  );
+                }) : (
+                  <Text style={styles.gradeAnalysisEmpty}>Grade breakdown appears after result sync</Text>
+                )}
+              </View>
+              <View style={[styles.stackFooterRow, { marginTop: 7 }]}>
+                <View style={styles.footerInfoItem}>
+                  <CheckCircle2 size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={styles.stackSubWhite}>{progressText}</Text>
+                </View>
+                <View style={styles.footerInfoSeparator} />
+                <View style={styles.footerInfoItem}>
+                  <GraduationCap size={11} color="#fff" style={{ opacity: 0.8 }} />
+                  <Text style={styles.stackSubWhite}>CGPA {hasCgpa ? cgpa : '--'}</Text>
+                </View>
+              </View>
+            </View>
+          </CardGradient>
+        );
+      },
+    },
+    {
       key: 'attendance',
+      peekLabel: 'ATTENDANCE',
+      onPress: () => router.push('/attendance' as any),
       color: '#FF7E82',
       gradient: ['#FF7E82', '#F43F5E'],
       render: (borderStyle?: any) => {
@@ -271,9 +407,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
             <View style={styles.stackGlassIcon}>
                <UserCheck size={20} color="#fff" />
             </View>
-            <TouchableOpacity style={styles.stackFab} onPress={() => router.push('/attendance' as any)}>
+            <View style={styles.stackFab}>
               <ChevronRight size={18} color="#fff" />
-            </TouchableOpacity>
+            </View>
             <View style={styles.stackContentLeft}>
               <View style={styles.stackBadgeRow}>
                 <View style={[styles.miniStatusBadge, { backgroundColor: 'rgba(255, 255, 255, 0.9)', paddingHorizontal: 10, paddingVertical: 4 }]}>
@@ -306,6 +442,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
     },
   ];
 
+  activeCardActionRef.current = cards[activeIndex]?.onPress ?? null;
   const cardOrder = getCardOrder();
 
   return (
@@ -358,7 +495,7 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
                 ],
                 borderColor: isTop ? 'transparent' : (card.key === 'library' && !isDark ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)'),
                 borderWidth: isTop ? 0 : 1.5,
-                opacity: depth === 3 ? 0.3 : depth === 2 ? 0.5 : depth === 1 ? 0.8 : 1,
+                opacity: depth >= 4 ? 0.3 : depth === 3 ? 0.45 : depth === 2 ? 0.6 : depth === 1 ? 0.8 : 1,
                 // Add a dynamic shadow for the top card
                 shadowOpacity: isTop ? translateY.interpolate({
                   inputRange: [-50, 0, 50],
@@ -371,15 +508,18 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
               <View style={styles.stackPeekLayer}>
                 <View style={styles.stackPeekBadge}>
                   <Lock size={12} color="#fff" />
-                  <Text style={styles.stackPeekText}>
-                    {card.key === 'fee' ? 'FEES' : card.key === 'exams' ? 'EXAMS' : card.key === 'attendance' ? 'ATTENDANCE' : 'LIBRARY'}
-                  </Text>
+                  <Text style={styles.stackPeekText}>{card.peekLabel}</Text>
                 </View>
               </View>
             )}
 
             {isTop && (
-              <View style={{ flex: 1 }}>
+              <View
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${card.peekLabel.toLowerCase()}`}
+                style={{ flex: 1 }}
+              >
                 {card.render(borderStyle)}
                 <View style={styles.stackDots}>
                   {cards.map((_, i) => (
@@ -693,18 +833,11 @@ export default function DashboardScreen() {
   const attColor = getAttendanceColor(overallAttendance);
   const userColor = getUserColor(profile?.vid || '');
 
-  // SMART SELF-SYNC FOR PWA
-  React.useEffect(() => {
-    if (Platform.OS === 'web' && profile?.name === 'Loading...' && !isScraping) {
-      console.log('PWA Smart Sync Triggered');
-      refreshData();
-    }
-  }, [profile?.name, isScraping]);
+
 
 
   React.useEffect(() => {
     async function syncNotifications() {
-      if (Platform.OS === 'web') return; // Notifications not supported on web in this context
       if (nextClassInfo.status === 'upcoming') {
         // 1. Clear previous schedules to prevent duplicates
         await cancelAllNotifications();
@@ -1259,6 +1392,7 @@ export default function DashboardScreen() {
             onFeePress={() => router.push('/fees' as any)}
             onLibraryPress={() => openUmsForm('https://ums.lpu.in/lpuums/frmRoomBooking.aspx', 'Room Booking')}
             onExamsPress={handleExamsPress}
+            onResultSummaryPress={() => router.push('/result_summary' as any)}
             onScrollToggle={setScrollEnabled}
           />
         </Animated.View>
@@ -3315,7 +3449,7 @@ const styles = StyleSheet.create({
   },
   // ── Swipeable Stack Foundation ──
   stackContainer: {
-    height: CARD_HEIGHT + 102,
+    height: CARD_HEIGHT + 136,
     position: 'relative',
     marginTop: -20, // Tightened gap with title
   },
@@ -3436,6 +3570,63 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: -1,
+  },
+  resultScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 7,
+  },
+  resultScoreLabel: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  gradeDistributionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    minHeight: 29,
+    gap: 4,
+    marginTop: 1,
+  },
+  gradeBarItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    minWidth: 14,
+  },
+  gradeBarCount: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+    lineHeight: 9,
+  },
+  gradeBarTrack: {
+    width: '100%',
+    maxWidth: 18,
+    height: 12,
+    borderRadius: 3,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  gradeBarFill: {
+    width: '100%',
+    borderRadius: 3,
+  },
+  gradeBarLabel: {
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 7,
+    fontWeight: '900',
+    lineHeight: 8,
+  },
+  gradeAnalysisEmpty: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.58)',
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'left',
   },
   stackSubWhite: {
     color: 'rgba(255,255,255,0.8)',
