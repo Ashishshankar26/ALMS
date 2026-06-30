@@ -661,7 +661,7 @@ const DASHBOARD_SCRIPT = `
             for(var i=0; i<links.length; i++) {
               var href = links[i].href;
               if(href.includes("Student-MakeupAdjustment")) mkLink = href;
-              if(href.includes("seatingplan") || href.includes("conduct") || href.includes("datesheet")) exLink = href;
+              if(href.includes("seatingplan") || href.includes("datesheet")) exLink = href;
             }
 
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -1574,7 +1574,7 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const isRealExamUrl = (url.includes('studentums.lpu.in') || url.includes('ums.lpu.in')) && 
                           !url.includes('happenings.lpu.in') && 
-                          (url.includes('seatingplan') || url.includes('/conduct/') || url.includes('datesheet'));
+                          (url.includes('seatingplan') || url.includes('datesheet'));
 
     if (isRealExamUrl) {
       console.log('AUTO-CAPTURED EXAM URL:', url);
