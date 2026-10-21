@@ -85,12 +85,14 @@ export default function AttendanceScreen() {
   const dutyLeaves = attendanceData.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0);
   
   // Use UMS-provided overall attendance (fetched from #AttPercent on dashboard)
-  // Only calculate ourselves as fallback if UMS value is missing
-  const umsOverallAttendance = data.overallAttendance && data.overallAttendance !== '0.0' ? data.overallAttendance : null;
-  const formattedUmsAttendance = umsOverallAttendance ? Math.round(parseFloat(umsOverallAttendance)).toString() : null;
-  const calcOverall = totalClasses > 0 ? Math.round(((attendedClasses + dutyLeaves) / totalClasses) * 100).toString() : '0';
+  // Only calculate ourselves as fallback if UMS value is missing or corrupted
+  const parsedUms = data.overallAttendance ? parseFloat(data.overallAttendance) : NaN;
+  const isUmsValid = !isNaN(parsedUms) && parsedUms > 0 && parsedUms <= 100;
+  const formattedUmsAttendance = isUmsValid ? Math.round(parsedUms).toString() : null;
+  const rawCalcOverall = totalClasses > 0 ? ((attendedClasses + dutyLeaves) / totalClasses) * 100 : 0;
+  const calcOverall = Math.min(100, Math.max(0, Math.round(rawCalcOverall))).toString();
   const overallAttendance = formattedUmsAttendance || calcOverall;
-  const rawOverallAttendance = totalClasses > 0 ? Math.round((attendedClasses / totalClasses) * 100).toString() : '0';
+  const rawOverallAttendance = totalClasses > 0 ? Math.min(100, Math.round((attendedClasses / totalClasses) * 100)).toString() : '0';
   
   const displayAttendance = showAggregate ? overallAttendance : rawOverallAttendance;
 
@@ -100,13 +102,16 @@ export default function AttendanceScreen() {
     return { text: 'Critical', color: '#FF3B30', icon: <XCircle size={20} color="#FF3B30" /> };
   };
 
-  const getEffectivePct = (item: any) => (
-    item.percentage && item.percentage > 0
-      ? item.percentage
-      : (item.totalClasses > 0
-        ? Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100)
-        : 0)
-  );
+  const getEffectivePct = (item: any) => {
+    if (item.percentage && item.percentage > 0 && item.percentage <= 100) {
+      return item.percentage;
+    }
+    if (item.totalClasses > 0) {
+      const calc = Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100);
+      return Math.min(100, Math.max(0, calc));
+    }
+    return 0;
+  };
 
   const getWidgetTheme = (percentage: number): [string, string, string] => {
     if (percentage === 100 || percentage >= targetPct + 5) return ['#F4FFF8', '#34C759', '#111111'];

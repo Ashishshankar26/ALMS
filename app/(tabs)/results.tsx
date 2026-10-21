@@ -271,14 +271,43 @@ export default function ResultsScreen() {
         </Animated.View>
 
         {displayData.length === 0 ? (
-          <View style={styles.emptyRecordCard}>
-            <Award size={28} color={PAGE.ink} />
-            <Text style={styles.emptyRecordTitle}>Clear Record</Text>
-            <Text style={styles.emptyRecordSub}>You have no reappear or backlog subjects.</Text>
+          <View style={styles.emptyRecordStage}>
+            <View
+              style={[
+                styles.emptyRecordCard,
+                {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : palette.paper,
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : palette.line,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <View style={[styles.emptyRecordIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                <Award size={32} color={isDark ? '#F5F5F7' : palette.ink} />
+              </View>
+              <Text style={[styles.emptyRecordTitle, { color: palette.ink }]}>
+                {activeTab === 'BACKLOG' ? 'Clear Record' : 'No Results Found'}
+              </Text>
+              <Text style={[styles.emptyRecordSub, { color: palette.muted }]}>
+                {activeTab === 'BACKLOG'
+                  ? 'You have no reappear, backlog, or improvement subjects.'
+                  : 'Pull to refresh on the home screen to sync your semester-wise grades.'}
+              </Text>
+              {activeTab === 'BACKLOG' && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setActiveTab('REGULAR')}
+                  style={[styles.emptyRecordActionBtn, { backgroundColor: palette.ink }]}
+                >
+                  <Text style={[styles.emptyRecordActionText, { color: palette.bg }]}>
+                    View Semester Results
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         ) : (
-          <>
-            <View style={styles.stackStage}>
+          <View style={styles.stackStage}>
               <View
                 {...stackPan.panHandlers}
                 style={[styles.stackDeck, { height: Math.min(height * 0.5, CARD_HEIGHT + Math.max(displayData.length - 1, 0) * STACK_STEP + 88) }]}
@@ -395,8 +424,9 @@ export default function ResultsScreen() {
                 })}
               </View>
             </View>
+        )}
 
-            <Animated.View
+        <Animated.View
               entering={FadeInUp.delay(140).duration(460).springify()}
               style={[
                 styles.bottomActions,
@@ -438,8 +468,6 @@ export default function ResultsScreen() {
                 <RotateCcw size={21} color={isDark ? '#FFFFFF' : '#111111'} strokeWidth={2.6} />
               </TouchableOpacity>
             </Animated.View>
-          </>
-        )}
       </View>
 
       <Modal visible={!!openedSemester} transparent animationType="fade" onRequestClose={() => setOpenedIndex(null)}>
@@ -1167,25 +1195,57 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'right',
   },
-  emptyRecordCard: {
-    margin: 28,
-    padding: 30,
-    borderRadius: 30,
-    backgroundColor: PAGE.paper,
+  emptyRecordStage: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
+    minHeight: CARD_HEIGHT + 140,
+  },
+  emptyRecordCard: {
+    width: '100%',
+    maxWidth: 360,
+    padding: 32,
+    borderRadius: 32,
+    alignItems: 'center',
+    shadowColor: '#111111',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  emptyRecordIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyRecordTitle: {
-    color: PAGE.ink,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
-    marginTop: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
   emptyRecordSub: {
-    color: PAGE.muted,
     fontSize: 13,
-    fontWeight: '700',
-    marginTop: 6,
+    fontWeight: '600',
+    marginTop: 8,
+    lineHeight: 19,
     textAlign: 'center',
+  },
+  emptyRecordActionBtn: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyRecordActionText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
   emptyContainer: {
     flex: 1,

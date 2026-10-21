@@ -2,7 +2,7 @@
   "expo": {
     "name": "ALMS",
     "slug": "lpu-app",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "alms",
@@ -14,13 +14,13 @@
       "backgroundColor": "#4C0099"
     },
     "ios": {
-    "bundleIdentifier": "com.ashish.alms",
-    "buildNumber": "1",
-    "supportsTablet": true,
-    "infoPlist": {
-      "ITSAppUsesNonExemptEncryption": false
-    }
-  },
+      "bundleIdentifier": "com.ashish.alms",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
       "package": "com.ashish.alms",
       "softwareKeyboardLayoutMode": "pan",
@@ -64,7 +64,23 @@
           "color": "#4C0099"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NextClassWidget",
+              "label": "Next Class",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "description": "View your upcoming class, subject, and room on your home screen.",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

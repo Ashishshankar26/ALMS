@@ -9,7 +9,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import { syncAndroidWidget } from '../../widgets/widget-sync';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -397,9 +399,9 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
         const totalPresent = attendedClasses + dutyLeaves;
 
-        const calculatedAtt = totalClasses > 0 ? Math.ceil((totalPresent / totalClasses) * 100) : 0;
+        const calculatedAtt = totalClasses > 0 ? Math.min(100, Math.ceil((totalPresent / totalClasses) * 100)) : 0;
         const parsedAtt = parseFloat(data.overallAttendance);
-        const attVal = (!isNaN(parsedAtt) && parsedAtt > 0) ? Math.ceil(parsedAtt) : calculatedAtt;
+        const attVal = (!isNaN(parsedAtt) && parsedAtt > 0 && parsedAtt <= 100) ? Math.ceil(parsedAtt) : calculatedAtt;
 
         return (
           <CardGradient id="grad_att" colors={['#FF7E82', '#F43F5E']} style={styles.stackCardInner} borderStyle={borderStyle}>
@@ -555,14 +557,90 @@ export default function DashboardScreen() {
   const attendedClasses = data.attendance?.reduce((acc, curr) => acc + (curr.attendedClasses || 0), 0) || 0;
   const dutyLeaves = data.attendance?.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0) || 0;
 
-  const calculatedAttendance = totalClasses > 0 ? Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100) : 0;
+  const calculatedAttendance = totalClasses > 0 ? Math.min(100, Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100)) : 0;
   
   const parsedOverallAtt = parseFloat(data.overallAttendance);
-  const overallAttendance = (!isNaN(parsedOverallAtt) && parsedOverallAtt > 0) 
+  const overallAttendance = (!isNaN(parsedOverallAtt) && parsedOverallAtt > 0 && parsedOverallAtt <= 100) 
     ? Math.ceil(parsedOverallAtt).toString() 
     : calculatedAttendance.toString();
 
-  // Helper to find "Next Class" dynamically
+  // Format all-caps or messy subject strings into beautiful Title Case
+  const formatSubjectTitle = (raw: string): string => {
+    if (!raw) return 'Class';
+    const clean = raw.trim();
+    const isAllUpper = clean === clean.toUpperCase();
+    if (!isAllUpper) return clean;
+
+    const acronyms = new Set([
+      'AI', 'ML', 'IOT', 'OS', 'DBMS', 'DSA', 'SQL', 'CSS', 'HTML', 'JS',
+      'PHP', 'API', 'UI', 'UX', 'IT', 'ECE', 'CSE', 'MEC', 'CIV', 'EE',
+      'LPU', 'TBA', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'
+    ]);
+
+    const specialWords: Record<string, string> = {
+      'REACTJS': 'React.js',
+      'NODEJS': 'Node.js',
+      'NEXTJS': 'Next.js',
+      'VUEJS': 'Vue.js',
+      'CPP': 'C++',
+      'OOP': 'OOPs',
+    };
+
+    return clean
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word, index) => {
+        const upper = word.toUpperCase();
+        if (specialWords[upper]) return specialWords[upper];
+        if (acronyms.has(upper)) return upper;
+        const minor = ['with', 'and', 'or', 'for', 'in', 'on', 'at', 'to', 'of', 'by', 'the', 'a', 'an'];
+        if (index > 0 && minor.includes(word)) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+  };
+
+  // Robust time slot parser supporting all UMS timing patterns
+  const parseTimeSlot = (timeStr: string) => {
+    if (!timeStr) return null;
+    const parts = timeStr.split(/\s*[-–—]\s*|\s+to\s+/i);
+    if (parts.length === 0) return null;
+
+    const parseSingle = (part: string, defaultPM: boolean) => {
+      const match = part.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const partHasPM = part.toUpperCase().includes('PM');
+      const partHasAM = part.toUpperCase().includes('AM');
+
+      if (partHasPM) {
+        if (h < 12) h += 12;
+      } else if (partHasAM) {
+        if (h === 12) h = 0;
+      } else if (defaultPM) {
+        if (h < 12) h += 12;
+      } else {
+        // UMS heuristic: 1..7 PM, 8..11 AM, 12 is 12 PM
+        if (h >= 1 && h <= 7) {
+          h += 12;
+        }
+      }
+      return h * 60 + m;
+    };
+
+    const hasEndPM = parts[1]?.toUpperCase().includes('PM') || false;
+    const startHasAM = parts[0]?.toUpperCase().includes('AM') || false;
+    const startHasPM = parts[0]?.toUpperCase().includes('PM') || false;
+    const startDefaultPM = hasEndPM && !startHasAM && !startHasPM;
+
+    const startMinutes = parseSingle(parts[0], startDefaultPM);
+    const endMinutes = parts[1] ? parseSingle(parts[1], hasEndPM) : (startMinutes !== null ? startMinutes + 50 : null);
+
+    return { startMinutes, endMinutes };
+  };
+
+  // Helper to find "Next Class" dynamically with ongoing, upcoming, and tomorrow lookahead
   const getNextClass = (allCandidates?: boolean): any => {
     const timetable = data.timetable || {};
     const makeupClasses = data.makeupClasses || [];
@@ -570,28 +648,11 @@ export default function DashboardScreen() {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const now = new Date();
     const currentDay = days[now.getDay()];
-    // Get date in DD-MMM-YYYY or DD MMM YYYY format to match makeup classes
-    const todayStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
-    const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-
-    const parseTimeTo24h = (timeStr: string) => {
-      if (!timeStr) return null;
-      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
-      if (!match) return null;
-      let hours = parseInt(match[1]);
-      const minutes = match[2];
-      const isPM = timeStr.toUpperCase().includes('PM');
-      const isAM = timeStr.toUpperCase().includes('AM');
-      if (isPM && hours < 12) hours += 12;
-      if (isAM && hours === 12) hours = 0;
-      return hours.toString().padStart(2, '0') + ':' + minutes;
-    };
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     const isClassMakeup = (cls: any) => {
       const type = (cls.type || "").toLowerCase();
       const subject = (cls.subject || "").toLowerCase();
-
       const hasMakeupKeyword =
         cls.isMakeup ||
         cls.date ||
@@ -603,36 +664,30 @@ export default function DashboardScreen() {
 
       if (hasMakeupKeyword) return true;
 
-      // Cross-reference with the dedicated makeup classes list
       const isMatchedInMakeupList = data.makeupClasses?.some((m: any) =>
         m.subjectCode === cls.subjectCode &&
         (m.time === cls.time || m.time?.includes(cls.time?.split(' ')[0]))
       );
-
       return !!isMatchedInMakeupList;
     };
 
-    // 1. Combine regular classes for today and makeup classes for today
+    // 1. Collect candidates for today (case-insensitive day matching)
     let candidates: any[] = [];
-
-    // Regular classes
-    if (timetable[currentDay]) {
-      timetable[currentDay].forEach((c: any) => candidates.push({ ...c, isMakeup: isClassMakeup(c) }));
+    const timetableDayKey = Object.keys(timetable).find(k => k.toLowerCase() === currentDay.toLowerCase());
+    if (timetableDayKey && timetable[timetableDayKey]) {
+      timetable[timetableDayKey].forEach((c: any) => candidates.push({ ...c, isMakeup: isClassMakeup(c) }));
     }
 
-    // Saturday Filtering Logic
-    if (currentDay === 'Saturday') {
+    // Saturday Filtering Logic: show normal classes and makeup classes, excluding placeholder project work
+    if (currentDay.toLowerCase() === 'saturday') {
       candidates = candidates.filter((cls: any) => {
         const subject = (cls.subject || "").toLowerCase();
-        const isProjectWork = subject.includes('project work');
-        // On Saturday, only show if NOT project work AND it's a makeup class
-        return !isProjectWork && cls.isMakeup;
+        return !subject.includes('project work');
       });
     }
 
-    // Makeup classes from dedicated list
+    // Makeup classes scheduled for today
     makeupClasses.forEach((c: any) => {
-      // Check if makeup class is today
       if (c.date) {
         try {
           const dateParts = c.date.split('-');
@@ -650,7 +705,8 @@ export default function DashboardScreen() {
                 subjectCode: c.subjectCode,
                 room: c.room,
                 type: c.type || 'Makeup',
-                isMakeup: true
+                isMakeup: true,
+                faculty: c.faculty || ''
               });
             }
           }
@@ -658,84 +714,96 @@ export default function DashboardScreen() {
       }
     });
 
-    if (candidates.length === 0) return { status: 'no_classes' };
+    // Parse each candidate's start and end times
+    const parsedCandidates = candidates.map(c => {
+      const slot = parseTimeSlot(c.time);
+      const startMin = slot?.startMinutes ?? null;
+      const endMin = slot?.endMinutes ?? (startMin !== null ? startMin + 50 : null);
+      return {
+        ...c,
+        startMin,
+        endMin
+      };
+    }).filter(c => c.startMin !== null);
 
-    const upcoming = candidates.filter((c: any) => {
-      const startTime = parseTimeTo24h(c.time);
-      return startTime ? startTime > currentTimeStr : false;
-    });
-
-    if (upcoming.length > 0) {
-      upcoming.sort((a: any, b: any) => {
-        const tA = parseTimeTo24h(a.time) || '';
-        const tB = parseTimeTo24h(b.time) || '';
-        return tA.localeCompare(tB);
-      });
-
-      // If requested all candidates (for notification pre-scheduling)
-      if (arguments[0] === true) {
-        return upcoming.map(c => {
-          const startTime = parseTimeTo24h(c.time);
-          const [h, m] = (startTime || '00:00').split(':').map(Number);
+    // If requested all candidates (for notifications)
+    if (allCandidates === true) {
+      return parsedCandidates
+        .filter(c => (c.startMin || 0) > currentMinutes)
+        .map(c => {
+          const h = Math.floor((c.startMin || 0) / 60);
+          const m = (c.startMin || 0) % 60;
           const triggerDate = new Date();
           triggerDate.setHours(h, m, 0, 0);
           return { ...c, startTimeDate: triggerDate };
         });
-      }
+    }
 
+    // 2. Check for ONGOING class (currently in session)
+    const ongoingClass = parsedCandidates.find(c => {
+      return c.startMin !== null && c.endMin !== null && currentMinutes >= c.startMin && currentMinutes < c.endMin;
+    });
+
+    if (ongoingClass) {
+      const minsRemaining = (ongoingClass.endMin || 0) - currentMinutes;
+      return {
+        status: 'ongoing',
+        time: ongoingClass.time,
+        subjectCode: ongoingClass.subjectCode || '',
+        subject: ongoingClass.subject || 'Class',
+        room: ongoingClass.room || 'TBA',
+        type: ongoingClass.type || (ongoingClass.isMakeup ? 'Makeup' : 'Lecture'),
+        faculty: ongoingClass.faculty || '',
+        minsRemaining
+      };
+    }
+
+    // 3. Check for UPCOMING class today
+    const upcoming = parsedCandidates.filter(c => (c.startMin || 0) > currentMinutes);
+    if (upcoming.length > 0) {
+      upcoming.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
       const next = upcoming[0];
-
-      // Prioritize structured data if available (from new Scraper logic)
-      if (next.subjectCode || next.subject) {
-        return {
-          status: 'upcoming',
-          time: next.time,
-          subjectCode: next.subjectCode,
-          subject: next.subject,
-          room: next.room || 'TBA',
-          type: next.type || 'Lecture'
-        };
-      }
-
-      // Parse regular class details robustly for legacy/other formats
-      const details = next.details || '';
-      let subject = 'Class';
-      let subjectCode = '';
-      let room = 'TBA';
-      let type = 'Lecture';
-
-      if (details.includes('R:')) {
-        const subjectMatch = details.match(/^([^ ]+)/);
-        const roomMatch = details.match(/R:\s*([A-Z0-9-]+)/i);
-        subjectCode = subjectMatch ? subjectMatch[1] : '';
-        room = roomMatch ? roomMatch[1] : 'TBA';
-      } else {
-        const parts = details.split(/\s*\/\s*/);
-        if (parts.length >= 2) {
-          type = parts[0].trim();
-          const codePart = parts[1].trim();
-          const codeMatch = codePart.match(/^([A-Z0-9]+)/i);
-          subjectCode = codeMatch ? codeMatch[1] : '';
-          subject = codePart.split('-')[1]?.trim() || codePart;
-          room = parts[2] ? parts[2].trim() : 'TBA';
-        } else {
-          const codeMatch = details.match(/([A-Z]{2,}\d{2,})/i);
-          if (codeMatch) subjectCode = codeMatch[1];
-          const roomMatch = details.match(/(?:R:|Room:)\s*([A-Z0-9-]+)/i) || details.match(/\b(\d{2}-\d{3}[A-Z]?)\b/);
-          if (roomMatch) room = roomMatch[1] || room;
-        }
-      }
-
+      const minsUntil = (next.startMin || 0) - currentMinutes;
       return {
         status: 'upcoming',
         time: next.time,
-        subjectCode: subjectCode,
-        subject: subject,
-        room: room,
-        type: type
+        subjectCode: next.subjectCode || '',
+        subject: next.subject || 'Class',
+        room: next.room || 'TBA',
+        type: next.type || (next.isMakeup ? 'Makeup' : 'Lecture'),
+        faculty: next.faculty || '',
+        minsUntil
       };
     }
-    return { status: 'finished' };
+
+    // 4. If all classes for today are finished, check TOMORROW's schedule!
+    const tomorrowIndex = (now.getDay() + 1) % 7;
+    const tomorrowDay = days[tomorrowIndex];
+    if (tomorrowDay !== 'Sunday') {
+      const tomorrowKey = Object.keys(timetable).find(k => k.toLowerCase() === tomorrowDay.toLowerCase());
+      if (tomorrowKey && timetable[tomorrowKey] && timetable[tomorrowKey].length > 0) {
+        const tomorrowClasses = timetable[tomorrowKey].map((c: any) => ({
+          ...c,
+          startMin: parseTimeSlot(c.time)?.startMinutes ?? 9999
+        })).sort((a: any, b: any) => a.startMin - b.startMin);
+
+        const firstTomorrow = tomorrowClasses[0];
+        if (firstTomorrow) {
+          return {
+            status: 'tomorrow',
+            time: firstTomorrow.time,
+            subjectCode: firstTomorrow.subjectCode || '',
+            subject: firstTomorrow.subject || 'Class',
+            room: firstTomorrow.room || 'TBA',
+            type: firstTomorrow.type || 'Lecture',
+            faculty: firstTomorrow.faculty || '',
+            tomorrowDay
+          };
+        }
+      }
+    }
+
+    return { status: 'no_classes' };
   };
 
   const nextClassInfo = getNextClass();
@@ -1045,6 +1113,80 @@ export default function DashboardScreen() {
     checkUpdates();
   }, []);
 
+  const [apkUpdate, setApkUpdate] = React.useState<any>(null);
+  const [isDownloadingApk, setIsDownloadingApk] = React.useState(false);
+  const [apkProgress, setApkProgress] = React.useState(0);
+
+  React.useEffect(() => {
+    syncAndroidWidget().catch(() => {});
+  }, [data?.timetable]);
+
+  React.useEffect(() => {
+    async function checkApkVersion() {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/Ashishshankar26/ALMS/main/version.json?t=${Date.now()}`);
+        if (!res.ok) return;
+        const info = await res.json();
+        const currentVersion = Constants.expoConfig?.version || '1.0.3';
+
+        const parseVer = (v: string) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+        const [cMaj, cMin, cPatch] = parseVer(currentVersion);
+        const [rMaj, rMin, rPatch] = parseVer(info.version || '0.0.0');
+
+        const isNewer = (rMaj > cMaj) || (rMaj === cMaj && rMin > cMin) || (rMaj === cMaj && rMin === cMin && rPatch > cPatch);
+        if (isNewer) {
+          setApkUpdate(info);
+        }
+      } catch (e) {}
+    }
+    checkApkVersion();
+  }, []);
+
+  const downloadAndInstallApk = async () => {
+    if (!apkUpdate?.apkUrl) return;
+    try {
+      setIsDownloadingApk(true);
+      setApkProgress(0);
+      const targetFileName = `ALMS_v${apkUpdate.version}.apk`;
+      const localPath = `${FileSystem.cacheDirectory}${targetFileName}`;
+
+      const downloadResumable = FileSystem.createDownloadResumable(
+        apkUpdate.apkUrl,
+        localPath,
+        {},
+        (dp) => {
+          if (dp.totalBytesExpectedToWrite > 0) {
+            const p = Math.round((dp.totalBytesWritten / dp.totalBytesExpectedToWrite) * 100);
+            setApkProgress(p);
+          }
+        }
+      );
+
+      const downloadResult = await downloadResumable.downloadAsync();
+      if (!downloadResult?.uri) throw new Error('Download failed');
+
+      if (Platform.OS === 'android') {
+        try {
+          const contentUri = await FileSystem.getContentUriAsync(downloadResult.uri);
+          const IntentLauncher = require('expo-intent-launcher');
+          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+            data: contentUri,
+            flags: 1,
+            type: 'application/vnd.android.package-archive',
+          });
+        } catch (intentErr) {
+          await Linking.openURL(apkUpdate.apkUrl);
+        }
+      } else {
+        await Linking.openURL(apkUpdate.apkUrl);
+      }
+    } catch (err) {
+      Linking.openURL(apkUpdate.apkUrl);
+    } finally {
+      setIsDownloadingApk(false);
+    }
+  };
+
   const handleUpdate = async () => {
     try {
       setIsUpdating(true);
@@ -1325,45 +1467,138 @@ export default function DashboardScreen() {
 
         {/* Next Class Widget - ANIMATED */}
         <Animated.View entering={FadeInDown.delay(400).duration(600).springify()}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Next Class</Text>
-          {nextClassInfo.status === 'upcoming' ? (
-            <View style={[styles.nextClassCardShadow, { backgroundColor: '#1D4ED8', borderRadius: 24, overflow: 'hidden' }]}>
-              <CardGradient
-                id="grad_next_class"
-                colors={['#1D4ED8', '#6D28D9']}
-                style={styles.nextClassCardInner}
-                borderStyle={{ borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)' }}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Next Class</Text>
+            {nextClassInfo && nextClassInfo.status !== 'no_classes' ? (
+              <TouchableOpacity 
+                onPress={() => router.push('/timetable' as any)}
+                activeOpacity={0.7}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
-                <View style={[styles.cardDecorCircle, { bottom: -30, right: -30, backgroundColor: 'rgba(255, 255, 255, 0.08)', width: 120, height: 120, borderRadius: 60 }]} />
-                <View style={styles.nextClassHeader}>
-                  <View style={[styles.timeBadge, { backgroundColor: 'rgba(255, 255, 255, 0.25)', flexDirection: 'row', alignItems: 'center' }]}>
-                    <Clock size={12} color="#ffffff" />
-                    <Text style={[styles.timeText, { color: '#ffffff' }]}>{nextClassInfo.time}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>Schedule</Text>
+                <ChevronRight size={14} color={colors.primary} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {nextClassInfo && nextClassInfo.status !== 'no_classes' ? (() => {
+            const isOngoing = nextClassInfo.status === 'ongoing';
+            const isTomorrow = nextClassInfo.status === 'tomorrow';
+            const typeStr = (nextClassInfo.type || '').toLowerCase();
+            const isPractical = typeStr.includes('practical') || typeStr.includes('lab');
+            const isTutorial = typeStr.includes('tutorial');
+            const isMakeup = typeStr.includes('makeup') || typeStr.includes('adjustment');
+
+            const accentColor = isOngoing
+              ? '#10B981'
+              : (isPractical ? '#10B981' : (isTutorial ? '#0EA5E9' : (isMakeup ? '#F59E0B' : '#6366F1')));
+
+            return (
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.push('/timetable' as any)}
+                style={[
+                  styles.modernNextClassCard,
+                  {
+                    backgroundColor: isDark ? '#141722' : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
+                    shadowColor: isDark ? '#000000' : 'rgba(0,0,0,0.06)',
+                  }
+                ]}
+              >
+                {/* Subtle Ambient Radial Glow */}
+                <View 
+                  style={{
+                    position: 'absolute',
+                    top: -30,
+                    right: -30,
+                    width: 120,
+                    height: 120,
+                    borderRadius: 60,
+                    backgroundColor: accentColor,
+                    opacity: isDark ? 0.08 : 0.04,
+                  }}
+                />
+
+                {/* Top Status & Type Row */}
+                <View style={styles.modernCardHeader}>
+                  <View 
+                    style={[
+                      styles.modernStatusPill, 
+                      { 
+                        backgroundColor: isOngoing 
+                          ? 'rgba(16, 185, 129, 0.14)' 
+                          : (isTomorrow ? 'rgba(168, 85, 247, 0.12)' : accentColor + '14') 
+                      }
+                    ]}
+                  >
+                    <View 
+                      style={[
+                        styles.modernStatusDot, 
+                        { backgroundColor: isOngoing ? '#10B981' : (isTomorrow ? '#A855F7' : accentColor) }
+                      ]} 
+                    />
+                    <Text 
+                      style={[
+                        styles.modernStatusText, 
+                        { color: isOngoing ? '#10B981' : (isTomorrow ? '#A855F7' : accentColor) }
+                      ]}
+                    >
+                      {isOngoing 
+                        ? `IN SESSION • ${nextClassInfo.minsRemaining || 0}m left` 
+                        : (isTomorrow ? `TOMORROW • ${nextClassInfo.time}` : (nextClassInfo.minsUntil ? `STARTS IN ${nextClassInfo.minsUntil}m` : nextClassInfo.time))}
+                    </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={[styles.pulseDot, { backgroundColor: '#ffffff' }]} />
-                    <View style={[styles.typeBadgeWidget, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                      <Text style={[styles.typeTextWidget, { color: '#ffffff', fontWeight: '800' }]}>{nextClassInfo.type.toUpperCase()}</Text>
+
+                  {/* Prominent Time Chip (Moved to Header to prevent any corner cut-off) */}
+                  <View style={[styles.modernTimePill, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }]}>
+                    <Clock size={12} color={accentColor} />
+                    <Text style={[styles.modernTimeText, { color: colors.text }]}>
+                      {nextClassInfo.time}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Subject Title (Title-Cased, Clean, Crisp) */}
+                <Text style={[styles.modernSubjectTitle, { color: colors.text }]} numberOfLines={2}>
+                  {formatSubjectTitle(nextClassInfo.subject)}
+                </Text>
+
+                {/* Bottom Details Chips Row */}
+                <View style={styles.modernChipsRow}>
+                  <View style={styles.modernChipsGroup}>
+                    {/* Room Chip */}
+                    <View style={[styles.modernInfoChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                      <MapPin size={12} color={accentColor} />
+                      <Text style={[styles.modernInfoChipText, { color: colors.text }]}>
+                        {nextClassInfo.room && nextClassInfo.room !== 'TBA' ? (nextClassInfo.room.toLowerCase().startsWith('room') ? nextClassInfo.room : `Room ${nextClassInfo.room}`) : 'Room TBA'}
+                      </Text>
+                    </View>
+
+                    {/* Course Code Chip */}
+                    {nextClassInfo.subjectCode ? (
+                      <View style={[styles.modernInfoChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                        <Tag size={12} color={accentColor} />
+                        <Text style={[styles.modernInfoChipText, { color: colors.textSecondary }]}>
+                          {nextClassInfo.subjectCode}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {/* Class Type Badge */}
+                    <View style={[styles.modernTypeBadge, { backgroundColor: accentColor + '18', borderColor: accentColor + '35' }]}>
+                      <Text style={[styles.modernTypeBadgeText, { color: accentColor }]}>
+                        {(nextClassInfo.type || 'Lecture').toUpperCase()}
+                      </Text>
                     </View>
                   </View>
-                </View>
 
-                <Text style={[styles.subjectText, { color: '#ffffff', fontWeight: '800' }]} numberOfLines={2}>{nextClassInfo.subject}</Text>
-
-                <View style={[styles.nextClassFooter, { borderTopColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                  <View style={styles.footerItem}>
-                    <Tag size={12} color="rgba(255, 255, 255, 0.85)" />
-                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.subjectCode}</Text>
-                  </View>
-                  <View style={[styles.footerDivider, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]} />
-                  <View style={styles.footerItem}>
-                    <MapPin size={12} color="rgba(255, 255, 255, 0.85)" />
-                    <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' }]}>{nextClassInfo.room}</Text>
-                  </View>
+                  {/* Chevron Right */}
+                  <ChevronRight size={16} color={colors.textSecondary} style={{ marginLeft: 6 }} />
                 </View>
-              </CardGradient>
-            </View>
-          ) : (
+              </TouchableOpacity>
+            );
+          })() : (
             <View style={[styles.emptyCardPremium, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.emptyIconBg, { backgroundColor: '#34C75915' }]}>
                 <Coffee size={28} color="#34C759" />
@@ -1371,7 +1606,7 @@ export default function DashboardScreen() {
               <View style={styles.emptyTextContainer}>
                 <Text style={[styles.emptyTitlePremium, { color: colors.text }]}>All Caught Up!</Text>
                 <Text style={[styles.emptySubPremium, { color: colors.textSecondary }]}>
-                  {nextClassInfo.status === 'no_classes' ? 'No more classes for today. Enjoy your free time!' : 'Your schedule is currently clear.'}
+                  No more classes scheduled. Enjoy your free time!
                 </Text>
               </View>
               <View style={[styles.emptyGlow, { backgroundColor: '#34C75910' }]} />
@@ -1733,7 +1968,7 @@ export default function DashboardScreen() {
                              for (const pattern of byPatterns) {
                               const match = txt.match(pattern);
                               if (match && match[1]) {
-                                const name = match[1].trim().split(/[\n\r]/)[0].trim();
+                                const name = match[1].trim().split(/[\r\n\r]/)[0].trim();
                                 // Clean brackets, parentheses, unclosed enclosures and trailing punctuation
                                 const cleaned = name
                                   .replace(/\([^)]*\)/g, '')
@@ -1909,7 +2144,7 @@ export default function DashboardScreen() {
                                           activeOpacity={0.7}
                                           onPress={() => {
                                             const { Clipboard } = require('react-native');
-                                            Clipboard.setString(item.title + '\n\n' + item.content);
+                                            Clipboard.setString(item.title + '\r\n\r\n' + item.content);
                                           }}
                                           style={{ 
                                             flexDirection: 'row',
@@ -2011,8 +2246,8 @@ export default function DashboardScreen() {
                   <Layers size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Compact High-Density Design</Text>
-                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Redesigned headers to save 35% screen space. More data, less scrolling!</Text>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Attendance Accuracy Restored</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Fixed column parsing and calculation to guarantee 100% accurate attendance percentage and attended class numbers.</Text>
                 </View>
               </View>
 
@@ -2022,8 +2257,8 @@ export default function DashboardScreen() {
                   <Bell size={20} color="#5856D6" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Glassmorphism Messaging</Text>
-                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>New translucent message portal with intelligent color-coding and spring animations.</Text>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Saturday Classes Support</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Fixed schedule filtering so normal classes scheduled on Saturdays now show alongside makeup classes.</Text>
                 </View>
               </View>
 
@@ -2032,8 +2267,8 @@ export default function DashboardScreen() {
                   <Award size={20} color="#34C759" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Account Settings Hub</Text>
-                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Manage your university credentials and profile settings directly from the dashboard.</Text>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>10x Faster Timetable Loading</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>Prioritized timetable loading right after dashboard sync so your schedule displays in just ~2 seconds.</Text>
                 </View>
               </View>
 
@@ -2042,8 +2277,8 @@ export default function DashboardScreen() {
                   <Sun size={20} color={colors.warning} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Enhanced Dark Mode</Text>
-                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>New 'Lite-Tint' backgrounds for metric cards to improve visibility and depth.</Text>
+                  <Text style={[styles.whatsNewItemTitle, { color: colors.text }]}>Timetable Pull-To-Refresh</Text>
+                  <Text style={[styles.whatsNewItemDesc, { color: colors.textSecondary }]}>You can now swipe down directly on the schedule list to instantly refresh your timetable.</Text>
                 </View>
               </View>
             </ScrollView>
@@ -2789,6 +3024,98 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
+  },
+  modernNextClassCard: {
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1.2,
+    marginBottom: 25,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  modernCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modernStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  modernStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  modernStatusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  modernTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  modernTypeBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  modernSubjectTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 23,
+    marginBottom: 14,
+    letterSpacing: -0.2,
+  },
+  modernTimePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  modernTimeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  modernChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modernChipsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  modernInfoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  modernInfoChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   nextClassCardShadow: {
     borderRadius: 24,

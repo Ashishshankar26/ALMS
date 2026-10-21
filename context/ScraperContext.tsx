@@ -5,6 +5,7 @@ import { WebView } from 'react-native-webview';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from './ThemeContext';
+import { syncAndroidWidget } from '../widgets/widget-sync';
 
 export interface SubjectAttendance {
   subjectCode: string;
@@ -198,21 +199,93 @@ const DASHBOARD_SCRIPT = `
           var poll = setInterval(function() {
             pollCount++;
             var summaryTable = document.getElementById("AttSummary");
-            var hasRows = summaryTable && summaryTable.querySelectorAll("tr").length > 1;
+            var hasRows = summaryTable && summaryTable.querySelectorAll("tr").length > 0;
             
             if (hasRows) {
               clearInterval(poll);
               log("scrapeAll: #AttSummary found, scraping...");
               var rows = summaryTable.querySelectorAll("tr");
+
+              // Dynamically inspect table headers if present
+              var table = summaryTable.closest("table") || summaryTable.parentElement;
+              var ths = table ? table.querySelectorAll("thead th, tr.top-heading2 th") : [];
+              var colMap = { course: 0, delivered: -1, attended: -1, leaves: -1, percentage: -1, lastAttended: -1 };
+              for (var h = 0; h < ths.length; h++) {
+                var hText = (ths[h].innerText || ths[h].textContent || "").trim().toLowerCase();
+                if (hText.includes("delivered") || (hText.includes("total") && hText.includes("t,l,p") && !hText.includes("attend"))) {
+                  colMap.delivered = h;
+                } else if (hText.includes("attended") && !hText.includes("last")) {
+                  colMap.attended = h;
+                } else if (hText.includes("duty") || hText.includes("leave") || hText.includes("dl")) {
+                  colMap.leaves = h;
+                } else if (hText.includes("percent") || hText.includes("%")) {
+                  colMap.percentage = h;
+                } else if (hText.includes("last")) {
+                  colMap.lastAttended = h;
+                } else if (hText.includes("course") || hText.includes("subject")) {
+                  colMap.course = h;
+                }
+              }
+
               for (var i = 0; i < rows.length; i++) {
                 var c = rows[i].querySelectorAll("td");
-                if (c.length >= 5) {
-                  var codeText = c[0].innerText.trim();
-                  var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
+                if (c.length >= 4) {
+                  var codeText = (c[colMap.course >= 0 && colMap.course < c.length ? colMap.course : 0].innerText || "").trim();
+                  var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\s:]/g, "").toUpperCase();
+                  if (!normCode) continue;
+
+                  var attended = 0;
+                  var total = 0;
+                  var leaves = 0;
+
+                  // 1. If headers matched the exact cell count and found attended/delivered columns
+                  if (ths.length === c.length && colMap.attended >= 0 && colMap.delivered >= 0) {
+                    attended = parseInt((c[colMap.attended].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    total = parseInt((c[colMap.delivered].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    leaves = colMap.leaves >= 0 ? (parseInt((c[colMap.leaves].innerText || "").replace(/[^\d]/g, ""), 10) || 0) : 0;
+                  } else if (c.length === 5) {
+                    // Standard 5-column UMS AJAX response:
+                    // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave, [4] Total Percentage
+                    total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                  } else if (c.length >= 6) {
+                    // 6-column layout: check if c[1] is a date (Last Attended)
+                    var c1Text = (c[1].innerText || "").trim();
+                    var isDateC1 = /[a-zA-Z]{3}|\d{1,2}[-\/]\d{1,2}/.test(c1Text) || c1Text === "-";
+                    if (isDateC1) {
+                      // [0] Course, [1] Last Attended, [2] Duty Leave, [3] Total Delivered, [4] Total Attended, [5] Percentage
+                      leaves = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                      total = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                      attended = parseInt((c[4].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    } else {
+                      // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave, [4] Percentage, [5] Other
+                      total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                      attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                      leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    }
+                  } else if (c.length === 4) {
+                    // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave
+                    total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                  }
+
+                  // Self-Healing Sanity Check:
+                  // Attended classes can never be 0 if leaves is large (e.g. 20, 30, 39).
+                  // If attended is 0 and leaves > 0, they were inverted by column shift!
+                  if (attended === 0 && leaves > 0) {
+                    attended = leaves;
+                    leaves = 0;
+                  }
+                  if (total < attended) {
+                    total = attended + leaves;
+                  }
+
                   attCounts[normCode] = {
-                    attended: parseInt(c[4].innerText) || 0,
-                    total: parseInt(c[3].innerText) || 0,
-                    leaves: parseInt(c[2].innerText) || 0,
+                    attended: attended,
+                    total: total,
+                    leaves: leaves,
                     subjectCode: codeText,
                     subjectName: codeText.includes("-") ? codeText.split("-")[1].trim() : codeText
                   };
@@ -535,10 +608,28 @@ const DASHBOARD_SCRIPT = `
                 if (code && code.length > 2) {
                   var normCode = code.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
                   var counts = attCounts[normCode] || { attended: 0, total: 0, leaves: 0 };
+                  var attClasses = Number(counts.attended) || 0;
+                  var totClasses = Number(counts.total) || 0;
+                  var dLeaves = Number(counts.leaves) || 0;
+                  var pct = Number(pctText) || 0;
+
+                  // Double safety check: if attended is 0 and leaves is positive, fix inversion
+                  if (attClasses === 0 && dLeaves > 0) {
+                    attClasses = dLeaves;
+                    dLeaves = 0;
+                  }
+                  // If total classes is 0 or less than attended, deduce from attended and percentage
+                  if ((totClasses === 0 || totClasses < attClasses) && attClasses > 0 && pct > 0) {
+                    totClasses = Math.round(((attClasses + dLeaves) / (pct / 100)));
+                  }
+                  if (totClasses < attClasses) {
+                    totClasses = attClasses + dLeaves;
+                  }
+
                   att.push({ 
                     subjectCode: code, subjectName: name, 
-                    attendedClasses: Number(counts.attended), totalClasses: Number(counts.total), 
-                    dutyLeaves: Number(counts.leaves), percentage: Number(pctText) || 0 
+                    attendedClasses: attClasses, totalClasses: totClasses, 
+                    dutyLeaves: dLeaves, percentage: pct 
                   });
                 }
               }
@@ -1401,6 +1492,31 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (parsed.examUrl && parsed.examUrl.includes('happenings.lpu.in')) {
             parsed.examUrl = '';
           }
+          // Sanitize corrupt overallAttendance (e.g. 17000%)
+          if (parsed.overallAttendance) {
+            const num = parseFloat(parsed.overallAttendance);
+            if (isNaN(num) || num > 100 || num < 0) {
+              parsed.overallAttendance = '0.0';
+            }
+          }
+          // Sanitize inverted attendedClasses/dutyLeaves in cached attendance
+          if (Array.isArray(parsed.attendance)) {
+            parsed.attendance = parsed.attendance.map((item: any) => {
+              let a = Number(item.attendedClasses) || 0;
+              let t = Number(item.totalClasses) || 0;
+              let l = Number(item.dutyLeaves) || 0;
+              const p = Number(item.percentage) || 0;
+              if (a === 0 && l > 0) {
+                a = l;
+                l = 0;
+              }
+              if ((t === 0 || t < a) && a > 0 && p > 0) {
+                t = Math.round((a + l) / (p / 100));
+              }
+              if (t < a) t = a + l;
+              return { ...item, attendedClasses: a, totalClasses: t, dutyLeaves: l };
+            });
+          }
           setData(prev => ({ ...prev, ...parsed }));
         } catch (e) {
           console.error('Failed to parse cached data:', e);
@@ -1748,8 +1864,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (p.makeupUrl) merged.makeupUrl = p.makeupUrl;
           if (p.results?.length > 0) merged.results = p.results;
           
-          // Trigger Profile page scraping next
-          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile'; true;`);
+          // Fast-track Timetable scraping immediately after Dashboard for instant schedule load
+          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
 
           merged.lastUpdated = new Date().toISOString();
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
@@ -1799,8 +1915,12 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const merged = { ...prev, roomBooking: payload, lastUpdated: new Date().toISOString() };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
           
-          // FINISH sync with timetable
-          webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/Reports/frmStudentTimeTable.aspx'; true;`);
+          isFullyDone.current = true;
+
+          // After entire sync chain completes, check for missing data and selectively retry
+          setTimeout(() => {
+            runSelectiveRetry(merged);
+          }, 2000);
           
           return merged;
         });
@@ -1889,23 +2009,36 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           
           let aggregatePct = "0.0";
           if (totalDelivered > 0) {
-            aggregatePct = (((totalAttended + totalLeaves) / totalDelivered) * 100).toFixed(1);
+            const rawPct = ((totalAttended + totalLeaves) / totalDelivered) * 100;
+            aggregatePct = Math.min(100, Math.max(0, rawPct)).toFixed(1);
           }
+
+          // Preserve the official UMS overall attendance if available and valid
+          const prevPct = parseFloat(prev.overallAttendance || '');
+          const hasValidOfficialAtt = !isNaN(prevPct) && prevPct > 0 && prevPct <= 100;
+          const finalOverallAttendance = hasValidOfficialAtt ? prev.overallAttendance : aggregatePct;
 
           const merged = { 
             ...prev, 
             timetable: structuredSchedule,
             attendance: updatedAttendance,
-            overallAttendance: aggregatePct,
+            overallAttendance: finalOverallAttendance,
             makeupClasses: prev.makeupClasses || [],
             lastUpdated: new Date().toISOString()
           };
           AsyncStorage.setItem('@scraped_data', JSON.stringify(merged)).catch(console.error);
+          syncAndroidWidget().catch(() => {});
           
-          // After main chain completes, check for missing data and selectively retry
-          setTimeout(() => {
-            runSelectiveRetry(merged);
-          }, 2000);
+          // Continue background sync chain with Profile & secondary sections
+          if (!didProfile.current) {
+            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/user-profile'; true;`);
+          } else {
+            // If profile was already scraped (e.g. timetable was fetched via retry), check for any remaining missing data
+            isFullyDone.current = true;
+            setTimeout(() => {
+              runSelectiveRetry(merged);
+            }, 2000);
+          }
           
           return merged;
         });

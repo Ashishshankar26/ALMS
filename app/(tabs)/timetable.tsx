@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, RefreshControl } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useScraper } from '../../context/ScraperContext';
@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TimetableScreen() {
-  const { data } = useScraper();
+  const { data, isScraping, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   const timetable = data.timetable || {};
   
@@ -24,7 +24,6 @@ export default function TimetableScreen() {
 
   const [activeDay, setActiveDay] = useState(getCurrentDay());
   const [showMakeup, setShowMakeup] = useState(false);
-  const makeupClasses: any[] = [];
 
   const isClassMakeup = (cls: any) => {
     const type = (cls.type || "").toLowerCase();
@@ -50,79 +49,85 @@ export default function TimetableScreen() {
     return !!isMatchedInMakeupList;
   };
 
-    // Populate Makeup Classes section exclusively from the dedicated makeup data
-  const now = new Date();
-  const rawMakeupClasses = data.makeupClasses || [];
+  // Populate Makeup Classes section exclusively from the dedicated makeup data (memoized)
+  const makeupClasses = useMemo(() => {
+    const list: any[] = [];
+    const now = new Date();
+    const rawMakeupClasses = data.makeupClasses || [];
 
-  if (rawMakeupClasses && rawMakeupClasses.length > 0) {
-    rawMakeupClasses.forEach(cls => {
-      // 1. Check if class has already happened
-      let hasHappened = false;
-      if (cls.date) {
-        try {
-          // Parse date: e.g., "15-May-2026"
-          const dateParts = cls.date.split('-');
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const classDate = new Date(
-            parseInt(dateParts[2]), 
-            months.indexOf(dateParts[1]), 
-            parseInt(dateParts[0])
-          );
-          
-          // Set to end of day for basic date comparison
-          classDate.setHours(23, 59, 59);
+    if (rawMakeupClasses && rawMakeupClasses.length > 0) {
+      rawMakeupClasses.forEach(cls => {
+        // 1. Check if class has already happened
+        let hasHappened = false;
+        if (cls.date) {
+          try {
+            // Parse date: e.g., "15-May-2026"
+            const dateParts = cls.date.split('-');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const classDate = new Date(
+              parseInt(dateParts[2]), 
+              months.indexOf(dateParts[1]), 
+              parseInt(dateParts[0])
+            );
+            
+            // Set to end of day for basic date comparison
+            classDate.setHours(23, 59, 59);
 
-          if (classDate < now) {
-            hasHappened = true;
-          } else if (classDate.toDateString() === now.toDateString()) {
-            // If today, check the time
-            const timeParts = (cls.time || "").split(/\s*-\s*/);
-            const endTimeStr = timeParts[1] || ""; // e.g., "04:50 PM"
-            if (endTimeStr) {
-               const [time, ampm] = endTimeStr.split(' ');
-               let [hours, minutes] = time.split(':').map(Number);
-               if (ampm === 'PM' && hours < 12) hours += 12;
-               if (ampm === 'AM' && hours === 12) hours = 0;
-               
-               const classEndTime = new Date(now);
-               classEndTime.setHours(hours, minutes, 0);
-               
-               if (now > classEndTime) {
-                 hasHappened = true;
-               }
+            if (classDate < now) {
+              hasHappened = true;
+            } else if (classDate.toDateString() === now.toDateString()) {
+              // If today, check the time
+              const timeParts = (cls.time || "").split(/\s*-\s*/);
+              const endTimeStr = timeParts[1] || ""; // e.g., "04:50 PM"
+              if (endTimeStr) {
+                 const [time, ampm] = endTimeStr.split(' ');
+                 let [hours, minutes] = time.split(':').map(Number);
+                 if (ampm === 'PM' && hours < 12) hours += 12;
+                 if (ampm === 'AM' && hours === 12) hours = 0;
+                 
+                 const classEndTime = new Date(now);
+                 classEndTime.setHours(hours, minutes, 0);
+                 
+                 if (now > classEndTime) {
+                   hasHappened = true;
+                 }
+              }
             }
+          } catch (e) {
+            console.error("Error parsing class date/time", e);
           }
-        } catch (e) {
-          console.error("Error parsing class date/time", e);
         }
-      }
 
-      if (hasHappened) return;
+        if (hasHappened) return;
 
-      // Internal deduplication check for safety
-      const exists = makeupClasses.some(m =>
-        m.time === cls.time &&
-        m.subjectCode === cls.subjectCode &&
-        m.date === cls.date
-      );
-      if (!exists) {
-        makeupClasses.push({ ...cls, isMakeup: true });
-      }
-    });
-  }
+        // Internal deduplication check for safety
+        const exists = list.some(m =>
+          m.time === cls.time &&
+          m.subjectCode === cls.subjectCode &&
+          m.date === cls.date
+        );
+        if (!exists) {
+          list.push({ ...cls, isMakeup: true });
+        }
+      });
+    }
+    return list;
+  }, [data.makeupClasses]);
 
-  let classesForDay = timetable[activeDay] || [];
+  // Classes for the selected day - now includes regular Saturday classes as well
+  const classesForDay = useMemo(() => {
+    let list = timetable[activeDay] || [];
 
-  // Saturday Filtering Logic
-  if (activeDay === 'Saturday') {
-    classesForDay = classesForDay.filter((cls: any) => {
-      const subject = (cls.subject || "").toLowerCase();
-      const isProjectWork = subject.includes('project work');
-      // On Saturday, only show if NOT project work AND it's a makeup class
-      // (Makeup classes in the timetable often have 'Adjustment' or 'Makeup' or are identified by having a specific date)
-      return !isProjectWork && (cls.isMakeup || cls.type?.toLowerCase().includes('makeup') || cls.date);
-    });
-  }
+    // Saturday Filtering Logic: show normal classes and makeup classes, excluding placeholder project work
+    if (activeDay === 'Saturday') {
+      list = list.filter((cls: any) => {
+        const subject = (cls.subject || "").toLowerCase();
+        const isProjectWork = subject.includes('project work');
+        return !isProjectWork;
+      });
+    }
+    return list;
+  }, [timetable, activeDay]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -189,6 +194,14 @@ export default function TimetableScreen() {
       <ScrollView 
         style={styles.list} 
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isScraping}
+            onRefresh={refreshData}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
 
         {/* Makeup Classes Section - COLLAPSIBLE */}

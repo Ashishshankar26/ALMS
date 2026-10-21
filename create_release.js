@@ -101,16 +101,18 @@ async function run() {
     console.error('Provide APK URL as argument');
     process.exit(1);
   }
-  const version = 'v1.0.3';
-  const destPath = path.join(__dirname, 'ALMS_v1.0.3.apk');
+  const version = args[1] || 'v1.0.4';
+  const cleanVersion = version.replace(/^v/, '');
+  const apkFileName = `ALMS_${version}.apk`;
+  const destPath = path.join(__dirname, apkFileName);
   console.log(`Downloading APK from ${apkUrl}...`);
   await downloadFile(apkUrl, destPath);
   console.log('Download complete');
   const releaseBody = {
     tag_name: version,
     target_commitish: 'main',
-    name: `LPU ALMS ${version} - Premium Layout & Scraper Stability Update`,
-    body: `## LPU ALMS ${version} Release Notes\n\n* UI layout fixes, premium navigation styling, scraper stability, background sync, clean compilation.\n\n### 📦 Install\nDownload the \`ALMS_v1.0.3.apk\` asset below.`,
+    name: `LPU ALMS ${version} - Android Home Screen Widget & Layout Update`,
+    body: `## LPU ALMS ${version} Release Notes\n\n* ✨ Added native Android Home Screen Widget for Next Class & Timetable\n* 🎨 Modernized Next Class card with refined glassmorphism\n* 🕒 Fixed time layout cut-off on small screens\n* 🚀 Added In-App APK Auto-Download and Installer\n\n### 📦 Install\nDownload the \`${apkFileName}\` asset below.`,
     draft: false,
     prerelease: false
   };
@@ -129,7 +131,7 @@ async function run() {
   console.log('Creating GitHub release');
   const release = await apiRequest('POST', `/repos/${OWNER}/${REPO}/releases`, releaseBody);
   console.log('Release created:', release.html_url);
-  const asset = await uploadAsset(release.id, destPath, 'ALMS_v1.0.3.apk');
+  const asset = await uploadAsset(release.id, destPath, apkFileName);
   console.log('Asset uploaded:', asset.browser_download_url);
   fs.unlinkSync(destPath);
   console.log('Cleanup done');
