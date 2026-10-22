@@ -12,20 +12,31 @@ export interface AttendanceWidgetData {
   criticalCount: number; // subjects below 75%
 }
 
-function getLayoutTier(width: number, height: number): 'compact' | 'medium' | 'large' {
-  if (width < 200 || height < 115) return 'compact';
-  if (height >= 230) return 'large';
+function getLayoutTier(
+  rawWidth?: number,
+  rawHeight?: number,
+  screenInfo?: WidgetInfo['screenInfo']
+): 'compact' | 'medium' | 'large' {
+  const screenW = screenInfo?.screenWidthDp && screenInfo.screenWidthDp > 0 ? screenInfo.screenWidthDp : 380;
+  const hasValidDims = Boolean(rawWidth && rawWidth > 0 && rawHeight && rawHeight > 0);
+  const w = hasValidDims ? (rawWidth as number) : 175;
+  const h = hasValidDims ? (rawHeight as number) : 140;
+  const widthRatio = w / screenW;
+
+  if (!hasValidDims || widthRatio <= 0.62 || w < 240 || (h < 132 && w < 290)) return 'compact';
+  if (h >= 215 && w >= 240) return 'large';
   return 'medium';
 }
 
 export function AttendanceWidget({ data, widgetInfo }: { data?: AttendanceWidgetData; widgetInfo?: WidgetInfo }) {
-  const w = widgetInfo?.width ?? 320;
-  const h = widgetInfo?.height ?? 160;
-  const tier = getLayoutTier(w, h);
+  const hasValidDims = Boolean(widgetInfo?.width && widgetInfo.width > 0 && widgetInfo?.height && widgetInfo.height > 0);
+  const w = hasValidDims ? (widgetInfo!.width) : 175;
+  const h = hasValidDims ? (widgetInfo!.height) : 140;
+  const tier = getLayoutTier(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
   const isCompact = tier === 'compact';
   const isLarge = tier === 'large';
-  const pad = isCompact ? 10 : (isLarge ? 20 : 14);
+  const pad = isCompact ? 8 : (isLarge ? 20 : 14);
   const radius = isCompact ? 16 : 22;
 
   const pct = data?.overallPercentage ?? 0;
@@ -74,22 +85,77 @@ export function AttendanceWidget({ data, widgetInfo }: { data?: AttendanceWidget
           width: 'match_parent',
           backgroundColor: bgColor,
           borderRadius: radius,
-          borderWidth: 1,
+          borderWidth: 1.2,
           borderColor: statusBg,
-          padding: pad,
-          justifyContent: 'center',
+          padding: 8,
+          justifyContent: 'space-between',
           alignItems: 'center',
         }}
         clickAction="OPEN_APP"
       >
-        <TextWidget
-          text={`${pct}%`}
-          style={{ color: statusColor, fontSize: 28, fontWeight: '900' }}
-        />
-        <TextWidget
-          text={statusText}
-          style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 9, fontWeight: '700', marginTop: 2 }}
-        />
+        {/* Top: Status Badge */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: statusBg,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 2.5,
+              borderWidth: 1,
+              borderColor: statusColor,
+            }}
+          >
+            <TextWidget
+              text={`● ${statusText}`}
+              style={{ color: statusColor, fontSize: 9, fontWeight: '800' }}
+            />
+          </FlexWidget>
+          <TextWidget
+            text="ALMS"
+            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 8.5, fontWeight: 'bold' }}
+          />
+        </FlexWidget>
+
+        {/* Center: Hero Percentage */}
+        <FlexWidget style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <TextWidget
+            text={`${pct}%`}
+            style={{ color: statusColor, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}
+          />
+          <TextWidget
+            text="ATTENDANCE"
+            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 8.5, fontWeight: '800', letterSpacing: 0.8 }}
+          />
+        </FlexWidget>
+
+        {/* Bottom: Attended / Total */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            paddingTop: 2,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <TextWidget
+            text={`${data.attended}/${data.total} classes`}
+            style={{ color: '#E2E8F0', fontSize: 9, fontWeight: '700' }}
+          />
+          <TextWidget
+            text={isSafe ? 'Safe ✓' : (isWarning ? 'Warning ⚠️' : 'Critical ⚠️')}
+            style={{ color: statusColor, fontSize: 8.5, fontWeight: '800' }}
+          />
+        </FlexWidget>
       </FlexWidget>
     );
   }

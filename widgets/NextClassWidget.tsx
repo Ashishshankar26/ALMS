@@ -42,34 +42,62 @@ export interface NextClassWidgetData {
   cgpa?: string;
 }
 
-// Unified Responsive Layout Engine that prevents cramping across ALL launcher cell sizes
-function getWidgetLayoutConfig(w: number, h: number) {
-  const isMicro = h < 95;              // 1-cell height (e.g. 4x1, 3x1, 2x1)
-  const isCompact = h >= 95 && h < 140; // 2-cell short height (e.g. 2x2, 3x2 on small launchers)
-  const isMedium = h >= 140 && h < 225; // Standard 2-cell / 3-cell height (e.g. 4x2, 3x2, 4x3)
-  const isLarge = h >= 225;            // Tall 4x4, 5x4
+// ── INTELLIGENT AUTO-RESIZING LAYOUT ENGINE ──
+// Detects smartphone screen ratios, launcher cell widths/heights, and orientation
+// to eliminate cramping and clipping across ALL Android phones and launchers.
+export function getWidgetLayoutConfig(
+  rawWidth?: number,
+  rawHeight?: number,
+  screenInfo?: WidgetInfo['screenInfo']
+) {
+  const screenW = screenInfo?.screenWidthDp && screenInfo.screenWidthDp > 0 ? screenInfo.screenWidthDp : 380;
+  const screenH = screenInfo?.screenHeightDp && screenInfo.screenHeightDp > 0 ? screenInfo.screenHeightDp : 800;
 
-  const isNarrow = w < 220;            // 2-cell width (e.g. 2x2, 2x3)
-  const isWide = w >= 320;             // 4-cell or wider
+  const hasValidDims = Boolean(rawWidth && rawWidth > 0 && rawHeight && rawHeight > 0);
+  // Default to compact 2x2 dimensions (175 x 140) if launcher hasn't supplied dimensions yet.
+  // This guarantees that initial placement NEVER overflows or renders a clipped 4x2 card into a 2x2 cell!
+  const w = hasValidDims ? (rawWidth as number) : 175;
+  const h = hasValidDims ? (rawHeight as number) : 140;
+
+  // Fraction of phone screen width occupied by this widget (e.g. 2 cols on 4-col launcher ≈ 0.46)
+  const widthRatio = w / screenW;
+
+  // 1. Ultra-compact 1-row height strip (e.g. 4x1 horizontal bar, or 2x1)
+  const isMicro = h < 98;
+
+  // 2. Small Box / 2x2 detection:
+  // - Occupies ≤ 62% of screen width (2 columns on any launcher)
+  // - OR absolute width is < 240dp
+  // - OR height is constrained (h < 132dp) and width < 290dp
+  // - OR initial cold-start before launcher measures
+  const isSmallBox = !isMicro && (!hasValidDims || widthRatio <= 0.62 || w < 240 || (h < 132 && w < 290));
+
+  // 3. Large multi-row expanded card (e.g. 4x3, 4x4, 5x4)
+  const isLarge = !isMicro && !isSmallBox && h >= 215 && w >= 240;
+
+  // 4. Medium (3x2 or compact 4x2 where height or width is intermediate)
+  const isMedium = !isMicro && !isSmallBox && !isLarge && (w < 310 || h < 145);
+
+  // 5. Full Standard 4x2 desktop utility card (w >= 310 && h >= 145)
+  const isFull = !isMicro && !isSmallBox && !isLarge && !isMedium;
 
   return {
+    w,
+    h,
+    isSmallBox,
     isMicro,
-    isCompact,
     isMedium,
+    isFull,
     isLarge,
-    isNarrow,
-    isWide,
-    // Spacing
-    padH: isNarrow ? 10 : (isMicro ? 12 : (isCompact ? 12 : 16)),
-    padV: isMicro ? 6 : (isCompact ? 8 : (isMedium ? 12 : 16)),
-    borderRadius: isMicro ? 14 : (isCompact ? 18 : 24),
+    // Dynamic paddings tailored to size
+    padH: isSmallBox ? 8 : (isMicro ? 10 : (isMedium ? 12 : 14)),
+    padV: isSmallBox ? 6 : (isMicro ? 5 : (isMedium ? 8 : 10)),
+    borderRadius: isSmallBox ? 16 : (isMicro ? 14 : 20),
     // Typography
-    titleFontSize: isMicro ? 12 : (isCompact ? (isNarrow ? 13 : 15) : (isMedium ? (isNarrow ? 16 : 19) : 22)),
-    titleMaxLines: isMicro || isCompact ? 1 : 2,
-    badgeFontSize: isMicro || isNarrow ? 8 : 10,
-    // Elements to show
-    showHandle: !isMicro && h >= 115,
-    scheduleItemsCount: isMicro ? 1 : (isCompact ? 2 : (isMedium ? 3 : 4)),
+    titleFontSize: isSmallBox ? 12 : (isMicro ? 12 : (isMedium ? 14 : 17)),
+    badgeFontSize: isSmallBox || isMicro ? 8 : 9.5,
+    // Max schedule items to display without vertical overflow
+    scheduleItemsCount: isSmallBox ? 2 : (isMicro ? 1 : (isLarge ? 4 : 3)),
   };
 }
 
@@ -80,9 +108,7 @@ export function NextClassWidget({
   data?: NextClassWidgetData;
   widgetInfo?: WidgetInfo;
 }) {
-  const w = widgetInfo?.width ?? 320;
-  const h = widgetInfo?.height ?? 160;
-  const cfg = getWidgetLayoutConfig(w, h);
+  const cfg = getWidgetLayoutConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
   const stackIndex = ((data?.stackIndex ?? 0) % 3 + 3) % 3;
   const hasClasses = Boolean(data && data.status !== 'no_classes' && data.subject);
@@ -117,15 +143,23 @@ export function NextClassWidget({
   const attBorder: ColorProp = isSafe ? '#059669' : (isWarning ? '#D97706' : '#E11D48');
   const attBadgeBg: ColorProp = isSafe ? 'rgba(16, 185, 129, 0.22)' : (isWarning ? 'rgba(245, 158, 11, 0.22)' : 'rgba(239, 68, 68, 0.22)');
 
-  // Top Handle Pill (directly from app's stackHandle style)
+  // Formatted timer labels
+  const timerBadgeText = isOngoing
+    ? (data?.timeUntilOrLeft ? `● ${data.timeUntilOrLeft}` : '● ACTIVE NOW')
+    : (data?.timeUntilOrLeft ? `● ${data.timeUntilOrLeft}` : (isTomorrow ? 'TOMORROW' : '● NEXT'));
+
+  // Course Code fallback (e.g. "CSE316")
+  const courseCodeDisplay = data?.subjectCode || (data?.subject && data.subject.length > 8 ? data.subject.slice(0, 7) + '..' : (data?.subject || 'CLASS'));
+
+  // Top Handle Pill (rendered only on standard full & large heights where space permits)
   const renderStackHandle = () => {
-    if (!cfg.showHandle) return null;
+    if (cfg.isSmallBox || cfg.isMicro || cfg.isMedium) return null;
     return (
       <FlexWidget
         style={{
           width: 'match_parent',
           alignItems: 'center',
-          marginBottom: cfg.isCompact ? 6 : 8,
+          marginBottom: 4,
         }}
       >
         <FlexWidget
@@ -156,7 +190,7 @@ export function NextClassWidget({
           justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
-          marginBottom: cfg.isMicro ? 3 : 6,
+          marginBottom: cfg.isMicro ? 2 : (cfg.isSmallBox ? 3 : 4),
         }}
       >
         {/* Left Side: Mini Status Badge + Optional Category Label */}
@@ -172,8 +206,8 @@ export function NextClassWidget({
             style={{
               backgroundColor: badgeBgColor,
               borderRadius: 8,
-              paddingHorizontal: cfg.isMicro || cfg.isNarrow ? 6 : 9,
-              paddingVertical: cfg.isMicro ? 2 : 4,
+              paddingHorizontal: cfg.isSmallBox || cfg.isMicro ? 6 : 8,
+              paddingVertical: cfg.isMicro ? 2 : 2.5,
               borderWidth: 1,
               borderColor: badgeBorderColor,
               flexDirection: 'row',
@@ -189,7 +223,7 @@ export function NextClassWidget({
                 color: badgeTextColor,
                 fontSize: cfg.badgeFontSize,
                 fontWeight: '900',
-                letterSpacing: 0.5,
+                letterSpacing: 0.4,
               }}
             />
             <TextWidget
@@ -202,8 +236,8 @@ export function NextClassWidget({
             />
           </FlexWidget>
 
-          {/* Category label shown when width permits */}
-          {!cfg.isNarrow && !cfg.isMicro ? (
+          {/* Category label shown only when width permits (full or large) */}
+          {(cfg.isFull || cfg.isLarge) ? (
             <TextWidget
               text={categoryLabel}
               style={{
@@ -223,7 +257,7 @@ export function NextClassWidget({
             flexDirection: 'row',
             alignItems: 'center',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 12,
+            borderRadius: 8,
             borderWidth: 1,
             borderColor: 'rgba(255, 255, 255, 0.12)',
             paddingHorizontal: 2,
@@ -233,8 +267,8 @@ export function NextClassWidget({
           {/* Previous Card Button */}
           <FlexWidget
             style={{
-              paddingHorizontal: cfg.isMicro ? 5 : 7,
-              paddingVertical: cfg.isMicro ? 1 : 3,
+              paddingHorizontal: cfg.isMicro || cfg.isSmallBox ? 4 : 5,
+              paddingVertical: 1,
             }}
             clickAction="PREV_STACK"
           >
@@ -242,7 +276,7 @@ export function NextClassWidget({
               text="‹"
               style={{
                 color: '#E2E8F0',
-                fontSize: cfg.isMicro ? 11 : 14,
+                fontSize: cfg.isMicro || cfg.isSmallBox ? 11 : 12,
                 fontWeight: '900',
               }}
             />
@@ -253,17 +287,17 @@ export function NextClassWidget({
             text={`${activeIdx + 1}/3`}
             style={{
               color: 'rgba(255, 255, 255, 0.75)',
-              fontSize: cfg.isMicro ? 8 : 10,
+              fontSize: cfg.isMicro || cfg.isSmallBox ? 8 : 9,
               fontWeight: '800',
-              marginHorizontal: 2,
+              marginHorizontal: 1,
             }}
           />
 
           {/* Next Card Button */}
           <FlexWidget
             style={{
-              paddingHorizontal: cfg.isMicro ? 5 : 7,
-              paddingVertical: cfg.isMicro ? 1 : 3,
+              paddingHorizontal: cfg.isMicro || cfg.isSmallBox ? 4 : 5,
+              paddingVertical: 1,
             }}
             clickAction="NEXT_STACK"
           >
@@ -271,7 +305,7 @@ export function NextClassWidget({
               text="›"
               style={{
                 color: '#E2E8F0',
-                fontSize: cfg.isMicro ? 11 : 14,
+                fontSize: cfg.isMicro || cfg.isSmallBox ? 11 : 12,
                 fontWeight: '900',
               }}
             />
@@ -293,8 +327,8 @@ export function NextClassWidget({
     const safePage = ((rawPage % totalPages) + totalPages) % totalPages;
     const visibleClasses = schedule.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
-    const badgeText = cfg.isNarrow || cfg.isMicro
-      ? `TODAY • ${count}`
+    const badgeText = cfg.isSmallBox || cfg.isMicro
+      ? `TODAY (${count})`
       : `TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`;
 
     return (
@@ -319,8 +353,8 @@ export function NextClassWidget({
         {count === 0 ? (
           <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
             <TextWidget
-              text="No classes scheduled for today ✓"
-              style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: cfg.titleFontSize - 3, fontWeight: '700' }}
+              text="No classes today ✓"
+              style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: cfg.isSmallBox ? 11 : 13, fontWeight: '700' }}
             />
           </FlexWidget>
         ) : (
@@ -333,33 +367,33 @@ export function NextClassWidget({
                   flexDirection: 'row',
                   alignItems: 'center',
                   backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.06)',
-                  borderRadius: 8,
-                  paddingHorizontal: cfg.isNarrow ? 6 : 8,
-                  paddingVertical: cfg.isMicro ? 2 : (cfg.isCompact ? 4 : 5),
+                  borderRadius: 6,
+                  paddingHorizontal: 6,
+                  paddingVertical: cfg.isSmallBox ? 2.5 : 3.5,
                   borderWidth: 1,
                   borderColor: item.isOngoing ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                  marginBottom: cfg.isMicro ? 2 : 4,
+                  marginBottom: cfg.isSmallBox ? 2 : 3,
                 }}
               >
-                {/* Start Time */}
+                {/* Course Code or Start Time */}
                 <TextWidget
-                  text={item.time.split('-')[0].trim()}
+                  text={cfg.isSmallBox ? (item.subjectCode || item.time.split('-')[0].trim()) : item.time.split('-')[0].trim()}
                   style={{
                     color: item.isOngoing ? '#10B981' : '#E2E8F0',
-                    fontSize: cfg.isMicro ? 9 : 11,
+                    fontSize: cfg.isSmallBox ? 9.5 : 10.5,
                     fontWeight: '800',
-                    width: cfg.isNarrow ? 52 : 64,
+                    width: cfg.isSmallBox ? 50 : 62,
                   }}
                 />
-                {/* Subject Name */}
-                <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
+                {/* Subject Name / Time */}
+                <FlexWidget style={{ flex: 1, marginHorizontal: 3 }}>
                   <TextWidget
-                    text={item.subject}
+                    text={cfg.isSmallBox ? item.time.split('-')[0].trim() : item.subject}
                     maxLines={1}
                     truncate="END"
                     style={{
                       color: '#FFFFFF',
-                      fontSize: cfg.isMicro ? 10 : 12,
+                      fontSize: cfg.isSmallBox ? 9.5 : 11,
                       fontWeight: 'bold',
                     }}
                   />
@@ -369,7 +403,7 @@ export function NextClassWidget({
                   text={item.room ? item.room.replace(/^Room\s*/i, '') : 'TBA'}
                   style={{
                     color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: cfg.isMicro ? 9 : 11,
+                    fontSize: cfg.isSmallBox ? 8.5 : 10,
                     fontWeight: '700',
                   }}
                 />
@@ -385,14 +419,14 @@ export function NextClassWidget({
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
-            marginTop: cfg.isMicro ? 2 : 4,
+            marginTop: 1,
           }}
         >
           <TextWidget
             text={count > pageSize
               ? `${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, count)} of ${count}`
-              : `${count} total classes`}
-            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: '600' }}
+              : `${count} classes`}
+            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 8.5, fontWeight: '600' }}
           />
 
           {totalPages > 1 ? (
@@ -400,38 +434,38 @@ export function NextClassWidget({
               <FlexWidget
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  borderRadius: 6,
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
-                  marginRight: 4,
+                  borderRadius: 5,
+                  paddingHorizontal: 5,
+                  paddingVertical: 1,
+                  marginRight: 3,
                 }}
                 clickAction="PREV_SCHEDULE_PAGE"
               >
                 <TextWidget
                   text="▲"
-                  style={{ color: scheduleAccent, fontSize: 9, fontWeight: 'bold' }}
+                  style={{ color: scheduleAccent, fontSize: 8.5, fontWeight: 'bold' }}
                 />
               </FlexWidget>
 
               <FlexWidget
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  borderRadius: 6,
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
+                  borderRadius: 5,
+                  paddingHorizontal: 5,
+                  paddingVertical: 1,
                 }}
                 clickAction="NEXT_SCHEDULE_PAGE"
               >
                 <TextWidget
                   text="▼"
-                  style={{ color: scheduleAccent, fontSize: 9, fontWeight: 'bold' }}
+                  style={{ color: scheduleAccent, fontSize: 8.5, fontWeight: 'bold' }}
                 />
               </FlexWidget>
             </FlexWidget>
           ) : (
             <TextWidget
               text="ALMS"
-              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
+              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 8, fontWeight: 'bold' }}
             />
           )}
         </FlexWidget>
@@ -467,15 +501,15 @@ export function NextClassWidget({
         {renderStackHandle()}
         {renderStackHeader(2, statusBadgeText, 'ACADEMIC ATTENDANCE', attBadgeBg, attBorder, attColor)}
 
-        {/* Subtitle from the app's card */}
-        {!cfg.isMicro ? (
+        {/* Subtitle from the app's card (hidden on small box) */}
+        {!cfg.isSmallBox && !cfg.isMicro ? (
           <TextWidget
             text="Live Attendance Tracking"
             style={{
               color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: cfg.isCompact ? 10 : 12,
+              fontSize: 10.5,
               fontWeight: '700',
-              marginBottom: 2,
+              marginBottom: 1,
             }}
           />
         ) : null}
@@ -487,7 +521,7 @@ export function NextClassWidget({
             alignItems: 'center',
             justifyContent: 'space-between',
             width: 'match_parent',
-            marginVertical: cfg.isMicro ? 1 : 3,
+            marginVertical: 1,
           }}
         >
           {/* Big Percentage Number */}
@@ -496,7 +530,7 @@ export function NextClassWidget({
               text={`${attPct}`}
               style={{
                 color: '#FFFFFF',
-                fontSize: cfg.isMicro ? 22 : (cfg.isCompact ? 28 : (cfg.isLarge ? 36 : 32)),
+                fontSize: cfg.isSmallBox ? 25 : (cfg.isLarge ? 34 : 28),
                 fontWeight: '900',
                 letterSpacing: -1,
               }}
@@ -505,7 +539,7 @@ export function NextClassWidget({
               text="%"
               style={{
                 color: attColor,
-                fontSize: cfg.isMicro ? 12 : 16,
+                fontSize: cfg.isSmallBox ? 12 : 15,
                 fontWeight: 'bold',
                 marginLeft: 2,
               }}
@@ -515,19 +549,19 @@ export function NextClassWidget({
           {/* Right Summary Info */}
           <FlexWidget style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
             <TextWidget
-              text={`${attended} / ${total} Present`}
+              text={`${attended}/${total}`}
               style={{
                 color: '#FFFFFF',
-                fontSize: cfg.isMicro ? 9 : 11,
+                fontSize: cfg.isSmallBox ? 9.5 : 11,
                 fontWeight: '700',
               }}
             />
-            {cgpa && cgpa !== '--' ? (
+            {cgpa && cgpa !== '--' && !cfg.isSmallBox ? (
               <TextWidget
                 text={`CGPA: ${cgpa}`}
                 style={{
                   color: '#A78BFA',
-                  fontSize: cfg.isMicro ? 8 : 10,
+                  fontSize: 8.5,
                   fontWeight: 'bold',
                   marginTop: 1,
                 }}
@@ -536,23 +570,23 @@ export function NextClassWidget({
           </FlexWidget>
         </FlexWidget>
 
-        {/* Progress Bar (omitted only on micro height) */}
+        {/* Progress Bar (rendered when space allows) */}
         {!cfg.isMicro ? (
           <FlexWidget
             style={{
               width: 'match_parent',
-              height: cfg.isCompact ? 5 : 7,
+              height: 4,
               backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              borderRadius: 4,
-              marginVertical: 2,
+              borderRadius: 2,
+              marginVertical: 1.5,
             }}
           >
             <FlexWidget
               style={{
-                width: (Math.max(10, (w - cfg.padH * 2) * Math.min(100, Math.max(0, attPct)) / 100)) as any,
+                width: (Math.max(8, (cfg.w - cfg.padH * 2) * Math.min(100, Math.max(0, attPct)) / 100)) as any,
                 height: 'match_parent',
                 backgroundColor: attColor,
-                borderRadius: 4,
+                borderRadius: 2,
               }}
             />
           </FlexWidget>
@@ -565,16 +599,16 @@ export function NextClassWidget({
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
-            marginTop: cfg.isMicro ? 1 : 3,
+            marginTop: 1,
           }}
         >
           <TextWidget
-            text={isSafe ? 'Above 75% requirement ✓' : 'Below 75% requirement ⚠️'}
-            style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: '600' }}
+            text={isSafe ? 'Above 75% ✓' : 'Below 75% ⚠️'}
+            style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 8.5, fontWeight: '600' }}
           />
           <TextWidget
             text="ALMS"
-            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
+            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 8, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
@@ -586,8 +620,8 @@ export function NextClassWidget({
   // ═════════════════════════════════════════════════════════════════════════
   if (!hasClasses) {
     const badgeText = data?.todayTotalClasses && data.todayTotalClasses > 0
-      ? `ALL ${data.todayTotalClasses} CLASSES DONE ✓`
-      : 'ALL CAUGHT UP ✓';
+      ? `ALL ${data.todayTotalClasses} DONE ✓`
+      : 'CAUGHT UP ✓';
 
     return (
       <FlexWidget
@@ -607,22 +641,22 @@ export function NextClassWidget({
         {renderStackHandle()}
         {renderStackHeader(0, badgeText, 'COMPANION', 'rgba(56, 189, 248, 0.22)', '#0284C7', '#38BDF8')}
 
-        <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1, marginVertical: 4 }}>
+        <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1, marginVertical: 2 }}>
           <TextWidget
             text="No classes scheduled"
             style={{
               color: '#FFFFFF',
-              fontSize: cfg.isMicro ? 12 : (cfg.isCompact ? 14 : 17),
+              fontSize: cfg.isSmallBox ? 12 : 15,
               fontWeight: 'bold',
-              marginBottom: 2,
+              marginBottom: 1,
             }}
           />
-          {!cfg.isMicro ? (
+          {!cfg.isSmallBox ? (
             <TextWidget
-              text={attPct > 0 ? `Attendance: ${attPct}% • Safe` : 'Enjoy your day! Tap to open ALMS.'}
+              text={attPct > 0 ? `Attendance: ${attPct}% • Safe` : 'Enjoy your free time!'}
               style={{
                 color: 'rgba(255, 255, 255, 0.65)',
-                fontSize: cfg.isCompact ? 9 : 11,
+                fontSize: 9.5,
               }}
             />
           ) : null}
@@ -638,11 +672,11 @@ export function NextClassWidget({
         >
           <TextWidget
             text="ALMS Companion"
-            style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: cfg.isMicro ? 8 : 10 }}
+            style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 8 }}
           />
           <TextWidget
             text="Tap to open"
-            style={{ color: '#38BDF8', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
+            style={{ color: '#38BDF8', fontSize: 8, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
@@ -650,23 +684,133 @@ export function NextClassWidget({
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 0: NEXT CLASS / ACTIVE CLASS (Utility Stack Card Design)
+  // CARD 0: NEXT CLASS / ACTIVE CLASS
   // ═════════════════════════════════════════════════════════════════════════
 
-  // Concise status badge text that never overflows on small widths
-  const statusBadgeText = cfg.isNarrow || cfg.isMicro
-    ? (isOngoing ? '● ACTIVE' : (isTomorrow ? 'TOMORROW' : 'NEXT'))
-    : (data!.statusText || (isOngoing ? '● ACTIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS')));
+  // ── 1. SMALL BOX / 2x2 LAYOUT (Strictly Course Code, Room, Class Time & Timer) ──
+  // Per user instruction: in 2x2 only show course code, room no, class time and the timer (not full name)
+  if (cfg.isSmallBox) {
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: nextClassBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: nextClassBorder,
+          paddingHorizontal: 8,
+          paddingVertical: 7,
+          justifyContent: 'space-between',
+        }}
+        clickAction="OPEN_APP"
+      >
+        {/* Row 1: Status Timer Badge on left + Cycler [‹ 1/3 ›] on right */}
+        {renderStackHeader(0, timerBadgeText, 'LIVE', nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
-  // Category label
-  const categoryLabel = isOngoing ? 'LIVE CLASS' : (isTomorrow ? 'UPCOMING' : 'NEXT CLASS');
+        {/* Row 2: Big Bold Course Code (NOT full name) + Type Tag */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: 'match_parent',
+            marginVertical: 1,
+          }}
+        >
+          <TextWidget
+            text={courseCodeDisplay}
+            style={{
+              color: '#FFFFFF',
+              fontSize: cfg.w < 160 ? 17 : 20,
+              fontWeight: '900',
+              letterSpacing: -0.5,
+            }}
+          />
+          <FlexWidget
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 5,
+              paddingHorizontal: 5,
+              paddingVertical: 1.5,
+            }}
+          >
+            <TextWidget
+              text={(data!.type || 'LEC').slice(0, 3).toUpperCase()}
+              style={{
+                color: nextClassAccent,
+                fontSize: 8.5,
+                fontWeight: '800',
+              }}
+            />
+          </FlexWidget>
+        </FlexWidget>
 
-  // Subtitle (Course Code + Lecture/Lab Type)
-  const courseCodeType = data!.subjectCode
-    ? `${data!.subjectCode} • ${(data!.type || 'Lecture').toUpperCase()}`
-    : (data!.type || 'Lecture').toUpperCase();
+        {/* Row 3: Class Time + Room Number */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <TextWidget
+            text={`⏰ ${data!.time.split('-')[0].trim()}`}
+            style={{
+              color: '#CBD5E1',
+              fontSize: 9.5,
+              fontWeight: '700',
+            }}
+          />
+          <TextWidget
+            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : '📍 TBA'}
+            style={{
+              color: '#FFFFFF',
+              fontSize: 9.5,
+              fontWeight: '800',
+            }}
+          />
+        </FlexWidget>
 
-  // ── 1. ULTRA-COMPACT (1-cell height, h < 95, e.g. 4x1 or 2x1) ──
+        {/* Row 4: Class Progress indicator & ALMS mark (only rendered when height allows) */}
+        {cfg.h >= 130 ? (
+          <FlexWidget
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: 'match_parent',
+              paddingTop: 2,
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <TextWidget
+              text={data?.todayTotalClasses
+                ? (data.currentClassIndex ? `Class ${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses} today`)
+                : 'ALMS Companion'}
+              style={{
+                color: nextClassAccent,
+                fontSize: 8,
+                fontWeight: '800',
+              }}
+            />
+            <TextWidget
+              text="ALMS"
+              style={{
+                color: 'rgba(255, 255, 255, 0.4)',
+                fontSize: 8,
+                fontWeight: 'bold',
+              }}
+            />
+          </FlexWidget>
+        ) : null}
+      </FlexWidget>
+    );
+  }
+
+  // ── 2. ULTRA-COMPACT (1-cell height horizontal strip, h < 98, e.g. 4x1) ──
   if (cfg.isMicro) {
     return (
       <FlexWidget
@@ -683,7 +827,7 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+        {renderStackHeader(0, timerBadgeText, 'LIVE', nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
         {/* Row 2: Subject Title on Left, Room + Time on Right */}
         <FlexWidget
@@ -696,7 +840,7 @@ export function NextClassWidget({
         >
           <FlexWidget style={{ flex: 1, marginRight: 6 }}>
             <TextWidget
-              text={data!.subject}
+              text={data!.subjectCode ? `${data!.subjectCode} • ${data!.subject}` : data!.subject}
               maxLines={1}
               truncate="END"
               style={{
@@ -707,10 +851,10 @@ export function NextClassWidget({
             />
           </FlexWidget>
           <TextWidget
-            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : data!.time.split('-')[0].trim()}
+            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')} • ${data!.time.split('-')[0].trim()}` : data!.time.split('-')[0].trim()}
             style={{
               color: nextClassAccent,
-              fontSize: 10,
+              fontSize: 9.5,
               fontWeight: '800',
             }}
           />
@@ -719,102 +863,14 @@ export function NextClassWidget({
     );
   }
 
-  // ── 2. COMPACT (Short 2-cell, 95 <= h < 140, e.g. 2x2 or 3x2) ──
-  if (cfg.isCompact) {
-    return (
-      <FlexWidget
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: nextClassBg,
-          borderRadius: cfg.borderRadius,
-          borderWidth: 1.2,
-          borderColor: nextClassBorder,
-          paddingHorizontal: cfg.padH,
-          paddingVertical: cfg.padV,
-          justifyContent: 'space-between',
-        }}
-        clickAction="OPEN_APP"
-      >
-        {renderStackHandle()}
-        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
-
-        {/* Time + Today Progress row */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-            marginVertical: 1,
-          }}
-        >
-          <TextWidget
-            text={`⏰ ${data!.time.split('-')[0].trim()}`}
-            style={{
-              color: '#CBD5E1',
-              fontSize: 11,
-              fontWeight: '700',
-            }}
-          />
-          {data?.todayTotalClasses ? (
-            <TextWidget
-              text={`${data.currentClassIndex ? `${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses}`} today`}
-              style={{
-                color: nextClassAccent,
-                fontSize: 9,
-                fontWeight: '800',
-              }}
-            />
-          ) : null}
-        </FlexWidget>
-
-        {/* Big Hero Subject Title */}
-        <TextWidget
-          text={data!.subject}
-          maxLines={1}
-          truncate="END"
-          style={{
-            color: '#FFFFFF',
-            fontSize: cfg.titleFontSize,
-            fontWeight: 'bold',
-          }}
-        />
-
-        {/* Bottom Info Row */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <TextWidget
-            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : '📍 TBA'}
-            style={{
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: 10,
-              fontWeight: '700',
-            }}
-          />
-          <TextWidget
-            text={(data!.type || 'Lecture').toUpperCase()}
-            style={{
-              color: nextClassAccent,
-              fontSize: 9,
-              fontWeight: '800',
-            }}
-          />
-        </FlexWidget>
-      </FlexWidget>
-    );
-  }
-
-  // ── 3. LARGE (Tall widgets, h >= 225, e.g. 4x4, 5x4) ──
+  // ── 3. LARGE EXPANDED (Tall widgets, h >= 215, e.g. 4x3, 4x4, 5x4) ──
   if (cfg.isLarge) {
     const schedule = data?.todaySchedule || [];
     const upcomingList = schedule.filter(s => !s.isPast);
+    const categoryLabel = isOngoing ? 'LIVE CLASS' : (isTomorrow ? 'UPCOMING' : 'NEXT CLASS');
+    const courseCodeType = data!.subjectCode
+      ? `${data!.subjectCode} • ${(data!.type || 'Lecture').toUpperCase()}`
+      : (data!.type || 'Lecture').toUpperCase();
 
     return (
       <FlexWidget
@@ -832,18 +888,18 @@ export function NextClassWidget({
         clickAction="OPEN_APP"
       >
         {renderStackHandle()}
-        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+        {renderStackHeader(0, data!.statusText || timerBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
         {/* Hero Card Container */}
         <FlexWidget
           style={{
             width: 'match_parent',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 16,
-            padding: 12,
+            borderRadius: 14,
+            padding: 10,
             borderWidth: 1,
             borderColor: 'rgba(255, 255, 255, 0.09)',
-            marginVertical: 4,
+            marginVertical: 3,
           }}
         >
           {/* Schedule Time & Progress Badge */}
@@ -853,70 +909,61 @@ export function NextClassWidget({
               justifyContent: 'space-between',
               alignItems: 'center',
               width: 'match_parent',
-              marginBottom: 6,
+              marginBottom: 3,
             }}
           >
             <TextWidget
               text={`⏰ ${data!.time}`}
               style={{
                 color: '#E2E8F0',
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: '800',
               }}
             />
             {data?.todayTotalClasses ? (
-              <FlexWidget
+              <TextWidget
+                text={data.currentClassIndex ? `Class ${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses} Today`}
                 style={{
-                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                  borderRadius: 6,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  borderWidth: 1,
-                  borderColor: 'rgba(56, 189, 248, 0.3)',
+                  color: nextClassAccent,
+                  fontSize: 10,
+                  fontWeight: '700',
                 }}
-              >
-                <TextWidget
-                  text={data.currentClassIndex
-                    ? `Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
-                    : `Today: ${data.todayTotalClasses} Classes`}
-                  style={{ color: '#38BDF8', fontSize: 10, fontWeight: 'bold' }}
-                />
-              </FlexWidget>
+              />
             ) : null}
           </FlexWidget>
 
-          {/* Subtitle Course Code */}
+          {/* Course Code + Type Tag */}
           <TextWidget
             text={courseCodeType}
             style={{
               color: nextClassAccent,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: '800',
-              letterSpacing: 0.5,
+              letterSpacing: 0.6,
               marginBottom: 2,
             }}
           />
 
-          {/* Subject Title */}
+          {/* Full Subject Name */}
           <TextWidget
             text={data!.subject}
             maxLines={2}
             truncate="END"
             style={{
               color: '#FFFFFF',
-              fontSize: 20,
-              fontWeight: '800',
-              lineHeight: 24,
-              marginBottom: 6,
+              fontSize: 16,
+              fontWeight: '900',
+              lineHeight: 20,
+              marginBottom: 3,
             }}
           />
 
-          {/* Room Badge */}
+          {/* Room Location */}
           <TextWidget
             text={data!.room && data!.room !== 'TBA'
               ? (data!.room.toLowerCase().startsWith('room') ? `📍 ${data!.room}` : `📍 Room ${data!.room}`)
               : '📍 Room TBA'}
-            style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 11, fontWeight: '700' }}
+            style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 10.5, fontWeight: '700' }}
           />
         </FlexWidget>
 
@@ -926,16 +973,16 @@ export function NextClassWidget({
             text="UPCOMING TODAY"
             style={{
               color: 'rgba(255, 255, 255, 0.5)',
-              fontSize: 9,
+              fontSize: 8.5,
               fontWeight: '800',
               letterSpacing: 0.8,
-              marginBottom: 4,
+              marginBottom: 2,
             }}
           />
           {upcomingList.length <= 1 ? (
             <TextWidget
               text="No more classes after this today ✓"
-              style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11, fontWeight: '600' }}
+              style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10.5, fontWeight: '600' }}
             />
           ) : (
             upcomingList.slice(1, 3).map((item, idx) => (
@@ -947,25 +994,25 @@ export function NextClassWidget({
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: 6,
                   paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  marginBottom: 3,
+                  paddingVertical: 2.5,
+                  marginBottom: 2,
                 }}
               >
                 <TextWidget
                   text={item.time.split('-')[0].trim()}
-                  style={{ color: nextClassAccent, fontSize: 10, fontWeight: '800', width: 62 }}
+                  style={{ color: nextClassAccent, fontSize: 9.5, fontWeight: '800', width: 58 }}
                 />
-                <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
+                <FlexWidget style={{ flex: 1, marginHorizontal: 3 }}>
                   <TextWidget
                     text={item.subject}
                     maxLines={1}
                     truncate="END"
-                    style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}
+                    style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '600' }}
                   />
                 </FlexWidget>
                 <TextWidget
                   text={item.room ? item.room.replace(/^Room\s*/i, '') : 'TBA'}
-                  style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: '600' }}
+                  style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 9.5, fontWeight: '600' }}
                 />
               </FlexWidget>
             ))
@@ -983,18 +1030,110 @@ export function NextClassWidget({
         >
           <TextWidget
             text={attPct > 0 ? `Attendance: ${attPct}% ${isSafe ? '✓' : '⚠️'}` : 'ALMS Companion'}
-            style={{ color: attColor, fontSize: 10, fontWeight: '700' }}
+            style={{ color: attColor, fontSize: 9.5, fontWeight: '700' }}
           />
           <TextWidget
             text={data?.cgpa ? `CGPA: ${data.cgpa}` : 'ALMS'}
-            style={{ color: '#A78BFA', fontSize: 10, fontWeight: 'bold' }}
+            style={{ color: '#A78BFA', fontSize: 9.5, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
     );
   }
 
-  // ── 4. MEDIUM (Standard 4x2 / 3x2, 140 <= h < 225) — The Core Utility Stack Card ──
+  // ── 4. MEDIUM (3x2 or Compact 4x2, w < 310 or h < 145) ──
+  // Shows 1-line subject title, course code, room and time without overflowing
+  if (cfg.isMedium) {
+    const mediumStatusBadge = data!.statusText || timerBadgeText;
+    const courseCodeType = data!.subjectCode
+      ? `${data!.subjectCode} • ${(data!.type || 'Lecture').toUpperCase()}`
+      : (data!.type || 'Lecture').toUpperCase();
+
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: nextClassBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: nextClassBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+        clickAction="OPEN_APP"
+      >
+        {renderStackHeader(0, mediumStatusBadge, 'NEXT CLASS', nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+
+        {/* Middle Section: Course Code + 1-Line Subject Title */}
+        <FlexWidget
+          style={{
+            width: 'match_parent',
+            marginVertical: 1,
+          }}
+        >
+          <TextWidget
+            text={courseCodeType}
+            style={{
+              color: nextClassAccent,
+              fontSize: 9.5,
+              fontWeight: '800',
+              letterSpacing: 0.5,
+              marginBottom: 1,
+            }}
+          />
+          <TextWidget
+            text={data!.subject}
+            maxLines={1}
+            truncate="END"
+            style={{
+              color: '#FFFFFF',
+              fontSize: cfg.titleFontSize,
+              fontWeight: 'bold',
+            }}
+          />
+        </FlexWidget>
+
+        {/* Clean Footer Row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            paddingTop: 2,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <TextWidget
+            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : '📍 TBA'}
+            style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}
+          />
+          <TextWidget
+            text={`⏰ ${data!.time}`}
+            style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 10, fontWeight: '600' }}
+          />
+          {data?.todayTotalClasses ? (
+            <TextWidget
+              text={data.currentClassIndex ? `📚 ${data.currentClassIndex}/${data.todayTotalClasses}` : `📚 ${data.todayTotalClasses}`}
+              style={{ color: nextClassAccent, fontSize: 10, fontWeight: '700' }}
+            />
+          ) : null}
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ── 5. FULL STANDARD 4x2 EXPANDED LAYOUT ──
+  // The full utility stack card: shows full course title (2 lines), room, time, and progress dividers
+  const fullStatusBadge = data!.statusText || (isOngoing ? '● ACTIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'));
+  const categoryLabel = isOngoing ? 'LIVE CLASS' : (isTomorrow ? 'UPCOMING' : 'NEXT CLASS');
+  const courseCodeType = data!.subjectCode
+    ? `${data!.subjectCode} • ${(data!.type || 'Lecture').toUpperCase()}`
+    : (data!.type || 'Lecture').toUpperCase();
+
   return (
     <FlexWidget
       style={{
@@ -1013,10 +1152,10 @@ export function NextClassWidget({
       {/* 1. Top Handle Pill from the app */}
       {renderStackHandle()}
 
-      {/* 2. Top Header Row: Status Badge (with time left/ends at) + Category + [‹ 1/3 ›] */}
-      {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+      {/* 2. Top Header Row: Status Badge + Category + [‹ 1/3 ›] */}
+      {renderStackHeader(0, fullStatusBadge, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
-      {/* 3. Middle Section: Subtitle (Course Code + Type) + Hero Subject Title */}
+      {/* 3. Middle Section: Subtitle (Course Code + Type) + FULL Subject Title */}
       <FlexWidget
         style={{
           width: 'match_parent',
@@ -1035,10 +1174,10 @@ export function NextClassWidget({
           }}
         />
 
-        {/* Big Hero Subject Title */}
+        {/* Full Subject Title */}
         <TextWidget
           text={data!.subject}
-          maxLines={cfg.titleMaxLines}
+          maxLines={2}
           truncate="END"
           style={{
             color: '#FFFFFF',
@@ -1049,13 +1188,13 @@ export function NextClassWidget({
         />
       </FlexWidget>
 
-      {/* 4. Footer Info Row (Directly copying the app's stackFooterRow with vertical separators) */}
+      {/* 4. Footer Info Row with Clean Dividers */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           width: 'match_parent',
-          paddingTop: 4,
+          paddingTop: 3,
           borderTopWidth: 1,
           borderTopColor: 'rgba(255, 255, 255, 0.08)',
         }}
@@ -1067,7 +1206,7 @@ export function NextClassWidget({
             : '📍 Room TBA'}
           style={{
             color: '#FFFFFF',
-            fontSize: 11,
+            fontSize: 10.5,
             fontWeight: '700',
           }}
         />
@@ -1076,9 +1215,9 @@ export function NextClassWidget({
         <FlexWidget
           style={{
             width: 1,
-            height: 10,
+            height: 9,
             backgroundColor: 'rgba(255, 255, 255, 0.25)',
-            marginHorizontal: 8,
+            marginHorizontal: 6,
           }}
         />
 
@@ -1087,7 +1226,7 @@ export function NextClassWidget({
           text={`⏰ ${data!.time}`}
           style={{
             color: 'rgba(255, 255, 255, 0.85)',
-            fontSize: 11,
+            fontSize: 10.5,
             fontWeight: '600',
           }}
         />
@@ -1097,9 +1236,9 @@ export function NextClassWidget({
           <FlexWidget
             style={{
               width: 1,
-              height: 10,
+              height: 9,
               backgroundColor: 'rgba(255, 255, 255, 0.25)',
-              marginHorizontal: 8,
+              marginHorizontal: 6,
             }}
           />
         ) : null}
@@ -1112,7 +1251,7 @@ export function NextClassWidget({
               : `📚 ${data.todayTotalClasses} Today`}
             style={{
               color: nextClassAccent,
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: '700',
             }}
           />

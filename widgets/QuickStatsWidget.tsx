@@ -13,20 +13,31 @@ export interface QuickStatsWidgetData {
   hasClass: boolean;
 }
 
-function getLayoutTier(width: number, height: number): 'compact' | 'medium' | 'large' {
-  if (width < 200 || height < 115) return 'compact';
-  if (height >= 230) return 'large';
+function getLayoutTier(
+  rawWidth?: number,
+  rawHeight?: number,
+  screenInfo?: WidgetInfo['screenInfo']
+): 'compact' | 'medium' | 'large' {
+  const screenW = screenInfo?.screenWidthDp && screenInfo.screenWidthDp > 0 ? screenInfo.screenWidthDp : 380;
+  const hasValidDims = Boolean(rawWidth && rawWidth > 0 && rawHeight && rawHeight > 0);
+  const w = hasValidDims ? (rawWidth as number) : 175;
+  const h = hasValidDims ? (rawHeight as number) : 140;
+  const widthRatio = w / screenW;
+
+  if (!hasValidDims || widthRatio <= 0.62 || w < 240 || (h < 132 && w < 290)) return 'compact';
+  if (h >= 215 && w >= 240) return 'large';
   return 'medium';
 }
 
 export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidgetData; widgetInfo?: WidgetInfo }) {
-  const w = widgetInfo?.width ?? 320;
-  const h = widgetInfo?.height ?? 160;
-  const tier = getLayoutTier(w, h);
+  const hasValidDims = Boolean(widgetInfo?.width && widgetInfo.width > 0 && widgetInfo?.height && widgetInfo.height > 0);
+  const w = hasValidDims ? (widgetInfo!.width) : 175;
+  const h = hasValidDims ? (widgetInfo!.height) : 140;
+  const tier = getLayoutTier(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
   const isCompact = tier === 'compact';
   const isLarge = tier === 'large';
-  const pad = isCompact ? 10 : (isLarge ? 20 : 14);
+  const pad = isCompact ? 8 : (isLarge ? 20 : 14);
   const radius = isCompact ? 16 : 22;
 
   const pct = data?.attendancePercent ?? 0;
@@ -65,7 +76,7 @@ export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidget
     );
   }
 
-  // ── COMPACT: Just show CGPA ──
+  // ── COMPACT: CGPA + Attendance side-by-side ──
   if (isCompact) {
     return (
       <FlexWidget
@@ -74,22 +85,86 @@ export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidget
           width: 'match_parent',
           backgroundColor: '#0F1117',
           borderRadius: radius,
-          borderWidth: 1,
-          borderColor: cgpaBg,
-          padding: pad,
-          justifyContent: 'center',
+          borderWidth: 1.2,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          padding: 8,
+          justifyContent: 'space-between',
           alignItems: 'center',
         }}
         clickAction="OPEN_APP"
       >
-        <TextWidget
-          text={data.cgpa || '--'}
-          style={{ color: cgpaColor, fontSize: 26, fontWeight: '900' }}
-        />
-        <TextWidget
-          text="CGPA"
-          style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 9, fontWeight: '700', marginTop: 2 }}
-        />
+        {/* Header */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <TextWidget
+            text="ALMS STATS"
+            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 8.5, fontWeight: '800' }}
+          />
+          <TextWidget
+            text="ALMS"
+            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 8, fontWeight: 'bold' }}
+          />
+        </FlexWidget>
+
+        {/* Center: CGPA and Attendance */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <FlexWidget style={{ alignItems: 'center' }}>
+            <TextWidget
+              text={data.cgpa || '--'}
+              style={{ color: cgpaColor, fontSize: 22, fontWeight: '900' }}
+            />
+            <TextWidget
+              text="CGPA"
+              style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: 8, fontWeight: '700', marginTop: 1 }}
+            />
+          </FlexWidget>
+
+          <FlexWidget style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
+
+          <FlexWidget style={{ alignItems: 'center' }}>
+            <TextWidget
+              text={`${pct}%`}
+              style={{ color: attColor, fontSize: 22, fontWeight: '900' }}
+            />
+            <TextWidget
+              text="ATTENDANCE"
+              style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: 8, fontWeight: '700', marginTop: 1 }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+
+        {/* Bottom */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            paddingTop: 2,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <TextWidget
+            text={data.hasClass ? (data.nextTime ? `Next: ${data.nextTime.split('-')[0].trim()}` : 'Class scheduled') : 'All done ✓'}
+            maxLines={1}
+            truncate="END"
+            style={{ color: '#38BDF8', fontSize: 8.5, fontWeight: '700' }}
+          />
+        </FlexWidget>
       </FlexWidget>
     );
   }

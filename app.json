@@ -72,8 +72,8 @@
             {
               "name": "NextClassWidget",
               "label": "Next Class & Schedule",
-              "minWidth": "110dp",
-              "minHeight": "100dp",
+              "minWidth": "100dp",
+              "minHeight": "80dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
               "maxResizeWidth": "500dp",
@@ -85,8 +85,8 @@
             {
               "name": "AttendanceWidget",
               "label": "Attendance Status",
-              "minWidth": "110dp",
-              "minHeight": "100dp",
+              "minWidth": "100dp",
+              "minHeight": "80dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
               "maxResizeWidth": "500dp",
@@ -98,8 +98,8 @@
             {
               "name": "QuickStatsWidget",
               "label": "Quick Stats",
-              "minWidth": "110dp",
-              "minHeight": "100dp",
+              "minWidth": "100dp",
+              "minHeight": "80dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
               "maxResizeWidth": "500dp",
