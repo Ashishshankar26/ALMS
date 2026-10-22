@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download, DownloadCloud, X, ExternalLink } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { syncAndroidWidget } from '../../widgets/widget-sync';
 import { useTheme, Typography } from '../../context/ThemeContext';
@@ -1129,14 +1129,18 @@ export default function DashboardScreen() {
         const res = await fetch(`https://raw.githubusercontent.com/Ashishshankar26/ALMS/main/version.json?t=${Date.now()}`);
         if (!res.ok) return;
         const info = await res.json();
-        const currentVersion = Constants.expoConfig?.version || '1.0.3';
+        
+        // Native widget check: If running on Android and native widget module is missing,
+        // user definitely needs to install the v1.0.4 native APK!
+        const hasNativeWidget = Platform.OS === 'android' ? !!(NativeModules && NativeModules.AndroidWidget) : true;
 
+        const currentVersion = Constants.expoConfig?.version || '1.0.3';
         const parseVer = (v: string) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
         const [cMaj, cMin, cPatch] = parseVer(currentVersion);
         const [rMaj, rMin, rPatch] = parseVer(info.version || '0.0.0');
 
         const isNewer = (rMaj > cMaj) || (rMaj === cMaj && rMin > cMin) || (rMaj === cMaj && rMin === cMin && rPatch > cPatch);
-        if (isNewer) {
+        if (isNewer || !hasNativeWidget) {
           setApkUpdate(info);
         }
       } catch (e) {}
@@ -1398,6 +1402,99 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.content}>
+        {/* New APK Update Banner with Auto-Installer */}
+        {apkUpdate && (
+          <Animated.View entering={FadeInDown.duration(600).springify()} style={{ marginBottom: 16 }}>
+            <LinearGradient
+              colors={['#4C0099', '#2E0066']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: 20,
+                padding: 16,
+                borderWidth: 1.5,
+                borderColor: 'rgba(255, 255, 255, 0.25)',
+                shadowColor: '#4C0099',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.35,
+                shadowRadius: 16,
+                elevation: 6,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                    <DownloadCloud size={18} color="#FFFFFF" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                      {apkUpdate.title || 'New ALMS v1.0.4 Available!'}
+                    </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' }}>
+                      Home Screen Widgets & Full Native Features
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setApkUpdate(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <X size={18} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
+              </View>
+
+              {apkUpdate.notes ? (
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, lineHeight: 17, marginBottom: 14 }}>
+                  {apkUpdate.notes}
+                </Text>
+              ) : null}
+
+              {isDownloadingApk ? (
+                <View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Downloading APK...</Text>
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>{apkProgress}%</Text>
+                  </View>
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+                    <View style={{ height: '100%', width: `${apkProgress}%`, backgroundColor: '#34C759', borderRadius: 4 }} />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={downloadAndInstallApk}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#FFFFFF',
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      gap: 6
+                    }}
+                  >
+                    <DownloadCloud size={16} color="#4C0099" />
+                    <Text style={{ color: '#4C0099', fontWeight: '800', fontSize: 13 }}>Download & Install APK</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(apkUpdate.apkUrl)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <ExternalLink size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </LinearGradient>
+          </Animated.View>
+        )}
+
         {/* CGPA & Attendance Grid - ANIMATED */}
         <Animated.View
           entering={FadeInDown.delay(200).duration(600).springify()}
@@ -1748,11 +1845,11 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases')}
+                  onPress={apkUpdate ? downloadAndInstallApk : () => Linking.openURL('https://github.com/Ashishshankar26/ALMS/releases')}
                   style={[styles.updateBtn, { backgroundColor: 'transparent', borderColor: 'rgba(255, 255, 255, 0.35)', borderWidth: 1, flex: 1 }]}
                 >
                   <Text style={[styles.updateBtnText, { color: '#ffffff', fontWeight: '800' }]}>
-                    Download APK
+                    {isDownloadingApk ? `Downloading ${apkProgress}%` : 'Download APK'}
                   </Text>
                 </TouchableOpacity>
               </View>
