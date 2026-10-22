@@ -83,13 +83,14 @@ export default function AttendanceScreen() {
   const totalClasses = attendanceData.reduce((acc, curr) => acc + (curr.totalClasses || 0), 0);
   const attendedClasses = attendanceData.reduce((acc, curr) => acc + (curr.attendedClasses || 0), 0);
   const dutyLeaves = attendanceData.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0);
+  const bonusAtt = attendanceData.reduce((acc, curr) => acc + (curr.bonusAttendance || 0), 0);
   
   // Use UMS-provided overall attendance (fetched from #AttPercent on dashboard)
   // Only calculate ourselves as fallback if UMS value is missing or corrupted
   const parsedUms = data.overallAttendance ? parseFloat(data.overallAttendance) : NaN;
   const isUmsValid = !isNaN(parsedUms) && parsedUms > 0 && parsedUms <= 100;
   const formattedUmsAttendance = isUmsValid ? Math.round(parsedUms).toString() : null;
-  const rawCalcOverall = totalClasses > 0 ? ((attendedClasses + dutyLeaves) / totalClasses) * 100 : 0;
+  const rawCalcOverall = totalClasses > 0 ? ((attendedClasses + dutyLeaves + bonusAtt) / totalClasses) * 100 : 0;
   const calcOverall = Math.min(100, Math.max(0, Math.round(rawCalcOverall))).toString();
   const overallAttendance = formattedUmsAttendance || calcOverall;
   const rawOverallAttendance = totalClasses > 0 ? Math.min(100, Math.round((attendedClasses / totalClasses) * 100)).toString() : '0';
@@ -107,7 +108,7 @@ export default function AttendanceScreen() {
       return item.percentage;
     }
     if (item.totalClasses > 0) {
-      const calc = Math.round(((item.attendedClasses + (item.dutyLeaves || 0)) / item.totalClasses) * 100);
+      const calc = Math.round(((item.attendedClasses + (item.dutyLeaves || 0) + (item.bonusAttendance || 0)) / item.totalClasses) * 100);
       return Math.min(100, Math.max(0, calc));
     }
     return 0;
@@ -156,8 +157,8 @@ export default function AttendanceScreen() {
   };
 
   const calculateMissable = (item: any) => {
-    const { attendedClasses: attended, totalClasses: total, dutyLeaves: leaves, subjectCode } = item;
-    const effectiveAttended = (attended || 0) + (leaves || 0);
+    const { attendedClasses: attended, totalClasses: total, dutyLeaves: leaves, bonusAttendance: bonus, subjectCode } = item;
+    const effectiveAttended = (attended || 0) + (leaves || 0) + (bonus || 0);
     
     // 100% Precise Remaining Count based on Calendar traversal
     const remainingPrecise = getPreciseRemainingClasses(subjectCode);
@@ -479,7 +480,9 @@ export default function AttendanceScreen() {
                   </View>
                   <View style={[styles.widgetFooterDivider, { backgroundColor: isDark ? '#FFFFFF' : '#111111' }]} />
                   <View style={styles.widgetFooterItem}>
-                    <Text style={[styles.widgetMiniValue, { color: isDark ? '#FFFFFF' : '#111111', textAlign: 'right' }]}>DL {item.dutyLeaves || 0}</Text>
+                    <Text style={[styles.widgetMiniValue, { color: isDark ? '#FFFFFF' : '#111111', textAlign: 'right' }]}>
+                      DL {item.dutyLeaves || 0}{item.bonusAttendance ? ` • +${item.bonusAttendance}B` : ''}
+                    </Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -498,7 +501,7 @@ export default function AttendanceScreen() {
             const status = getStatus(effectivePct);
             const proj = calculateMissable(openedSubject);
             const [base, accent, ink] = getWidgetTheme(effectivePct);
-            const skipTodayPct = Math.round(((openedSubject.attendedClasses + (openedSubject.dutyLeaves || 0)) / (openedSubject.totalClasses + 1)) * 100);
+            const skipTodayPct = Math.round(((openedSubject.attendedClasses + (openedSubject.dutyLeaves || 0) + (openedSubject.bonusAttendance || 0)) / (openedSubject.totalClasses + 1)) * 100);
 
             // Format student name to "LASTNAME, FIRSTNAME" safely and make sure it is compact
             const rawName = data.profile?.name || 'STUDENT PASSENGER';

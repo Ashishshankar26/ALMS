@@ -397,7 +397,8 @@ function SwipeableUtilityStack({ isDark, colors, data, nextExam, onFeePress, onL
         const totalClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) || 0;
         const attendedClasses = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) || 0;
         const dutyLeaves = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) || 0;
-        const totalPresent = attendedClasses + dutyLeaves;
+        const bonusAttendance = data.attendance?.reduce((acc: number, curr: any) => acc + (curr.bonusAttendance || 0), 0) || 0;
+        const totalPresent = attendedClasses + dutyLeaves + bonusAttendance;
 
         const calculatedAtt = totalClasses > 0 ? Math.min(100, Math.ceil((totalPresent / totalClasses) * 100)) : 0;
         const parsedAtt = parseFloat(data.overallAttendance);
@@ -552,12 +553,13 @@ export default function DashboardScreen() {
   // Profile Data
   const profile = data.profile;
 
-  // Calculate Overall Attendance including Duty Leaves
+  // Calculate Overall Attendance including Duty Leaves and Bonus Attendance
   const totalClasses = data.attendance?.reduce((acc, curr) => acc + (curr.totalClasses || 0), 0) || 0;
   const attendedClasses = data.attendance?.reduce((acc, curr) => acc + (curr.attendedClasses || 0), 0) || 0;
   const dutyLeaves = data.attendance?.reduce((acc, curr) => acc + (curr.dutyLeaves || 0), 0) || 0;
+  const bonusAttendance = data.attendance?.reduce((acc, curr) => acc + (curr.bonusAttendance || 0), 0) || 0;
 
-  const calculatedAttendance = totalClasses > 0 ? Math.min(100, Math.ceil(((attendedClasses + dutyLeaves) / totalClasses) * 100)) : 0;
+  const calculatedAttendance = totalClasses > 0 ? Math.min(100, Math.ceil(((attendedClasses + dutyLeaves + bonusAttendance) / totalClasses) * 100)) : 0;
   
   const parsedOverallAtt = parseFloat(data.overallAttendance);
   const overallAttendance = (!isNaN(parsedOverallAtt) && parsedOverallAtt > 0 && parsedOverallAtt <= 100) 

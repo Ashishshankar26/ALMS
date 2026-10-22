@@ -13,6 +13,7 @@ export interface SubjectAttendance {
   attendedClasses: number;
   totalClasses: number;
   dutyLeaves?: number;
+  bonusAttendance?: number;
   percentage: number;
 }
 
@@ -185,6 +186,7 @@ const DASHBOARD_SCRIPT = `
       try {
         log("scrapeAll: Starting...");
         var attCounts = {};
+        var officialAggregateAttendance = "";
 
         function triggerAtt() {
           var el = document.getElementById("AttPercent");
@@ -231,44 +233,48 @@ const DASHBOARD_SCRIPT = `
                 var c = rows[i].querySelectorAll("td");
                 if (c.length >= 4) {
                   var codeText = (c[colMap.course >= 0 && colMap.course < c.length ? colMap.course : 0].innerText || "").trim();
-                  var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\s:]/g, "").toUpperCase();
+                  var normCode = codeText.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
                   if (!normCode) continue;
 
                   var attended = 0;
                   var total = 0;
                   var leaves = 0;
+                  var bonus = 0;
+                  var pct = 0;
+
+                  if (normCode.includes("AGGREGATE")) {
+                    if (c.length >= 6) {
+                      var aggP = parseFloat((c[5].innerText || "").replace(/[^\\d.]/g, ""));
+                      if (!isNaN(aggP) && aggP > 0 && aggP <= 100) {
+                        officialAggregateAttendance = aggP.toString();
+                      }
+                    }
+                    continue;
+                  }
 
                   // 1. If headers matched the exact cell count and found attended/delivered columns
                   if (ths.length === c.length && colMap.attended >= 0 && colMap.delivered >= 0) {
-                    attended = parseInt((c[colMap.attended].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    total = parseInt((c[colMap.delivered].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    leaves = colMap.leaves >= 0 ? (parseInt((c[colMap.leaves].innerText || "").replace(/[^\d]/g, ""), 10) || 0) : 0;
+                    attended = parseInt((c[colMap.attended].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    total = parseInt((c[colMap.delivered].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    leaves = colMap.leaves >= 0 ? (parseInt((c[colMap.leaves].innerText || "").replace(/[^\\d]/g, ""), 10) || 0) : 0;
                   } else if (c.length === 5) {
                     // Standard 5-column UMS AJAX response:
                     // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave, [4] Total Percentage
-                    total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    total = parseInt((c[1].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    attended = parseInt((c[2].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    leaves = parseInt((c[3].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
                   } else if (c.length >= 6) {
-                    // 6-column layout: check if c[1] is a date (Last Attended)
-                    var c1Text = (c[1].innerText || "").trim();
-                    var isDateC1 = /[a-zA-Z]{3}|\d{1,2}[-\/]\d{1,2}/.test(c1Text) || c1Text === "-";
-                    if (isDateC1) {
-                      // [0] Course, [1] Last Attended, [2] Duty Leave, [3] Total Delivered, [4] Total Attended, [5] Percentage
-                      leaves = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                      total = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                      attended = parseInt((c[4].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    } else {
-                      // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave, [4] Percentage, [5] Other
-                      total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                      attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                      leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    }
+                    // 6-column UMS layout: [0] Course, [1] Delivered, [2] Attended, [3] Duty Leave, [4] Bonus, [5] Percentage
+                    total = parseInt((c[1].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    attended = parseInt((c[2].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    leaves = parseInt((c[3].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    bonus = parseInt((c[4].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    pct = parseFloat((c[5].innerText || "").replace(/[^\\d.]/g, "")) || 0;
                   } else if (c.length === 4) {
                     // [0] Course, [1] Total Delivered, [2] Total Attended, [3] Duty Leave
-                    total = parseInt((c[1].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    attended = parseInt((c[2].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
-                    leaves = parseInt((c[3].innerText || "").replace(/[^\d]/g, ""), 10) || 0;
+                    total = parseInt((c[1].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    attended = parseInt((c[2].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
+                    leaves = parseInt((c[3].innerText || "").replace(/[^\\d]/g, ""), 10) || 0;
                   }
 
                   // Self-Healing Sanity Check:
@@ -286,8 +292,10 @@ const DASHBOARD_SCRIPT = `
                     attended: attended,
                     total: total,
                     leaves: leaves,
+                    bonus: bonus,
+                    percentage: pct,
                     subjectCode: codeText,
-                    subjectName: codeText.includes("-") ? codeText.split("-")[1].trim() : codeText
+                    subjectName: codeText.includes("-") ? codeText.split("-")[1].trim() : (codeText.includes(":") ? codeText.split(":")[1].trim() : codeText)
                   };
                 }
               }
@@ -579,6 +587,9 @@ const DASHBOARD_SCRIPT = `
             if (cgpaEl) { var cm = (cgpaEl.innerText || cgpaEl.textContent || "").match(/([0-9]+\.[0-9]+)/); if (cm) qC = cm[1]; }
             var attEl = document.getElementById("AttPercent");
             if (attEl) { var am = (attEl.innerText || attEl.textContent || "").match(/([0-9]+(?:\.[0-9]+)?)/); if (am) qA = am[1]; }
+            if ((!qA || qA === "0" || qA === "0.0") && officialAggregateAttendance) {
+              qA = officialAggregateAttendance;
+            }
 
             // Simplified fee extraction
             var fV = "0";
@@ -607,29 +618,30 @@ const DASHBOARD_SCRIPT = `
                 }
                 if (code && code.length > 2) {
                   var normCode = code.split("-")[0].split(":")[0].trim().replace(/[\\s:]/g, "").toUpperCase();
-                  var counts = attCounts[normCode] || { attended: 0, total: 0, leaves: 0 };
+                  var counts = attCounts[normCode] || { attended: 0, total: 0, leaves: 0, bonus: 0 };
                   var attClasses = Number(counts.attended) || 0;
                   var totClasses = Number(counts.total) || 0;
                   var dLeaves = Number(counts.leaves) || 0;
-                  var pct = Number(pctText) || 0;
+                  var bBonus = Number(counts.bonus) || 0;
+                  var pct = (counts.percentage && counts.percentage > 0) ? Number(counts.percentage) : (Number(pctText) || 0);
 
                   // Double safety check: if attended is 0 and leaves is positive, fix inversion
-                  if (attClasses === 0 && dLeaves > 0) {
+                  if (attClasses === 0 && dLeaves > 5) {
                     attClasses = dLeaves;
                     dLeaves = 0;
                   }
                   // If total classes is 0 or less than attended, deduce from attended and percentage
                   if ((totClasses === 0 || totClasses < attClasses) && attClasses > 0 && pct > 0) {
-                    totClasses = Math.round(((attClasses + dLeaves) / (pct / 100)));
+                    totClasses = Math.round(((attClasses + dLeaves + bBonus) / (pct / 100)));
                   }
-                  if (totClasses < attClasses) {
-                    totClasses = attClasses + dLeaves;
+                  if (totClasses < attClasses + dLeaves + bBonus) {
+                    totClasses = attClasses + dLeaves + bBonus;
                   }
 
                   att.push({ 
                     subjectCode: code, subjectName: name, 
                     attendedClasses: attClasses, totalClasses: totClasses, 
-                    dutyLeaves: dLeaves, percentage: pct 
+                    dutyLeaves: dLeaves, bonusAttendance: bBonus, percentage: pct 
                   });
                 }
               }
@@ -1505,16 +1517,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
               let a = Number(item.attendedClasses) || 0;
               let t = Number(item.totalClasses) || 0;
               let l = Number(item.dutyLeaves) || 0;
+              let b = Number(item.bonusAttendance) || 0;
               const p = Number(item.percentage) || 0;
-              if (a === 0 && l > 0) {
+              if (a === 0 && l > 5) {
                 a = l;
                 l = 0;
               }
               if ((t === 0 || t < a) && a > 0 && p > 0) {
-                t = Math.round((a + l) / (p / 100));
+                t = Math.round((a + l + b) / (p / 100));
               }
-              if (t < a) t = a + l;
-              return { ...item, attendedClasses: a, totalClasses: t, dutyLeaves: l };
+              if (t < a + l + b) t = a + l + b;
+              return { ...item, attendedClasses: a, totalClasses: t, dutyLeaves: l, bonusAttendance: b };
             });
           }
           setData(prev => ({ ...prev, ...parsed }));
@@ -2001,15 +2014,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           let totalAttended = 0;
           let totalDelivered = 0;
           let totalLeaves = 0;
+          let totalBonus = 0;
           updatedAttendance.forEach(a => {
             totalAttended += (a.attendedClasses || 0);
             totalDelivered += (a.totalClasses || 0);
             totalLeaves += (a.dutyLeaves || 0);
+            totalBonus += (a.bonusAttendance || 0);
           });
           
           let aggregatePct = "0.0";
           if (totalDelivered > 0) {
-            const rawPct = ((totalAttended + totalLeaves) / totalDelivered) * 100;
+            const rawPct = ((totalAttended + totalLeaves + totalBonus) / totalDelivered) * 100;
             aggregatePct = Math.min(100, Math.max(0, rawPct)).toFixed(1);
           }
 
