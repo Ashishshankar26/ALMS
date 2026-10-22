@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import React from 'react';
-import { NextClassWidget, NextClassWidgetData } from './NextClassWidget';
+import { NextClassWidget, NextClassWidgetData, ScheduleItem } from './NextClassWidget';
+import { AttendanceWidget, AttendanceWidgetData } from './AttendanceWidget';
+import { QuickStatsWidget, QuickStatsWidgetData } from './QuickStatsWidget';
+import type { WidgetInfo } from 'react-native-android-widget';
 
 // Format all-caps subject names into clean Title Case
 export function formatSubjectTitle(raw: string): string {
@@ -76,7 +79,7 @@ export function parseTimeSlot(timeStr: string) {
   return { startMinutes, endMinutes };
 }
 
-// Extract current next class from timetable data
+// Extract current next class and entire day schedule from timetable data
 export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = []): NextClassWidgetData {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const now = new Date();
@@ -129,6 +132,20 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
     };
   }).filter(c => c.startMin !== null);
 
+  // Sort today's schedule chronologically
+  parsed.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
+
+  const todaySchedule: ScheduleItem[] = parsed.map(c => ({
+    time: c.time,
+    subject: formatSubjectTitle(c.subject || 'Class'),
+    subjectCode: c.subjectCode || '',
+    room: c.room || 'TBA',
+    type: c.type || 'Lecture',
+    isOngoing: Boolean(c.startMin !== null && c.endMin !== null && currentMinutes >= c.startMin && currentMinutes < c.endMin),
+    isPast: Boolean(c.endMin !== null && c.endMin <= currentMinutes),
+    isUpcoming: Boolean(c.startMin !== null && c.startMin > currentMinutes),
+  }));
+
   // 1. Ongoing class
   const ongoing = parsed.find(c => c.startMin !== null && c.endMin !== null && currentMinutes >= c.startMin && currentMinutes < c.endMin);
   if (ongoing) {
@@ -141,6 +158,7 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
       room: ongoing.room || 'TBA',
       type: ongoing.type || 'Lecture',
       subjectCode: ongoing.subjectCode || '',
+      todaySchedule,
     };
   }
 
@@ -158,30 +176,38 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
       room: next.room || 'TBA',
       type: next.type || 'Lecture',
       subjectCode: next.subjectCode || '',
+      todaySchedule,
     };
   }
 
-  // 3. Look ahead to Tomorrow
-  const tomorrowDay = days[(now.getDay() + 1) % 7];
-  if (tomorrowDay !== 'Sunday') {
-    const tomorrowKey = Object.keys(timetable).find(k => k.toLowerCase() === tomorrowDay.toLowerCase());
-    if (tomorrowKey && timetable[tomorrowKey] && timetable[tomorrowKey].length > 0) {
-      const tomorrowParsed = timetable[tomorrowKey].map((c: any) => {
+  // 3. Look ahead across the stored week's timetable (Tomorrow, or next active day like Monday)
+  for (let offset = 1; offset <= 7; offset++) {
+    const targetDay = days[(now.getDay() + offset) % 7];
+    if (targetDay === 'Sunday') continue;
+    const dayKey = Object.keys(timetable).find(k => k.toLowerCase() === targetDay.toLowerCase());
+    if (dayKey && Array.isArray(timetable[dayKey]) && timetable[dayKey].length > 0) {
+      let dayClasses = timetable[dayKey].map((c: any) => {
         const slot = parseTimeSlot(c.time);
         return { ...c, startMin: slot?.startMinutes ?? null };
       }).filter((c: any) => c.startMin !== null);
 
-      if (tomorrowParsed.length > 0) {
-        tomorrowParsed.sort((a: any, b: any) => (a.startMin || 0) - (b.startMin || 0));
-        const firstTomorrow = tomorrowParsed[0];
+      if (targetDay === 'Saturday') {
+        dayClasses = dayClasses.filter((cls: any) => !(cls.subject || '').toLowerCase().includes('project work'));
+      }
+
+      if (dayClasses.length > 0) {
+        dayClasses.sort((a: any, b: any) => (a.startMin || 0) - (b.startMin || 0));
+        const first = dayClasses[0];
+        const statusLabel = offset === 1 ? 'TOMORROW' : targetDay.toUpperCase();
         return {
-          status: 'tomorrow',
-          statusText: 'TOMORROW',
-          time: firstTomorrow.time,
-          subject: formatSubjectTitle(firstTomorrow.subject || 'Class'),
-          room: firstTomorrow.room || 'TBA',
-          type: firstTomorrow.type || 'Lecture',
-          subjectCode: firstTomorrow.subjectCode || '',
+          status: offset === 1 ? 'tomorrow' : 'upcoming',
+          statusText: statusLabel,
+          time: first.time,
+          subject: formatSubjectTitle(first.subject || 'Class'),
+          room: first.room || 'TBA',
+          type: first.type || 'Lecture',
+          subjectCode: first.subjectCode || '',
+          todaySchedule,
         };
       }
     }
@@ -195,32 +221,215 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
     room: '',
     type: '',
     subjectCode: '',
+    todaySchedule,
   };
 }
 
-// Retrieve cached data and compute widget state
+// ── DATA EXTRACTORS ──
+
+// Retrieve cached data and compute NextClass widget state with schedule & academic stats
 export async function getWidgetClassData(): Promise<NextClassWidgetData> {
   try {
     const raw = await AsyncStorage.getItem('@scraped_data');
-    if (!raw) return { status: 'no_classes', statusText: 'ALL CAUGHT UP', time: '', subject: '', room: '', type: '', subjectCode: '' };
+    if (!raw) {
+      return {
+        status: 'no_classes',
+        statusText: 'ALL CAUGHT UP',
+        time: '',
+        subject: '',
+        room: '',
+        type: '',
+        subjectCode: '',
+        todaySchedule: [],
+      };
+    }
     const parsed = JSON.parse(raw);
-    return calculateNextClass(parsed.timetable || {}, parsed.makeupClasses || []);
+    const result = calculateNextClass(parsed.timetable || {}, parsed.makeupClasses || []);
+
+    if (Array.isArray(parsed.attendance) && parsed.attendance.length > 0) {
+      const total = parsed.attendance.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0);
+      const attended = parsed.attendance.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0);
+      const duty = parsed.attendance.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0);
+      const bonus = parsed.attendance.reduce((acc: number, curr: any) => acc + (curr.bonusAttendance || 0), 0);
+      const totalPresent = attended + duty + bonus;
+
+      const officialParsed = parseFloat(parsed.overallAttendance);
+      result.overallAttendance = (!isNaN(officialParsed) && officialParsed > 0 && officialParsed <= 100)
+        ? Math.ceil(officialParsed)
+        : (total > 0 ? Math.min(100, Math.ceil((totalPresent / total) * 100)) : 0);
+      result.attendedClasses = totalPresent;
+      result.totalClasses = total;
+    }
+    result.cgpa = parsed.cgpa || '';
+    return result;
   } catch (e) {
-    return { status: 'no_classes', statusText: 'ALL CAUGHT UP', time: '', subject: '', room: '', type: '', subjectCode: '' };
+    return {
+      status: 'no_classes',
+      statusText: 'ALL CAUGHT UP',
+      time: '',
+      subject: '',
+      room: '',
+      type: '',
+      subjectCode: '',
+      todaySchedule: [],
+    };
   }
 }
 
-// Trigger widget re-render on Android
+// Retrieve cached data and compute Attendance widget state
+export async function getWidgetAttendanceData(): Promise<AttendanceWidgetData | undefined> {
+  try {
+    const raw = await AsyncStorage.getItem('@scraped_data');
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    const attendance = parsed.attendance;
+    if (!Array.isArray(attendance) || attendance.length === 0) return undefined;
+
+    const total = attendance.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0);
+    const attended = attendance.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0);
+    const dutyLeaves = attendance.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0);
+    const bonusAttendance = attendance.reduce((acc: number, curr: any) => acc + (curr.bonusAttendance || 0), 0);
+    const totalPresent = attended + dutyLeaves + bonusAttendance;
+
+    const officialParsed = parseFloat(parsed.overallAttendance);
+    const calculated = total > 0 ? Math.min(100, Math.ceil((totalPresent / total) * 100)) : 0;
+    const overallPercentage = (!isNaN(officialParsed) && officialParsed > 0 && officialParsed <= 100)
+      ? Math.ceil(officialParsed)
+      : calculated;
+
+    const criticalCount = attendance.filter((a: any) => {
+      const t = a.totalClasses || 0;
+      const p = (a.attendedClasses || 0) + (a.dutyLeaves || 0) + (a.bonusAttendance || 0);
+      return t > 0 && (p / t) * 100 < 75;
+    }).length;
+
+    return {
+      overallPercentage,
+      attended,
+      total,
+      dutyLeaves,
+      bonusAttendance,
+      subjectCount: attendance.length,
+      criticalCount,
+    };
+  } catch (e) {
+    return undefined;
+  }
+}
+
+// Retrieve cached data and compute QuickStats widget state
+export async function getWidgetQuickStatsData(): Promise<QuickStatsWidgetData | undefined> {
+  try {
+    const raw = await AsyncStorage.getItem('@scraped_data');
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+
+    const attendance = parsed.attendance;
+    const total = Array.isArray(attendance) ? attendance.reduce((acc: number, curr: any) => acc + (curr.totalClasses || 0), 0) : 0;
+    const attended = Array.isArray(attendance) ? attendance.reduce((acc: number, curr: any) => acc + (curr.attendedClasses || 0), 0) : 0;
+    const dutyLeaves = Array.isArray(attendance) ? attendance.reduce((acc: number, curr: any) => acc + (curr.dutyLeaves || 0), 0) : 0;
+    const bonusAttendance = Array.isArray(attendance) ? attendance.reduce((acc: number, curr: any) => acc + (curr.bonusAttendance || 0), 0) : 0;
+    const totalPresent = attended + dutyLeaves + bonusAttendance;
+
+    const officialParsed = parseFloat(parsed.overallAttendance);
+    const calculated = total > 0 ? Math.min(100, Math.ceil((totalPresent / total) * 100)) : 0;
+    const attendancePercent = (!isNaN(officialParsed) && officialParsed > 0 && officialParsed <= 100)
+      ? Math.ceil(officialParsed)
+      : calculated;
+
+    const classData = calculateNextClass(parsed.timetable || {}, parsed.makeupClasses || []);
+
+    return {
+      cgpa: parsed.cgpa || '--',
+      attendancePercent,
+      attended,
+      total,
+      nextSubject: classData.subject ? formatSubjectTitle(classData.subject) : '',
+      nextTime: classData.time || '',
+      nextRoom: classData.room || '',
+      hasClass: classData.status !== 'no_classes',
+    };
+  } catch (e) {
+    return undefined;
+  }
+}
+
+// ── WIDGET UPDATE TRIGGERS ──
+
+// Trigger ALL widget types to re-render on Android with their specific widgetInfo dimensions
 export async function syncAndroidWidget(): Promise<void> {
   if (Platform.OS !== 'android') return;
   try {
     const { requestWidgetUpdate } = require('react-native-android-widget');
-    const data = await getWidgetClassData();
-    await requestWidgetUpdate({
-      widgetName: 'NextClassWidget',
-      renderWidget: () => React.createElement(NextClassWidget, { data }),
-    });
+
+    // Update NextClassWidget
+    try {
+      const classData = await getWidgetClassData();
+      await requestWidgetUpdate({
+        widgetName: 'NextClassWidget',
+        renderWidget: (widgetInfo: WidgetInfo) => React.createElement(NextClassWidget, { data: classData, widgetInfo }),
+      });
+    } catch (err) {}
+
+    // Update AttendanceWidget
+    try {
+      const attData = await getWidgetAttendanceData();
+      await requestWidgetUpdate({
+        widgetName: 'AttendanceWidget',
+        renderWidget: (widgetInfo: WidgetInfo) => React.createElement(AttendanceWidget, { data: attData, widgetInfo }),
+      });
+    } catch (err) {}
+
+    // Update QuickStatsWidget
+    try {
+      const statsData = await getWidgetQuickStatsData();
+      await requestWidgetUpdate({
+        widgetName: 'QuickStatsWidget',
+        renderWidget: (widgetInfo: WidgetInfo) => React.createElement(QuickStatsWidget, { data: statsData, widgetInfo }),
+      });
+    } catch (err) {}
   } catch (err) {
     // Graceful fallback if native widget code is not linked
   }
+}
+
+// ── LIVE IN-APP AUTO-SYNC ──
+// Keeps widgets ticking in real-time when app is open or resumes from background
+let autoSyncInterval: ReturnType<typeof setInterval> | null = null;
+let appStateSub: any = null;
+
+export function initWidgetAutoSync(): () => void {
+  if (Platform.OS !== 'android') return () => {};
+
+  // Initial immediate sync
+  syncAndroidWidget().catch(() => {});
+
+  // Sync whenever app comes into foreground
+  if (!appStateSub) {
+    appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') {
+        syncAndroidWidget().catch(() => {});
+      }
+    });
+  }
+
+  // Periodic 60s ticker while app is active so real-time countdown stays accurate
+  if (!autoSyncInterval) {
+    autoSyncInterval = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        syncAndroidWidget().catch(() => {});
+      }
+    }, 60000);
+  }
+
+  return () => {
+    if (autoSyncInterval) {
+      clearInterval(autoSyncInterval);
+      autoSyncInterval = null;
+    }
+    if (appStateSub) {
+      appStateSub.remove();
+      appStateSub = null;
+    }
+  };
 }

@@ -11,7 +11,7 @@ import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download, DownloadCloud, X, ExternalLink } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
-import { syncAndroidWidget } from '../../widgets/widget-sync';
+import { syncAndroidWidget, initWidgetAutoSync } from '../../widgets/widget-sync';
 import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -1120,8 +1120,9 @@ export default function DashboardScreen() {
   const [apkProgress, setApkProgress] = React.useState(0);
 
   React.useEffect(() => {
-    syncAndroidWidget().catch(() => {});
-  }, [data?.timetable]);
+    const cleanup = initWidgetAutoSync();
+    return cleanup;
+  }, [data?.timetable, data?.attendance, data?.cgpa]);
 
   React.useEffect(() => {
     async function checkApkVersion() {

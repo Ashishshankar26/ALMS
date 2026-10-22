@@ -71,10 +71,40 @@
           "widgets": [
             {
               "name": "NextClassWidget",
-              "label": "Next Class",
-              "minWidth": "250dp",
-              "minHeight": "110dp",
-              "description": "View your upcoming class, subject, and room on your home screen.",
+              "label": "Next Class & Schedule",
+              "minWidth": "110dp",
+              "minHeight": "100dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "500dp",
+              "maxResizeHeight": "650dp",
+              "description": "View upcoming class, today's schedule timeline, and attendance stack on your home screen.",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "AttendanceWidget",
+              "label": "Attendance Status",
+              "minWidth": "110dp",
+              "minHeight": "100dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "500dp",
+              "maxResizeHeight": "650dp",
+              "description": "Monitor your overall university attendance percentage and status.",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "QuickStatsWidget",
+              "label": "Quick Stats",
+              "minWidth": "110dp",
+              "minHeight": "100dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "500dp",
+              "maxResizeHeight": "650dp",
+              "description": "Combined home screen widget showing your CGPA, attendance, and next class.",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }
