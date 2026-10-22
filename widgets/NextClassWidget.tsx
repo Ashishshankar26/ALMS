@@ -23,8 +23,18 @@ export interface NextClassWidgetData {
   subjectCode: string;
   teacher?: string;
 
-  // Stack & detail enhancements
+  // Real-time Today metrics & time left
+  todayTotalClasses?: number;
+  todayCompletedClasses?: number;
+  todayRemainingClasses?: number;
+  currentClassIndex?: number;
+  timeUntilOrLeft?: string;
+  activeClassEndTime?: string;
+  nextClassStartTime?: string;
+
+  // Stack, pagination & detail enhancements
   stackIndex?: number; // 0: Next Class, 1: Schedule, 2: Attendance
+  schedulePage?: number; // pagination for today's schedule
   todaySchedule?: ScheduleItem[];
   overallAttendance?: number;
   attendedClasses?: number;
@@ -72,53 +82,152 @@ export function NextClassWidget({
   const attColor: ColorProp = attPct >= 80 ? '#10B981' : (attPct >= 75 ? '#F59E0B' : '#EF4444');
   const attBg: ColorProp = attPct >= 80 ? 'rgba(16, 185, 129, 0.2)' : (attPct >= 75 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)');
 
-  // Stack indicator component (tappable button that cycles through cards)
-  const renderStackIndicator = (activeIdx: number, compact: boolean = false) => {
+  // Full Navigation Bar with Left ‹, Center Status / Refresh, and Right › Stack Navigator
+  const renderNavBar = (activeIdx: number, centerPill: React.ReactNode, compact: boolean = false) => {
     const dots = activeIdx === 0 ? '● ○ ○' : (activeIdx === 1 ? '○ ● ○' : '○ ○ ●');
     return (
       <FlexWidget
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: 10,
-          paddingHorizontal: compact ? 6 : 9,
-          paddingVertical: compact ? 3 : 5,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.18)',
           flexDirection: 'row',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          justifyContent: 'center',
+          width: 'match_parent',
         }}
-        clickAction="CYCLE_STACK"
       >
-        <TextWidget
-          text={dots}
+        {/* Left side: Previous Card Arrow + Center Pill */}
+        <FlexWidget
           style={{
-            color: '#A78BFA',
-            fontSize: compact ? 8 : 10,
-            fontWeight: 'bold',
-            letterSpacing: compact ? 1 : 2,
+            flexDirection: 'row',
+            alignItems: 'center',
           }}
-        />
-        {!compact && (
-          <TextWidget
-            text=" ↻"
+        >
+          {/* Previous Card ‹ (Simulates Swipe Left) */}
+          <FlexWidget
             style={{
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: 10,
-              fontWeight: 'bold',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 8,
+              paddingHorizontal: compact ? 7 : 10,
+              paddingVertical: compact ? 3 : 5,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+              marginRight: 6,
             }}
-          />
-        )}
+            clickAction="PREV_STACK"
+          >
+            <TextWidget
+              text="‹"
+              style={{
+                color: '#E2E8F0',
+                fontSize: compact ? 12 : 15,
+                fontWeight: 'bold',
+              }}
+            />
+          </FlexWidget>
+
+          {centerPill}
+        </FlexWidget>
+
+        {/* Right side: Dots Indicator + Next Card Arrow › (Simulates Swipe Right) */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          {/* Dots Indicator */}
+          <FlexWidget
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: 8,
+              paddingHorizontal: compact ? 6 : 8,
+              paddingVertical: compact ? 3 : 5,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+              marginRight: 4,
+            }}
+            clickAction="NEXT_STACK"
+          >
+            <TextWidget
+              text={dots}
+              style={{
+                color: '#A78BFA',
+                fontSize: compact ? 8 : 10,
+                fontWeight: 'bold',
+                letterSpacing: compact ? 1 : 2,
+              }}
+            />
+          </FlexWidget>
+
+          {/* Next Card › */}
+          <FlexWidget
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 8,
+              paddingHorizontal: compact ? 7 : 10,
+              paddingVertical: compact ? 3 : 5,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+            }}
+            clickAction="NEXT_STACK"
+          >
+            <TextWidget
+              text="›"
+              style={{
+                color: '#E2E8F0',
+                fontSize: compact ? 12 : 15,
+                fontWeight: 'bold',
+              }}
+            />
+          </FlexWidget>
+        </FlexWidget>
       </FlexWidget>
     );
   };
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 1: TODAY'S SCHEDULE STACK VIEW (Medium & Compact)
+  // CARD 1: TODAY'S SCHEDULE VIEW (With Up/Down Pagination & Scroll Support)
   // ═════════════════════════════════════════════════════════════════════════
   if (stackIndex === 1 && !isLarge) {
     const schedule = data?.todaySchedule || [];
     const count = schedule.length;
+    const pageSize = isCompact ? 2 : 3;
+    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const rawPage = data?.schedulePage ?? 0;
+    const safePage = ((rawPage % totalPages) + totalPages) % totalPages;
+    const visibleClasses = schedule.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+    const schedulePill = (
+      <FlexWidget
+        style={{
+          backgroundColor: 'rgba(56, 189, 248, 0.18)',
+          borderRadius: 8,
+          paddingHorizontal: isCompact ? 6 : 10,
+          paddingVertical: isCompact ? 3 : 5,
+          borderWidth: 1,
+          borderColor: '#38BDF8',
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        clickAction="REFRESH_WIDGET"
+      >
+        <TextWidget
+          text={`TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`}
+          style={{
+            color: '#38BDF8',
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+        <TextWidget
+          text=" ↻"
+          style={{
+            color: '#38BDF8',
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
+    );
 
     return (
       <FlexWidget
@@ -134,38 +243,10 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        {/* Header */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(56, 189, 248, 0.18)',
-              borderRadius: 8,
-              paddingHorizontal: isCompact ? 6 : 10,
-              paddingVertical: isCompact ? 3 : 5,
-              borderWidth: 1,
-              borderColor: '#38BDF8',
-            }}
-          >
-            <TextWidget
-              text={`TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`}
-              style={{
-                color: '#38BDF8',
-                fontSize: isCompact ? 9 : 11,
-                fontWeight: 'bold',
-              }}
-            />
-          </FlexWidget>
-          {renderStackIndicator(1, isCompact)}
-        </FlexWidget>
+        {/* Navigation Bar */}
+        {renderNavBar(1, schedulePill, isCompact)}
 
-        {/* Schedule List */}
+        {/* Schedule List Items */}
         {schedule.length === 0 ? (
           <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
             <TextWidget
@@ -175,20 +256,20 @@ export function NextClassWidget({
           </FlexWidget>
         ) : (
           <FlexWidget style={{ width: 'match_parent', flexDirection: 'column', marginVertical: 4 }}>
-            {schedule.slice(0, isCompact ? 2 : 3).map((item, idx) => (
+            {visibleClasses.map((item, idx) => (
               <FlexWidget
                 key={idx}
                 style={{
                   width: 'match_parent',
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                  backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.06)',
                   borderRadius: 8,
                   paddingHorizontal: isCompact ? 6 : 10,
                   paddingVertical: isCompact ? 4 : 6,
                   borderWidth: 1,
                   borderColor: item.isOngoing ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                  marginBottom: isCompact ? 4 : 6,
+                  marginBottom: isCompact ? 4 : 5,
                 }}
               >
                 <TextWidget
@@ -225,7 +306,7 @@ export function NextClassWidget({
           </FlexWidget>
         )}
 
-        {/* Footer info */}
+        {/* Footer info + Up/Down Pagination for scrolling through classes */}
         <FlexWidget
           style={{
             flexDirection: 'row',
@@ -235,25 +316,94 @@ export function NextClassWidget({
           }}
         >
           <TextWidget
-            text={schedule.length > (isCompact ? 2 : 3) ? `+${schedule.length - (isCompact ? 2 : 3)} more classes` : 'Tap to open timetable'}
-            style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: isCompact ? 8 : 10 }}
+            text={count > pageSize ? `${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, count)} of ${count} classes` : `${count} total classes`}
+            style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: isCompact ? 8 : 10 }}
           />
-          <TextWidget
-            text="ALMS"
-            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
-          />
+
+          {totalPages > 1 ? (
+            <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FlexWidget
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  marginRight: 4,
+                }}
+                clickAction="PREV_SCHEDULE_PAGE"
+              >
+                <TextWidget
+                  text="▲ Prev"
+                  style={{ color: '#38BDF8', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+                />
+              </FlexWidget>
+
+              <FlexWidget
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                }}
+                clickAction="NEXT_SCHEDULE_PAGE"
+              >
+                <TextWidget
+                  text="▼ Next"
+                  style={{ color: '#38BDF8', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+                />
+              </FlexWidget>
+            </FlexWidget>
+          ) : (
+            <TextWidget
+              text="ALMS"
+              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+            />
+          )}
         </FlexWidget>
       </FlexWidget>
     );
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 2: ATTENDANCE & STATS STACK VIEW (Medium & Compact)
+  // CARD 2: ATTENDANCE & STATS STACK VIEW
   // ═════════════════════════════════════════════════════════════════════════
   if (stackIndex === 2 && !isLarge) {
     const total = data?.totalClasses ?? 0;
     const attended = data?.attendedClasses ?? 0;
     const cgpa = data?.cgpa || '--';
+
+    const attPill = (
+      <FlexWidget
+        style={{
+          backgroundColor: attBg,
+          borderRadius: 8,
+          paddingHorizontal: isCompact ? 6 : 10,
+          paddingVertical: isCompact ? 3 : 5,
+          borderWidth: 1,
+          borderColor: attColor,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        clickAction="REFRESH_WIDGET"
+      >
+        <TextWidget
+          text={attPct >= 75 ? 'ATTENDANCE SAFE' : 'ATTENDANCE WARNING'}
+          style={{
+            color: attColor,
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+        <TextWidget
+          text=" ↻"
+          style={{
+            color: attColor,
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
+    );
 
     return (
       <FlexWidget
@@ -269,36 +419,8 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        {/* Header */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget
-            style={{
-              backgroundColor: attBg,
-              borderRadius: 8,
-              paddingHorizontal: isCompact ? 6 : 10,
-              paddingVertical: isCompact ? 3 : 5,
-              borderWidth: 1,
-              borderColor: attColor,
-            }}
-          >
-            <TextWidget
-              text={attPct >= 75 ? 'ATTENDANCE SAFE' : 'ATTENDANCE WARNING'}
-              style={{
-                color: attColor,
-                fontSize: isCompact ? 9 : 11,
-                fontWeight: 'bold',
-              }}
-            />
-          </FlexWidget>
-          {renderStackIndicator(2, isCompact)}
-        </FlexWidget>
+        {/* Navigation Bar */}
+        {renderNavBar(2, attPill, isCompact)}
 
         {/* Big percentage & stats row */}
         <FlexWidget
@@ -398,6 +520,39 @@ export function NextClassWidget({
   // NO CLASSES / EMPTY STATE
   // ═════════════════════════════════════════════════════════════════════════
   if (!hasClasses) {
+    const emptyPill = (
+      <FlexWidget
+        style={{
+          backgroundColor: 'rgba(16, 185, 129, 0.18)',
+          borderRadius: 8,
+          paddingHorizontal: isCompact ? 6 : 10,
+          paddingVertical: isCompact ? 3 : 5,
+          borderWidth: 1,
+          borderColor: '#10B981',
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        clickAction="REFRESH_WIDGET"
+      >
+        <TextWidget
+          text="ALL CAUGHT UP ✓"
+          style={{
+            color: '#10B981',
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+        <TextWidget
+          text=" ↻"
+          style={{
+            color: '#10B981',
+            fontSize: isCompact ? 9 : 11,
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
+    );
+
     return (
       <FlexWidget
         style={{
@@ -412,35 +567,7 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.18)',
-              borderRadius: 8,
-              paddingHorizontal: isCompact ? 6 : 10,
-              paddingVertical: isCompact ? 3 : 5,
-              borderWidth: 1,
-              borderColor: '#10B981',
-            }}
-          >
-            <TextWidget
-              text="ALL CAUGHT UP ✓"
-              style={{
-                color: '#10B981',
-                fontSize: isCompact ? 9 : 11,
-                fontWeight: 'bold',
-              }}
-            />
-          </FlexWidget>
-          {renderStackIndicator(stackIndex, isCompact)}
-        </FlexWidget>
+        {renderNavBar(stackIndex, emptyPill, isCompact)}
 
         <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 6 }}>
           <TextWidget
@@ -486,6 +613,31 @@ export function NextClassWidget({
   // COMPACT (2x2) LAYOUT
   // ═════════════════════════════════════════════════════════════════════════
   if (isCompact) {
+    const compactPill = (
+      <FlexWidget
+        style={{
+          backgroundColor: statusBg,
+          borderRadius: 6,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderWidth: 1,
+          borderColor: accentColor,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        clickAction="REFRESH_WIDGET"
+      >
+        <TextWidget
+          text={isOngoing ? '● ACTIVE' : (isTomorrow ? 'TMR' : 'NEXT')}
+          style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
+        />
+        <TextWidget
+          text=" ↻"
+          style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
+        />
+      </FlexWidget>
+    );
+
     return (
       <FlexWidget
         style={{
@@ -500,7 +652,10 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        {/* Top: Status Badge + Stack Dots */}
+        {/* Navigation Bar */}
+        {renderNavBar(0, compactPill, true)}
+
+        {/* Time display + Today total classes badge */}
         <FlexWidget
           style={{
             flexDirection: 'row',
@@ -509,29 +664,17 @@ export function NextClassWidget({
             width: 'match_parent',
           }}
         >
-          <FlexWidget
-            style={{
-              backgroundColor: statusBg,
-              borderRadius: 6,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderWidth: 1,
-              borderColor: accentColor,
-            }}
-          >
+          <TextWidget
+            text={data!.time}
+            style={{ color: '#E2E8F0', fontSize: 10, fontWeight: '700' }}
+          />
+          {data?.todayTotalClasses ? (
             <TextWidget
-              text={isOngoing ? '● LIVE' : (isTomorrow ? 'TMR' : 'NEXT')}
-              style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
+              text={`${data.currentClassIndex ? `${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses}`} today`}
+              style={{ color: '#38BDF8', fontSize: 8, fontWeight: '700' }}
             />
-          </FlexWidget>
-          {renderStackIndicator(0, true)}
+          ) : null}
         </FlexWidget>
-
-        {/* Time display */}
-        <TextWidget
-          text={data!.time}
-          style={{ color: '#E2E8F0', fontSize: 10, fontWeight: '700' }}
-        />
 
         {/* Subject Name - Big & bold */}
         <TextWidget
@@ -592,11 +735,44 @@ export function NextClassWidget({
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // LARGE (4x4, 4x5, 5x6) LAYOUT — Full Details + Today's Schedule Timeline
+  // LARGE (4x4, 4x5, 5x6) LAYOUT — Full Details + Complete Timeline
   // ═════════════════════════════════════════════════════════════════════════
   if (isLarge) {
     const schedule = data?.todaySchedule || [];
     const upcomingList = schedule.filter(s => !s.isPast);
+
+    const largePill = (
+      <FlexWidget
+        style={{
+          backgroundColor: statusBg,
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          paddingVertical: 6,
+          borderWidth: 1,
+          borderColor: accentColor,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        clickAction="REFRESH_WIDGET"
+      >
+        <TextWidget
+          text={data!.statusText || (isOngoing ? '● LIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
+          style={{
+            color: accentColor,
+            fontSize: 13,
+            fontWeight: 'bold',
+          }}
+        />
+        <TextWidget
+          text=" ↻"
+          style={{
+            color: accentColor,
+            fontSize: 13,
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
+    );
 
     return (
       <FlexWidget
@@ -612,37 +788,8 @@ export function NextClassWidget({
         }}
         clickAction="OPEN_APP"
       >
-        {/* Top Header */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget
-            style={{
-              backgroundColor: statusBg,
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              paddingVertical: 6,
-              borderWidth: 1,
-              borderColor: accentColor,
-            }}
-          >
-            <TextWidget
-              text={data!.statusText || (isOngoing ? '● LIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
-              style={{
-                color: accentColor,
-                fontSize: 13,
-                fontWeight: 'bold',
-              }}
-            />
-          </FlexWidget>
-
-          {renderStackIndicator(stackIndex, false)}
-        </FlexWidget>
+        {/* Navigation Bar */}
+        {renderNavBar(stackIndex, largePill, false)}
 
         {/* Main Hero Card for Current / Next Class */}
         <FlexWidget
@@ -674,20 +821,42 @@ export function NextClassWidget({
                 fontWeight: '800',
               }}
             />
-            <FlexWidget
-              style={{
-                backgroundColor: accentLight,
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderWidth: 1,
-                borderColor: accentColor,
-              }}
-            >
-              <TextWidget
-                text={(data!.type || 'Lecture').toUpperCase()}
-                style={{ color: accentColor, fontSize: 11, fontWeight: 'bold' }}
-              />
+            <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {data?.todayTotalClasses ? (
+                <FlexWidget
+                  style={{
+                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                    borderRadius: 8,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderWidth: 1,
+                    borderColor: 'rgba(56, 189, 248, 0.3)',
+                    marginRight: 6,
+                  }}
+                >
+                  <TextWidget
+                    text={data.currentClassIndex
+                      ? `Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
+                      : `Today: ${data.todayTotalClasses} Classes`}
+                    style={{ color: '#38BDF8', fontSize: 10, fontWeight: 'bold' }}
+                  />
+                </FlexWidget>
+              ) : null}
+              <FlexWidget
+                style={{
+                  backgroundColor: accentLight,
+                  borderRadius: 8,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderWidth: 1,
+                  borderColor: accentColor,
+                }}
+              >
+                <TextWidget
+                  text={(data!.type || 'Lecture').toUpperCase()}
+                  style={{ color: accentColor, fontSize: 11, fontWeight: 'bold' }}
+                />
+              </FlexWidget>
             </FlexWidget>
           </FlexWidget>
 
@@ -789,7 +958,7 @@ export function NextClassWidget({
               />
             </FlexWidget>
           ) : (
-            upcomingList.slice(1, 3).map((item, idx) => (
+            upcomingList.slice(1, 4).map((item, idx) => (
               <FlexWidget
                 key={idx}
                 style={{
@@ -852,6 +1021,39 @@ export function NextClassWidget({
   // ═════════════════════════════════════════════════════════════════════════
   // MEDIUM (4x2 / 3x2) LAYOUT — The Standard Default Home Screen Size
   // ═════════════════════════════════════════════════════════════════════════
+  const mediumPill = (
+    <FlexWidget
+      style={{
+        backgroundColor: statusBg,
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderWidth: 1,
+        borderColor: accentColor,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+      clickAction="REFRESH_WIDGET"
+    >
+      <TextWidget
+        text={data!.statusText || (isOngoing ? '● ACTIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
+        style={{
+          color: accentColor,
+          fontSize: 11,
+          fontWeight: 'bold',
+        }}
+      />
+      <TextWidget
+        text=" ↻"
+        style={{
+          color: accentColor,
+          fontSize: 11,
+          fontWeight: 'bold',
+        }}
+      />
+    </FlexWidget>
+  );
+
   return (
     <FlexWidget
       style={{
@@ -866,56 +1068,57 @@ export function NextClassWidget({
       }}
       clickAction="OPEN_APP"
     >
-      {/* Header Row: Status Pill (left) + Stack Dots (right) */}
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: 'match_parent',
-        }}
-      >
-        <FlexWidget
-          style={{
-            backgroundColor: statusBg,
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 5,
-            borderWidth: 1,
-            borderColor: accentColor,
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}
-        >
-          <TextWidget
-            text={data!.statusText || (isOngoing ? '● LIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
-            style={{
-              color: accentColor,
-              fontSize: 11,
-              fontWeight: 'bold',
-            }}
-          />
-        </FlexWidget>
+      {/* Header Row with Left ‹ and Right › Navigation + Live Refresh */}
+      {renderNavBar(0, mediumPill, false)}
 
-        {renderStackIndicator(0, false)}
-      </FlexWidget>
-
-      {/* Middle Row: Schedule Time & Subject Title */}
+      {/* Middle Row: Schedule Time, Today's Class Count & Subject Title */}
       <FlexWidget
         style={{
           width: 'match_parent',
           marginVertical: 4,
         }}
       >
-        <TextWidget
-          text={`⏰ ${data!.time}`}
+        <FlexWidget
           style={{
-            color: '#CBD5E1',
-            fontSize: 12,
-            fontWeight: '700',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
             marginBottom: 2,
           }}
-        />
+        >
+          <TextWidget
+            text={`⏰ ${data!.time}`}
+            style={{
+              color: '#CBD5E1',
+              fontSize: 12,
+              fontWeight: '700',
+            }}
+          />
+          {data?.todayTotalClasses ? (
+            <FlexWidget
+              style={{
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                borderRadius: 6,
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderWidth: 1,
+                borderColor: 'rgba(56, 189, 248, 0.3)',
+              }}
+            >
+              <TextWidget
+                text={data.currentClassIndex
+                  ? `📚 Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
+                  : `📚 ${data.todayTotalClasses} Classes Today`}
+                style={{
+                  color: '#38BDF8',
+                  fontSize: 10,
+                  fontWeight: '700',
+                }}
+              />
+            </FlexWidget>
+          ) : null}
+        </FlexWidget>
         <TextWidget
           text={data!.subject}
           maxLines={2}

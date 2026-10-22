@@ -79,6 +79,16 @@ export function parseTimeSlot(timeStr: string) {
   return { startMinutes, endMinutes };
 }
 
+// Convert minute-of-day integer into formatted 12-hour AM/PM string (e.g. 840 -> "02:00 PM")
+export function formatMinutesToTime(minutes: number): string {
+  const h24 = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  const mm = m < 10 ? `0${m}` : `${m}`;
+  return `${h12}:${mm} ${ampm}`;
+}
+
 // Extract current next class and entire day schedule from timetable data
 export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = []): NextClassWidgetData {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -146,19 +156,33 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
     isUpcoming: Boolean(c.startMin !== null && c.startMin > currentMinutes),
   }));
 
+  const todayTotalClasses = todaySchedule.length;
+  const todayCompletedClasses = todaySchedule.filter(s => s.isPast).length;
+  const todayRemainingClasses = todaySchedule.filter(s => s.isUpcoming).length;
+
   // 1. Ongoing class
   const ongoing = parsed.find(c => c.startMin !== null && c.endMin !== null && currentMinutes >= c.startMin && currentMinutes < c.endMin);
   if (ongoing) {
     const remaining = (ongoing.endMin || 0) - currentMinutes;
+    const endTimeStr = ongoing.endMin !== null ? formatMinutesToTime(ongoing.endMin) : '';
+    const ongoingIdx = todaySchedule.findIndex(s => s.isOngoing);
+    const currentClassIndex = ongoingIdx >= 0 ? ongoingIdx + 1 : 1;
+
     return {
       status: 'ongoing',
-      statusText: `LIVE NOW • ${remaining}m left`,
+      statusText: endTimeStr ? `ACTIVE NOW • TILL ${endTimeStr} (${remaining}m)` : `ACTIVE NOW • ${remaining}m left`,
       time: ongoing.time,
       subject: formatSubjectTitle(ongoing.subject || 'Class'),
       room: ongoing.room || 'TBA',
       type: ongoing.type || 'Lecture',
       subjectCode: ongoing.subjectCode || '',
       todaySchedule,
+      todayTotalClasses,
+      todayCompletedClasses,
+      todayRemainingClasses,
+      currentClassIndex,
+      timeUntilOrLeft: `${remaining}m left`,
+      activeClassEndTime: endTimeStr,
     };
   }
 
@@ -168,15 +192,25 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
     upcoming.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
     const next = upcoming[0];
     const minsUntil = (next.startMin || 0) - currentMinutes;
+    const startTimeStr = next.startMin !== null ? formatMinutesToTime(next.startMin) : '';
+    const nextIdx = todaySchedule.findIndex(s => s.isUpcoming);
+    const currentClassIndex = nextIdx >= 0 ? nextIdx + 1 : 1;
+
     return {
       status: 'upcoming',
-      statusText: `STARTS IN ${minsUntil}m`,
+      statusText: startTimeStr ? `STARTS AT ${startTimeStr} (${minsUntil}m)` : `STARTS IN ${minsUntil}m`,
       time: next.time,
       subject: formatSubjectTitle(next.subject || 'Class'),
       room: next.room || 'TBA',
       type: next.type || 'Lecture',
       subjectCode: next.subjectCode || '',
       todaySchedule,
+      todayTotalClasses,
+      todayCompletedClasses,
+      todayRemainingClasses,
+      currentClassIndex,
+      timeUntilOrLeft: `in ${minsUntil}m`,
+      nextClassStartTime: startTimeStr,
     };
   }
 
@@ -199,15 +233,21 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
         dayClasses.sort((a: any, b: any) => (a.startMin || 0) - (b.startMin || 0));
         const first = dayClasses[0];
         const statusLabel = offset === 1 ? 'TOMORROW' : targetDay.toUpperCase();
+        const startTimeStr = first.startMin !== null ? formatMinutesToTime(first.startMin) : '';
         return {
           status: offset === 1 ? 'tomorrow' : 'upcoming',
-          statusText: statusLabel,
+          statusText: startTimeStr ? `${statusLabel} AT ${startTimeStr}` : statusLabel,
           time: first.time,
           subject: formatSubjectTitle(first.subject || 'Class'),
           room: first.room || 'TBA',
           type: first.type || 'Lecture',
           subjectCode: first.subjectCode || '',
           todaySchedule,
+          todayTotalClasses,
+          todayCompletedClasses,
+          todayRemainingClasses,
+          currentClassIndex: 0,
+          nextClassStartTime: startTimeStr,
         };
       }
     }
@@ -215,13 +255,17 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
 
   return {
     status: 'no_classes',
-    statusText: 'ALL CAUGHT UP',
+    statusText: todayTotalClasses > 0 ? `ALL ${todayTotalClasses} CLASSES DONE ✓` : 'ALL CAUGHT UP',
     time: '',
     subject: '',
     room: '',
     type: '',
     subjectCode: '',
     todaySchedule,
+    todayTotalClasses,
+    todayCompletedClasses,
+    todayRemainingClasses,
+    currentClassIndex: 0,
   };
 }
 
@@ -354,6 +398,51 @@ export async function getWidgetQuickStatsData(): Promise<QuickStatsWidgetData | 
   }
 }
 
+// Schedule notifications at exact class start times today so user stays alerted even when app is killed
+export async function scheduleClassTransitionAlerts(schedule: ScheduleItem[]): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    const Notifications = require('expo-notifications');
+    const permissions = await Notifications.getPermissionsAsync();
+    if (!permissions.granted) return;
+
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.content.data?.isClassTransition) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    for (const item of schedule) {
+      const slot = parseTimeSlot(item.time);
+      if (!slot?.startMinutes) continue;
+
+      if (slot.startMinutes > currentMinutes) {
+        const triggerDate = new Date();
+        triggerDate.setHours(Math.floor(slot.startMinutes / 60));
+        triggerDate.setMinutes(slot.startMinutes % 60);
+        triggerDate.setSeconds(0);
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `Class Starting: ${item.subject}`,
+            body: `📍 ${item.room ? (item.room.startsWith('Room') ? item.room : `Room ${item.room}`) : 'Room TBA'} • ${item.time}`,
+            data: { isClassTransition: true },
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: triggerDate,
+          },
+        });
+      }
+    }
+  } catch (err) {}
+}
+
 // ── WIDGET UPDATE TRIGGERS ──
 
 // Trigger ALL widget types to re-render on Android with their specific widgetInfo dimensions
@@ -367,8 +456,26 @@ export async function syncAndroidWidget(): Promise<void> {
       const classData = await getWidgetClassData();
       await requestWidgetUpdate({
         widgetName: 'NextClassWidget',
-        renderWidget: (widgetInfo: WidgetInfo) => React.createElement(NextClassWidget, { data: classData, widgetInfo }),
+        renderWidget: async (widgetInfo: WidgetInfo) => {
+          const savedStack = await AsyncStorage.getItem(`@widget_stack_${widgetInfo.widgetId}`);
+          const stackIndex = savedStack ? parseInt(savedStack, 10) : 0;
+          const savedPage = await AsyncStorage.getItem(`@widget_page_${widgetInfo.widgetId}`);
+          const schedulePage = savedPage ? parseInt(savedPage, 10) : 0;
+          return React.createElement(NextClassWidget, {
+            data: {
+              ...classData,
+              stackIndex: isNaN(stackIndex) ? 0 : stackIndex,
+              schedulePage: isNaN(schedulePage) ? 0 : schedulePage,
+            },
+            widgetInfo,
+          });
+        },
       });
+
+      // Schedule transition alerts for today's classes
+      if (Array.isArray(classData.todaySchedule) && classData.todaySchedule.length > 0) {
+        scheduleClassTransitionAlerts(classData.todaySchedule).catch(() => {});
+      }
     } catch (err) {}
 
     // Update AttendanceWidget
