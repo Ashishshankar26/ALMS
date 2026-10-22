@@ -2,6 +2,6 @@
   "version": "1.0.4",
   "minRequiredVersion": "1.0.2",
   "apkUrl": "https://github.com/Ashishshankar26/ALMS/releases/download/v1.0.4/ALMS_v1.0.4.apk",
-  "title": "ALMS v1.0.4 Update",
-  "notes": "Added Android Home Screen Widget support for your timetable and next class. Added refined glassmorphism design and fixed time cut-off."
+  "title": "ALMS v1.0.4 - Home Screen Widget & Attendance Fix",
+  "notes": "Added native Android Home Screen Widget for Next Class & Timetable, modern glassmorphic Next Class card, fixed attendance bonus column parsing, and scraper stability."
 }

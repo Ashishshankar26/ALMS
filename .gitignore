@@ -45,3 +45,4 @@ npx
 analyze.ps1
 .vscode/
 scratch/
+*.apk
