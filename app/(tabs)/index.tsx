@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated, NativeModules } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Platform, Image, Modal, ActivityIndicator, PanResponder, Animated as RNAnimated, NativeModules, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInRight, FadeInUp, Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
@@ -1172,22 +1172,59 @@ export default function DashboardScreen() {
       if (!downloadResult?.uri) throw new Error('Download failed');
 
       if (Platform.OS === 'android') {
+        let launched = false;
         try {
           const contentUri = await FileSystem.getContentUriAsync(downloadResult.uri);
           const IntentLauncher = require('expo-intent-launcher');
-          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-            data: contentUri,
-            flags: 1,
-            type: 'application/vnd.android.package-archive',
-          });
+          if (IntentLauncher && IntentLauncher.startActivityAsync) {
+            await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+              data: contentUri,
+              flags: 1,
+              type: 'application/vnd.android.package-archive',
+            });
+            launched = true;
+          }
         } catch (intentErr) {
-          await Linking.openURL(apkUpdate.apkUrl);
+          console.log('IntentLauncher fallback to Sharing:', intentErr);
+        }
+
+        if (!launched) {
+          try {
+            const Sharing = require('expo-sharing');
+            if (Sharing && (await Sharing.isAvailableAsync())) {
+              await Sharing.shareAsync(downloadResult.uri, {
+                mimeType: 'application/vnd.android.package-archive',
+                dialogTitle: 'Install ALMS Update',
+              });
+              launched = true;
+            }
+          } catch (shareErr) {
+            console.log('Sharing fallback error:', shareErr);
+          }
+        }
+
+        if (!launched) {
+          Alert.alert(
+            'APK Download Complete',
+            'The ALMS v1.0.4 APK has been downloaded! Tap on the download notification in your notification shade or open your phone\'s Files/Downloads app to install.',
+            [
+              { text: 'Open in Browser', onPress: () => Linking.openURL(apkUpdate.apkUrl) },
+              { text: 'OK', style: 'cancel' }
+            ]
+          );
         }
       } else {
         await Linking.openURL(apkUpdate.apkUrl);
       }
     } catch (err) {
-      Linking.openURL(apkUpdate.apkUrl);
+      Alert.alert(
+        'Download ALMS v1.0.4',
+        'Would you like to download the APK directly from GitHub?',
+        [
+          { text: 'Download', onPress: () => Linking.openURL(apkUpdate.apkUrl) },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
     } finally {
       setIsDownloadingApk(false);
     }
