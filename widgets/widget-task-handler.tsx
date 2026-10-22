@@ -4,12 +4,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NextClassWidget } from './NextClassWidget';
 import { AttendanceWidget } from './AttendanceWidget';
 import { QuickStatsWidget } from './QuickStatsWidget';
-import { getWidgetClassData, getWidgetAttendanceData, getWidgetQuickStatsData } from './widget-sync';
+import {
+  getWidgetClassData,
+  getWidgetAttendanceData,
+  getWidgetQuickStatsData,
+  syncAndroidWidget,
+} from './widget-sync';
+
+const GLOBAL_STACK_KEY = '@widget_active_stack_index';
+const GLOBAL_PAGE_KEY = '@widget_active_page_index';
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const widgetInfo = props.widgetInfo;
   const stackKey = `@widget_stack_${widgetInfo.widgetId}`;
-
   const pageKey = `@widget_page_${widgetInfo.widgetId}`;
 
   switch (props.widgetAction) {
@@ -17,13 +24,18 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED': {
       if (widgetInfo.widgetName === 'NextClassWidget') {
-        const savedStack = await AsyncStorage.getItem(stackKey);
+        const savedStack =
+          (await AsyncStorage.getItem(stackKey)) ||
+          (await AsyncStorage.getItem(GLOBAL_STACK_KEY));
         const stackIndex = savedStack ? parseInt(savedStack, 10) : 0;
-        const savedPage = await AsyncStorage.getItem(pageKey);
+
+        const savedPage =
+          (await AsyncStorage.getItem(pageKey)) ||
+          (await AsyncStorage.getItem(GLOBAL_PAGE_KEY));
         const schedulePage = savedPage ? parseInt(savedPage, 10) : 0;
 
         const data = await getWidgetClassData();
-        data.stackIndex = isNaN(stackIndex) ? 0 : stackIndex;
+        data.stackIndex = isNaN(stackIndex) ? 0 : ((stackIndex % 3) + 3) % 3;
         data.schedulePage = isNaN(schedulePage) ? 0 : schedulePage;
         props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} />);
       } else if (widgetInfo.widgetName === 'AttendanceWidget') {
@@ -38,12 +50,17 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
     case 'WIDGET_CLICK': {
       const clickAction = props.clickAction;
-      if (widgetInfo.widgetName === 'NextClassWidget') {
-        const savedStack = await AsyncStorage.getItem(stackKey);
-        const currentIdx = savedStack ? parseInt(savedStack, 10) : 0;
-        const safeIdx = isNaN(currentIdx) ? 0 : currentIdx;
 
-        const savedPage = await AsyncStorage.getItem(pageKey);
+      if (widgetInfo.widgetName === 'NextClassWidget') {
+        const savedStack =
+          (await AsyncStorage.getItem(stackKey)) ||
+          (await AsyncStorage.getItem(GLOBAL_STACK_KEY));
+        const currentIdx = savedStack ? parseInt(savedStack, 10) : 0;
+        const safeIdx = isNaN(currentIdx) ? 0 : ((currentIdx % 3) + 3) % 3;
+
+        const savedPage =
+          (await AsyncStorage.getItem(pageKey)) ||
+          (await AsyncStorage.getItem(GLOBAL_PAGE_KEY));
         const currentPage = savedPage ? parseInt(savedPage, 10) : 0;
         const safePage = isNaN(currentPage) ? 0 : currentPage;
 
@@ -53,23 +70,30 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         if (clickAction === 'NEXT_STACK' || clickAction === 'CYCLE_STACK') {
           nextIdx = (safeIdx + 1) % 3;
           await AsyncStorage.setItem(stackKey, String(nextIdx));
+          await AsyncStorage.setItem(GLOBAL_STACK_KEY, String(nextIdx));
         } else if (clickAction === 'PREV_STACK') {
           nextIdx = (safeIdx - 1 + 3) % 3;
           await AsyncStorage.setItem(stackKey, String(nextIdx));
+          await AsyncStorage.setItem(GLOBAL_STACK_KEY, String(nextIdx));
         } else if (clickAction === 'NEXT_SCHEDULE_PAGE') {
           nextPage = safePage + 1;
           await AsyncStorage.setItem(pageKey, String(nextPage));
+          await AsyncStorage.setItem(GLOBAL_PAGE_KEY, String(nextPage));
         } else if (clickAction === 'PREV_SCHEDULE_PAGE') {
           nextPage = Math.max(0, safePage - 1);
           await AsyncStorage.setItem(pageKey, String(nextPage));
+          await AsyncStorage.setItem(GLOBAL_PAGE_KEY, String(nextPage));
         } else if (clickAction === 'REFRESH_WIDGET') {
-          // Keep current card and page, re-evaluating latest data in real time
+          // Keep current card index, force-fetch newest data
         }
 
         const data = await getWidgetClassData();
         data.stackIndex = nextIdx;
         data.schedulePage = nextPage;
         props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} />);
+
+        // Synchronize all instances on the home screen immediately
+        syncAndroidWidget().catch(() => {});
       } else if (widgetInfo.widgetName === 'AttendanceWidget') {
         const data = await getWidgetAttendanceData();
         props.renderWidget(<AttendanceWidget data={data} widgetInfo={widgetInfo} />);

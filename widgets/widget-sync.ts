@@ -457,9 +457,13 @@ export async function syncAndroidWidget(): Promise<void> {
       await requestWidgetUpdate({
         widgetName: 'NextClassWidget',
         renderWidget: async (widgetInfo: WidgetInfo) => {
-          const savedStack = await AsyncStorage.getItem(`@widget_stack_${widgetInfo.widgetId}`);
+          const savedStack =
+            (await AsyncStorage.getItem(`@widget_stack_${widgetInfo.widgetId}`)) ||
+            (await AsyncStorage.getItem('@widget_active_stack_index'));
           const stackIndex = savedStack ? parseInt(savedStack, 10) : 0;
-          const savedPage = await AsyncStorage.getItem(`@widget_page_${widgetInfo.widgetId}`);
+          const savedPage =
+            (await AsyncStorage.getItem(`@widget_page_${widgetInfo.widgetId}`)) ||
+            (await AsyncStorage.getItem('@widget_active_page_index'));
           const schedulePage = savedPage ? parseInt(savedPage, 10) : 0;
           return React.createElement(NextClassWidget, {
             data: {
