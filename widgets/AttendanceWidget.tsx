@@ -352,7 +352,7 @@ export function AttendanceWidget({ data, widgetInfo }: { data?: AttendanceWidget
       >
         <FlexWidget
           style={{
-            width: (w * Math.min(pct, 100) / 100) as any,
+            width: (Math.max(10, (w - pad * 2)) * Math.min(pct, 100) / 100) as any,
             height: 'match_parent',
             backgroundColor: statusColor,
             borderRadius: 3,

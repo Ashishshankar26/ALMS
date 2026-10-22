@@ -42,11 +42,35 @@ export interface NextClassWidgetData {
   cgpa?: string;
 }
 
-// Adaptive layout tiers based on widget width and height (dp)
-function getLayoutTier(width: number, height: number): 'compact' | 'medium' | 'large' {
-  if (width < 200 || height < 115) return 'compact';
-  if (height >= 230) return 'large';
-  return 'medium';
+// Unified Responsive Layout Engine that prevents cramping across ALL launcher cell sizes
+function getWidgetLayoutConfig(w: number, h: number) {
+  const isMicro = h < 95;              // 1-cell height (e.g. 4x1, 3x1, 2x1)
+  const isCompact = h >= 95 && h < 140; // 2-cell short height (e.g. 2x2, 3x2 on small launchers)
+  const isMedium = h >= 140 && h < 225; // Standard 2-cell / 3-cell height (e.g. 4x2, 3x2, 4x3)
+  const isLarge = h >= 225;            // Tall 4x4, 5x4
+
+  const isNarrow = w < 220;            // 2-cell width (e.g. 2x2, 2x3)
+  const isWide = w >= 320;             // 4-cell or wider
+
+  return {
+    isMicro,
+    isCompact,
+    isMedium,
+    isLarge,
+    isNarrow,
+    isWide,
+    // Spacing
+    padH: isNarrow ? 10 : (isMicro ? 12 : (isCompact ? 12 : 16)),
+    padV: isMicro ? 6 : (isCompact ? 8 : (isMedium ? 12 : 16)),
+    borderRadius: isMicro ? 14 : (isCompact ? 18 : 24),
+    // Typography
+    titleFontSize: isMicro ? 12 : (isCompact ? (isNarrow ? 13 : 15) : (isMedium ? (isNarrow ? 16 : 19) : 22)),
+    titleMaxLines: isMicro || isCompact ? 1 : 2,
+    badgeFontSize: isMicro || isNarrow ? 8 : 10,
+    // Elements to show
+    showHandle: !isMicro && h >= 115,
+    scheduleItemsCount: isMicro ? 1 : (isCompact ? 2 : (isMedium ? 3 : 4)),
+  };
 }
 
 export function NextClassWidget({
@@ -58,15 +82,12 @@ export function NextClassWidget({
 }) {
   const w = widgetInfo?.width ?? 320;
   const h = widgetInfo?.height ?? 160;
-  const tier = getLayoutTier(w, h);
+  const cfg = getWidgetLayoutConfig(w, h);
 
-  const isCompact = tier === 'compact';
-  const isLarge = tier === 'large';
-
-  const stackIndex = data?.stackIndex ?? 0;
+  const stackIndex = ((data?.stackIndex ?? 0) % 3 + 3) % 3;
   const hasClasses = Boolean(data && data.status !== 'no_classes' && data.subject);
 
-  // Theme accents based on class status
+  // Status flags
   const isOngoing = data?.status === 'ongoing';
   const isTomorrow = data?.status === 'tomorrow';
   const isLab = Boolean(
@@ -74,17 +95,60 @@ export function NextClassWidget({
     (data?.type || '').toLowerCase().includes('practical')
   );
 
-  const accentColor: ColorProp = isOngoing ? '#10B981' : (isTomorrow ? '#A855F7' : (isLab ? '#06B6D4' : '#6366F1'));
-  const statusBg: ColorProp = isOngoing ? 'rgba(16, 185, 129, 0.22)' : (isTomorrow ? 'rgba(168, 85, 247, 0.22)' : 'rgba(99, 102, 241, 0.22)');
-  const accentLight: ColorProp = isOngoing ? 'rgba(16, 185, 129, 0.15)' : (isTomorrow ? 'rgba(168, 85, 247, 0.15)' : (isLab ? 'rgba(6, 182, 212, 0.15)' : 'rgba(99, 102, 241, 0.15)'));
+  // ── APP'S UTILITY STACK COLOR PALETTES ──
+  // Card 0: Next Class / Active Class (Deep Emerald for Live, Royal Indigo for Upcoming, Deep Plum for Tomorrow)
+  const nextClassBg: ColorProp = isOngoing ? '#06261D' : (isTomorrow ? '#21102B' : (isLab ? '#09212B' : '#101438'));
+  const nextClassBorder: ColorProp = isOngoing ? '#059669' : (isTomorrow ? '#9333EA' : (isLab ? '#0284C7' : '#4F46E5'));
+  const nextClassAccent: ColorProp = isOngoing ? '#10B981' : (isTomorrow ? '#A855F7' : (isLab ? '#38BDF8' : '#818CF8'));
+  const nextClassBadgeBg: ColorProp = isOngoing ? 'rgba(16, 185, 129, 0.22)' : (isTomorrow ? 'rgba(168, 85, 247, 0.22)' : 'rgba(99, 102, 241, 0.22)');
 
+  // Card 1: Today's Schedule (Deep Sapphire Navy from the app)
+  const scheduleBg: ColorProp = '#081A2E';
+  const scheduleBorder: ColorProp = '#0284C7';
+  const scheduleAccent: ColorProp = '#38BDF8';
+  const scheduleBadgeBg: ColorProp = 'rgba(56, 189, 248, 0.22)';
+
+  // Card 2: Attendance (Deep Crimson/Rose matching app's attendance stack card)
   const attPct = data?.overallAttendance ?? 0;
-  const attColor: ColorProp = attPct >= 80 ? '#10B981' : (attPct >= 75 ? '#F59E0B' : '#EF4444');
-  const attBg: ColorProp = attPct >= 80 ? 'rgba(16, 185, 129, 0.2)' : (attPct >= 75 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+  const isSafe = attPct >= 80;
+  const isWarning = attPct >= 75 && attPct < 80;
+  const attColor: ColorProp = isSafe ? '#10B981' : (isWarning ? '#F59E0B' : '#EF4444');
+  const attBg: ColorProp = '#260D17';
+  const attBorder: ColorProp = isSafe ? '#059669' : (isWarning ? '#D97706' : '#E11D48');
+  const attBadgeBg: ColorProp = isSafe ? 'rgba(16, 185, 129, 0.22)' : (isWarning ? 'rgba(245, 158, 11, 0.22)' : 'rgba(239, 68, 68, 0.22)');
 
-  // Full Navigation Bar with Left ‹, Center Status / Refresh, and Right › Stack Navigator
-  const renderNavBar = (activeIdx: number, centerPill: React.ReactNode, compact: boolean = false) => {
-    const dots = activeIdx === 0 ? '● ○ ○' : (activeIdx === 1 ? '○ ● ○' : '○ ○ ●');
+  // Top Handle Pill (directly from app's stackHandle style)
+  const renderStackHandle = () => {
+    if (!cfg.showHandle) return null;
+    return (
+      <FlexWidget
+        style={{
+          width: 'match_parent',
+          alignItems: 'center',
+          marginBottom: cfg.isCompact ? 6 : 8,
+        }}
+      >
+        <FlexWidget
+          style={{
+            width: 32,
+            height: 3,
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            borderRadius: 2,
+          }}
+        />
+      </FlexWidget>
+    );
+  };
+
+  // Sleek Glass Card Header with Status Badge & Cycler Controls
+  const renderStackHeader = (
+    activeIdx: number,
+    statusBadgeText: string,
+    categoryLabel: string,
+    badgeBgColor: ColorProp,
+    badgeBorderColor: ColorProp,
+    badgeTextColor: ColorProp
+  ) => {
     return (
       <FlexWidget
         style={{
@@ -92,25 +156,85 @@ export function NextClassWidget({
           justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
+          marginBottom: cfg.isMicro ? 3 : 6,
         }}
       >
-        {/* Left side: Previous Card Arrow + Center Pill */}
+        {/* Left Side: Mini Status Badge + Optional Category Label */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             alignItems: 'center',
+            flex: 1,
           }}
         >
-          {/* Previous Card ‹ (Simulates Swipe Left) */}
+          {/* Mini Status Badge (clickable to refresh data) */}
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: badgeBgColor,
               borderRadius: 8,
-              paddingHorizontal: compact ? 7 : 10,
-              paddingVertical: compact ? 3 : 5,
+              paddingHorizontal: cfg.isMicro || cfg.isNarrow ? 6 : 9,
+              paddingVertical: cfg.isMicro ? 2 : 4,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.15)',
-              marginRight: 6,
+              borderColor: badgeBorderColor,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+            clickAction="REFRESH_WIDGET"
+          >
+            <TextWidget
+              text={statusBadgeText}
+              maxLines={1}
+              truncate="END"
+              style={{
+                color: badgeTextColor,
+                fontSize: cfg.badgeFontSize,
+                fontWeight: '900',
+                letterSpacing: 0.5,
+              }}
+            />
+            <TextWidget
+              text=" ↻"
+              style={{
+                color: badgeTextColor,
+                fontSize: cfg.badgeFontSize,
+                fontWeight: 'bold',
+              }}
+            />
+          </FlexWidget>
+
+          {/* Category label shown when width permits */}
+          {!cfg.isNarrow && !cfg.isMicro ? (
+            <TextWidget
+              text={categoryLabel}
+              style={{
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: 10,
+                fontWeight: '800',
+                letterSpacing: 0.8,
+                marginLeft: 8,
+              }}
+            />
+          ) : null}
+        </FlexWidget>
+
+        {/* Right Side: Glass Card Cycler [ ‹  1/3  › ] */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.12)',
+            paddingHorizontal: 2,
+            paddingVertical: 1,
+          }}
+        >
+          {/* Previous Card Button */}
+          <FlexWidget
+            style={{
+              paddingHorizontal: cfg.isMicro ? 5 : 7,
+              paddingVertical: cfg.isMicro ? 1 : 3,
             }}
             clickAction="PREV_STACK"
           >
@@ -118,55 +242,28 @@ export function NextClassWidget({
               text="‹"
               style={{
                 color: '#E2E8F0',
-                fontSize: compact ? 12 : 15,
-                fontWeight: 'bold',
+                fontSize: cfg.isMicro ? 11 : 14,
+                fontWeight: '900',
               }}
             />
           </FlexWidget>
 
-          {centerPill}
-        </FlexWidget>
-
-        {/* Right side: Dots Indicator + Next Card Arrow › (Simulates Swipe Right) */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}
-        >
-          {/* Dots Indicator */}
-          <FlexWidget
+          {/* Current / Total Stack Indicator */}
+          <TextWidget
+            text={`${activeIdx + 1}/3`}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 8,
-              paddingHorizontal: compact ? 6 : 8,
-              paddingVertical: compact ? 3 : 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              marginRight: 4,
+              color: 'rgba(255, 255, 255, 0.75)',
+              fontSize: cfg.isMicro ? 8 : 10,
+              fontWeight: '800',
+              marginHorizontal: 2,
             }}
-            clickAction="NEXT_STACK"
-          >
-            <TextWidget
-              text={dots}
-              style={{
-                color: '#A78BFA',
-                fontSize: compact ? 8 : 10,
-                fontWeight: 'bold',
-                letterSpacing: compact ? 1 : 2,
-              }}
-            />
-          </FlexWidget>
+          />
 
-          {/* Next Card › */}
+          {/* Next Card Button */}
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: 8,
-              paddingHorizontal: compact ? 7 : 10,
-              paddingVertical: compact ? 3 : 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.15)',
+              paddingHorizontal: cfg.isMicro ? 5 : 7,
+              paddingVertical: cfg.isMicro ? 1 : 3,
             }}
             clickAction="NEXT_STACK"
           >
@@ -174,8 +271,8 @@ export function NextClassWidget({
               text="›"
               style={{
                 color: '#E2E8F0',
-                fontSize: compact ? 12 : 15,
-                fontWeight: 'bold',
+                fontSize: cfg.isMicro ? 11 : 14,
+                fontWeight: '900',
               }}
             />
           </FlexWidget>
@@ -185,77 +282,49 @@ export function NextClassWidget({
   };
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 1: TODAY'S SCHEDULE VIEW (With Up/Down Pagination & Scroll Support)
+  // CARD 1: TODAY'S SCHEDULE (With Up/Down Pagination & Responsive Item Sizing)
   // ═════════════════════════════════════════════════════════════════════════
-  if (stackIndex === 1 && !isLarge) {
+  if (stackIndex === 1) {
     const schedule = data?.todaySchedule || [];
     const count = schedule.length;
-    const pageSize = isCompact ? 2 : 3;
+    const pageSize = cfg.scheduleItemsCount;
     const totalPages = Math.max(1, Math.ceil(count / pageSize));
     const rawPage = data?.schedulePage ?? 0;
     const safePage = ((rawPage % totalPages) + totalPages) % totalPages;
     const visibleClasses = schedule.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
-    const schedulePill = (
-      <FlexWidget
-        style={{
-          backgroundColor: 'rgba(56, 189, 248, 0.18)',
-          borderRadius: 8,
-          paddingHorizontal: isCompact ? 6 : 10,
-          paddingVertical: isCompact ? 3 : 5,
-          borderWidth: 1,
-          borderColor: '#38BDF8',
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        clickAction="REFRESH_WIDGET"
-      >
-        <TextWidget
-          text={`TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`}
-          style={{
-            color: '#38BDF8',
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-        <TextWidget
-          text=" ↻"
-          style={{
-            color: '#38BDF8',
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-      </FlexWidget>
-    );
+    const badgeText = cfg.isNarrow || cfg.isMicro
+      ? `TODAY • ${count}`
+      : `TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`;
 
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0A0C12',
-          borderRadius: isCompact ? 16 : 22,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          padding: isCompact ? 10 : 14,
+          backgroundColor: scheduleBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: scheduleBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
         }}
         clickAction="OPEN_APP"
       >
-        {/* Navigation Bar */}
-        {renderNavBar(1, schedulePill, isCompact)}
+        {renderStackHandle()}
+        {renderStackHeader(1, badgeText, 'SCHEDULE HUB', scheduleBadgeBg, scheduleBorder, scheduleAccent)}
 
         {/* Schedule List Items */}
-        {schedule.length === 0 ? (
+        {count === 0 ? (
           <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
             <TextWidget
               text="No classes scheduled for today ✓"
-              style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: isCompact ? 11 : 13, fontWeight: '600' }}
+              style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: cfg.titleFontSize - 3, fontWeight: '700' }}
             />
           </FlexWidget>
         ) : (
-          <FlexWidget style={{ width: 'match_parent', flexDirection: 'column', marginVertical: 4 }}>
+          <FlexWidget style={{ width: 'match_parent', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
             {visibleClasses.map((item, idx) => (
               <FlexWidget
                 key={idx}
@@ -263,24 +332,26 @@ export function NextClassWidget({
                   width: 'match_parent',
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.06)',
+                  backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.06)',
                   borderRadius: 8,
-                  paddingHorizontal: isCompact ? 6 : 10,
-                  paddingVertical: isCompact ? 4 : 6,
+                  paddingHorizontal: cfg.isNarrow ? 6 : 8,
+                  paddingVertical: cfg.isMicro ? 2 : (cfg.isCompact ? 4 : 5),
                   borderWidth: 1,
                   borderColor: item.isOngoing ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                  marginBottom: isCompact ? 4 : 5,
+                  marginBottom: cfg.isMicro ? 2 : 4,
                 }}
               >
+                {/* Start Time */}
                 <TextWidget
                   text={item.time.split('-')[0].trim()}
                   style={{
                     color: item.isOngoing ? '#10B981' : '#E2E8F0',
-                    fontSize: isCompact ? 9 : 11,
-                    fontWeight: '700',
-                    width: isCompact ? 54 : 68,
+                    fontSize: cfg.isMicro ? 9 : 11,
+                    fontWeight: '800',
+                    width: cfg.isNarrow ? 52 : 64,
                   }}
                 />
+                {/* Subject Name */}
                 <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
                   <TextWidget
                     text={item.subject}
@@ -288,17 +359,18 @@ export function NextClassWidget({
                     truncate="END"
                     style={{
                       color: '#FFFFFF',
-                      fontSize: isCompact ? 10 : 12,
+                      fontSize: cfg.isMicro ? 10 : 12,
                       fontWeight: 'bold',
                     }}
                   />
                 </FlexWidget>
+                {/* Room */}
                 <TextWidget
                   text={item.room ? item.room.replace(/^Room\s*/i, '') : 'TBA'}
                   style={{
-                    color: 'rgba(255, 255, 255, 0.75)',
-                    fontSize: isCompact ? 9 : 11,
-                    fontWeight: '600',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: cfg.isMicro ? 9 : 11,
+                    fontWeight: '700',
                   }}
                 />
               </FlexWidget>
@@ -306,18 +378,21 @@ export function NextClassWidget({
           </FlexWidget>
         )}
 
-        {/* Footer info + Up/Down Pagination for scrolling through classes */}
+        {/* Footer info & Pagination Controls */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
+            marginTop: cfg.isMicro ? 2 : 4,
           }}
         >
           <TextWidget
-            text={count > pageSize ? `${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, count)} of ${count} classes` : `${count} total classes`}
-            style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: isCompact ? 8 : 10 }}
+            text={count > pageSize
+              ? `${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, count)} of ${count}`
+              : `${count} total classes`}
+            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: '600' }}
           />
 
           {totalPages > 1 ? (
@@ -326,15 +401,15 @@ export function NextClassWidget({
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.12)',
                   borderRadius: 6,
-                  paddingHorizontal: 8,
+                  paddingHorizontal: 7,
                   paddingVertical: 2,
                   marginRight: 4,
                 }}
                 clickAction="PREV_SCHEDULE_PAGE"
               >
                 <TextWidget
-                  text="▲ Prev"
-                  style={{ color: '#38BDF8', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+                  text="▲"
+                  style={{ color: scheduleAccent, fontSize: 9, fontWeight: 'bold' }}
                 />
               </FlexWidget>
 
@@ -342,21 +417,21 @@ export function NextClassWidget({
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.12)',
                   borderRadius: 6,
-                  paddingHorizontal: 8,
+                  paddingHorizontal: 7,
                   paddingVertical: 2,
                 }}
                 clickAction="NEXT_SCHEDULE_PAGE"
               >
                 <TextWidget
-                  text="▼ Next"
-                  style={{ color: '#38BDF8', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+                  text="▼"
+                  style={{ color: scheduleAccent, fontSize: 9, fontWeight: 'bold' }}
                 />
               </FlexWidget>
             </FlexWidget>
           ) : (
             <TextWidget
               text="ALMS"
-              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
             />
           )}
         </FlexWidget>
@@ -365,151 +440,141 @@ export function NextClassWidget({
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 2: ATTENDANCE & STATS STACK VIEW
+  // CARD 2: ATTENDANCE & STATS (Matching App's Attendance Stack Card)
   // ═════════════════════════════════════════════════════════════════════════
-  if (stackIndex === 2 && !isLarge) {
+  if (stackIndex === 2) {
     const total = data?.totalClasses ?? 0;
     const attended = data?.attendedClasses ?? 0;
     const cgpa = data?.cgpa || '--';
 
-    const attPill = (
-      <FlexWidget
-        style={{
-          backgroundColor: attBg,
-          borderRadius: 8,
-          paddingHorizontal: isCompact ? 6 : 10,
-          paddingVertical: isCompact ? 3 : 5,
-          borderWidth: 1,
-          borderColor: attColor,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        clickAction="REFRESH_WIDGET"
-      >
-        <TextWidget
-          text={attPct >= 75 ? 'ATTENDANCE SAFE' : 'ATTENDANCE WARNING'}
-          style={{
-            color: attColor,
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-        <TextWidget
-          text=" ↻"
-          style={{
-            color: attColor,
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-      </FlexWidget>
-    );
+    const statusBadgeText = isSafe ? 'SAFE' : (isWarning ? 'WARNING' : 'CRITICAL');
 
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0A0C12',
-          borderRadius: isCompact ? 16 : 22,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          padding: isCompact ? 10 : 14,
+          backgroundColor: attBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: attBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
         }}
         clickAction="OPEN_APP"
       >
-        {/* Navigation Bar */}
-        {renderNavBar(2, attPill, isCompact)}
+        {renderStackHandle()}
+        {renderStackHeader(2, statusBadgeText, 'ACADEMIC ATTENDANCE', attBadgeBg, attBorder, attColor)}
 
-        {/* Big percentage & stats row */}
+        {/* Subtitle from the app's card */}
+        {!cfg.isMicro ? (
+          <TextWidget
+            text="Live Attendance Tracking"
+            style={{
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: cfg.isCompact ? 10 : 12,
+              fontWeight: '700',
+              marginBottom: 2,
+            }}
+          />
+        ) : null}
+
+        {/* Big Hero Value Row */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: 'match_parent',
-            marginVertical: 4,
+            marginVertical: cfg.isMicro ? 1 : 3,
           }}
         >
-          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {/* Big Percentage Number */}
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
             <TextWidget
               text={`${attPct}`}
               style={{
-                color: attColor,
-                fontSize: isCompact ? 28 : 36,
+                color: '#FFFFFF',
+                fontSize: cfg.isMicro ? 22 : (cfg.isCompact ? 28 : (cfg.isLarge ? 36 : 32)),
                 fontWeight: '900',
+                letterSpacing: -1,
               }}
             />
             <TextWidget
               text="%"
               style={{
                 color: attColor,
-                fontSize: isCompact ? 14 : 18,
+                fontSize: cfg.isMicro ? 12 : 16,
                 fontWeight: 'bold',
                 marginLeft: 2,
               }}
             />
           </FlexWidget>
 
+          {/* Right Summary Info */}
           <FlexWidget style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
             <TextWidget
               text={`${attended} / ${total} Present`}
               style={{
                 color: '#FFFFFF',
-                fontSize: isCompact ? 10 : 13,
+                fontSize: cfg.isMicro ? 9 : 11,
                 fontWeight: '700',
               }}
             />
-            {cgpa ? (
+            {cgpa && cgpa !== '--' ? (
               <TextWidget
                 text={`CGPA: ${cgpa}`}
                 style={{
                   color: '#A78BFA',
-                  fontSize: isCompact ? 9 : 12,
+                  fontSize: cfg.isMicro ? 8 : 10,
                   fontWeight: 'bold',
-                  marginTop: 2,
+                  marginTop: 1,
                 }}
               />
             ) : null}
           </FlexWidget>
         </FlexWidget>
 
-        {/* Progress bar */}
-        <FlexWidget
-          style={{
-            width: 'match_parent',
-            height: isCompact ? 6 : 8,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 4,
-          }}
-        >
+        {/* Progress Bar (omitted only on micro height) */}
+        {!cfg.isMicro ? (
           <FlexWidget
             style={{
-              width: (w * Math.min(100, Math.max(0, attPct)) / 100) as any,
-              height: 'match_parent',
-              backgroundColor: attColor,
+              width: 'match_parent',
+              height: cfg.isCompact ? 5 : 7,
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
               borderRadius: 4,
+              marginVertical: 2,
             }}
-          />
-        </FlexWidget>
+          >
+            <FlexWidget
+              style={{
+                width: (Math.max(10, (w - cfg.padH * 2) * Math.min(100, Math.max(0, attPct)) / 100)) as any,
+                height: 'match_parent',
+                backgroundColor: attColor,
+                borderRadius: 4,
+              }}
+            />
+          </FlexWidget>
+        ) : null}
 
-        {/* Footer */}
+        {/* Footer Row */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
+            marginTop: cfg.isMicro ? 1 : 3,
           }}
         >
           <TextWidget
-            text={attPct >= 75 ? 'Above 75% requirement ✓' : 'Below 75% requirement ⚠️'}
-            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isCompact ? 8 : 10 }}
+            text={isSafe ? 'Above 75% requirement ✓' : 'Below 75% requirement ⚠️'}
+            style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: '600' }}
           />
           <TextWidget
             text="ALMS"
-            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
@@ -517,75 +582,50 @@ export function NextClassWidget({
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // NO CLASSES / EMPTY STATE
+  // NO CLASSES / ALL CAUGHT UP STATE
   // ═════════════════════════════════════════════════════════════════════════
   if (!hasClasses) {
-    const emptyPill = (
-      <FlexWidget
-        style={{
-          backgroundColor: 'rgba(16, 185, 129, 0.18)',
-          borderRadius: 8,
-          paddingHorizontal: isCompact ? 6 : 10,
-          paddingVertical: isCompact ? 3 : 5,
-          borderWidth: 1,
-          borderColor: '#10B981',
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        clickAction="REFRESH_WIDGET"
-      >
-        <TextWidget
-          text="ALL CAUGHT UP ✓"
-          style={{
-            color: '#10B981',
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-        <TextWidget
-          text=" ↻"
-          style={{
-            color: '#10B981',
-            fontSize: isCompact ? 9 : 11,
-            fontWeight: 'bold',
-          }}
-        />
-      </FlexWidget>
-    );
+    const badgeText = data?.todayTotalClasses && data.todayTotalClasses > 0
+      ? `ALL ${data.todayTotalClasses} CLASSES DONE ✓`
+      : 'ALL CAUGHT UP ✓';
 
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0A0C12',
-          borderRadius: isCompact ? 16 : 22,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          padding: isCompact ? 10 : 16,
+          backgroundColor: '#0A1926',
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: '#0284C7',
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
         }}
         clickAction="OPEN_APP"
       >
-        {renderNavBar(stackIndex, emptyPill, isCompact)}
+        {renderStackHandle()}
+        {renderStackHeader(0, badgeText, 'COMPANION', 'rgba(56, 189, 248, 0.22)', '#0284C7', '#38BDF8')}
 
-        <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 6 }}>
+        <FlexWidget style={{ alignItems: 'center', justifyContent: 'center', flex: 1, marginVertical: 4 }}>
           <TextWidget
             text="No classes scheduled"
             style={{
               color: '#FFFFFF',
-              fontSize: isCompact ? 13 : 16,
+              fontSize: cfg.isMicro ? 12 : (cfg.isCompact ? 14 : 17),
               fontWeight: 'bold',
-              marginBottom: 4,
+              marginBottom: 2,
             }}
           />
-          <TextWidget
-            text={attPct > 0 ? `Attendance: ${attPct}% • Safe` : 'Enjoy your day! Tap to open ALMS.'}
-            style={{
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: isCompact ? 10 : 12,
-            }}
-          />
+          {!cfg.isMicro ? (
+            <TextWidget
+              text={attPct > 0 ? `Attendance: ${attPct}% • Safe` : 'Enjoy your day! Tap to open ALMS.'}
+              style={{
+                color: 'rgba(255, 255, 255, 0.65)',
+                fontSize: cfg.isCompact ? 9 : 11,
+              }}
+            />
+          ) : null}
         </FlexWidget>
 
         <FlexWidget
@@ -598,11 +638,11 @@ export function NextClassWidget({
         >
           <TextWidget
             text="ALMS Companion"
-            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: isCompact ? 8 : 10 }}
+            style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: cfg.isMicro ? 8 : 10 }}
           />
           <TextWidget
             text="Tap to open"
-            style={{ color: '#10B981', fontSize: isCompact ? 8 : 10, fontWeight: 'bold' }}
+            style={{ color: '#38BDF8', fontSize: cfg.isMicro ? 8 : 10, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
@@ -610,52 +650,138 @@ export function NextClassWidget({
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // COMPACT (2x2) LAYOUT
+  // CARD 0: NEXT CLASS / ACTIVE CLASS (Utility Stack Card Design)
   // ═════════════════════════════════════════════════════════════════════════
-  if (isCompact) {
-    const compactPill = (
-      <FlexWidget
-        style={{
-          backgroundColor: statusBg,
-          borderRadius: 6,
-          paddingHorizontal: 6,
-          paddingVertical: 2,
-          borderWidth: 1,
-          borderColor: accentColor,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        clickAction="REFRESH_WIDGET"
-      >
-        <TextWidget
-          text={isOngoing ? '● ACTIVE' : (isTomorrow ? 'TMR' : 'NEXT')}
-          style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
-        />
-        <TextWidget
-          text=" ↻"
-          style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
-        />
-      </FlexWidget>
-    );
 
+  // Concise status badge text that never overflows on small widths
+  const statusBadgeText = cfg.isNarrow || cfg.isMicro
+    ? (isOngoing ? '● ACTIVE' : (isTomorrow ? 'TOMORROW' : 'NEXT'))
+    : (data!.statusText || (isOngoing ? '● ACTIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS')));
+
+  // Category label
+  const categoryLabel = isOngoing ? 'LIVE CLASS' : (isTomorrow ? 'UPCOMING' : 'NEXT CLASS');
+
+  // Subtitle (Course Code + Lecture/Lab Type)
+  const courseCodeType = data!.subjectCode
+    ? `${data!.subjectCode} • ${(data!.type || 'Lecture').toUpperCase()}`
+    : (data!.type || 'Lecture').toUpperCase();
+
+  // ── 1. ULTRA-COMPACT (1-cell height, h < 95, e.g. 4x1 or 2x1) ──
+  if (cfg.isMicro) {
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0A0C12',
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          padding: 10,
+          backgroundColor: nextClassBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: nextClassBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
         }}
         clickAction="OPEN_APP"
       >
-        {/* Navigation Bar */}
-        {renderNavBar(0, compactPill, true)}
+        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
-        {/* Time display + Today total classes badge */}
+        {/* Row 2: Subject Title on Left, Room + Time on Right */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <FlexWidget style={{ flex: 1, marginRight: 6 }}>
+            <TextWidget
+              text={data!.subject}
+              maxLines={1}
+              truncate="END"
+              style={{
+                color: '#FFFFFF',
+                fontSize: cfg.titleFontSize,
+                fontWeight: 'bold',
+              }}
+            />
+          </FlexWidget>
+          <TextWidget
+            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : data!.time.split('-')[0].trim()}
+            style={{
+              color: nextClassAccent,
+              fontSize: 10,
+              fontWeight: '800',
+            }}
+          />
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ── 2. COMPACT (Short 2-cell, 95 <= h < 140, e.g. 2x2 or 3x2) ──
+  if (cfg.isCompact) {
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: nextClassBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: nextClassBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+        clickAction="OPEN_APP"
+      >
+        {renderStackHandle()}
+        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+
+        {/* Time + Today Progress row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginVertical: 1,
+          }}
+        >
+          <TextWidget
+            text={`⏰ ${data!.time.split('-')[0].trim()}`}
+            style={{
+              color: '#CBD5E1',
+              fontSize: 11,
+              fontWeight: '700',
+            }}
+          />
+          {data?.todayTotalClasses ? (
+            <TextWidget
+              text={`${data.currentClassIndex ? `${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses}`} today`}
+              style={{
+                color: nextClassAccent,
+                fontSize: 9,
+                fontWeight: '800',
+              }}
+            />
+          ) : null}
+        </FlexWidget>
+
+        {/* Big Hero Subject Title */}
+        <TextWidget
+          text={data!.subject}
+          maxLines={1}
+          truncate="END"
+          style={{
+            color: '#FFFFFF',
+            fontSize: cfg.titleFontSize,
+            fontWeight: 'bold',
+          }}
+        />
+
+        {/* Bottom Info Row */}
         <FlexWidget
           style={{
             flexDirection: 'row',
@@ -665,200 +791,111 @@ export function NextClassWidget({
           }}
         >
           <TextWidget
-            text={data!.time}
-            style={{ color: '#E2E8F0', fontSize: 10, fontWeight: '700' }}
+            text={data!.room && data!.room !== 'TBA' ? `📍 ${data!.room.replace(/^Room\s*/i, '')}` : '📍 TBA'}
+            style={{
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontSize: 10,
+              fontWeight: '700',
+            }}
           />
-          {data?.todayTotalClasses ? (
-            <TextWidget
-              text={`${data.currentClassIndex ? `${data.currentClassIndex}/${data.todayTotalClasses}` : `${data.todayTotalClasses}`} today`}
-              style={{ color: '#38BDF8', fontSize: 8, fontWeight: '700' }}
-            />
-          ) : null}
-        </FlexWidget>
-
-        {/* Subject Name - Big & bold */}
-        <TextWidget
-          text={data!.subject}
-          maxLines={2}
-          truncate="END"
-          style={{
-            color: '#FFFFFF',
-            fontSize: 13,
-            fontWeight: 'bold',
-            lineHeight: 16,
-          }}
-        />
-
-        {/* Bottom row: Room + Type full-width pills */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget
+          <TextWidget
+            text={(data!.type || 'Lecture').toUpperCase()}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.09)',
-              borderRadius: 6,
-              paddingHorizontal: 6,
-              paddingVertical: 3,
-              flex: 1,
-              alignItems: 'center',
-              marginRight: 4,
+              color: nextClassAccent,
+              fontSize: 9,
+              fontWeight: '800',
             }}
-          >
-            <TextWidget
-              text={data!.room && data!.room !== 'TBA' ? data!.room.replace(/^Room\s*/i, '📍 ') : '📍 TBA'}
-              style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' }}
-            />
-          </FlexWidget>
-
-          <FlexWidget
-            style={{
-              backgroundColor: accentLight,
-              borderRadius: 6,
-              paddingHorizontal: 6,
-              paddingVertical: 3,
-              borderWidth: 1,
-              borderColor: accentColor,
-            }}
-          >
-            <TextWidget
-              text={(data!.type || 'LEC').slice(0, 3).toUpperCase()}
-              style={{ color: accentColor, fontSize: 8, fontWeight: 'bold' }}
-            />
-          </FlexWidget>
+          />
         </FlexWidget>
       </FlexWidget>
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // LARGE (4x4, 4x5, 5x6) LAYOUT — Full Details + Complete Timeline
-  // ═════════════════════════════════════════════════════════════════════════
-  if (isLarge) {
+  // ── 3. LARGE (Tall widgets, h >= 225, e.g. 4x4, 5x4) ──
+  if (cfg.isLarge) {
     const schedule = data?.todaySchedule || [];
     const upcomingList = schedule.filter(s => !s.isPast);
-
-    const largePill = (
-      <FlexWidget
-        style={{
-          backgroundColor: statusBg,
-          borderRadius: 12,
-          paddingHorizontal: 14,
-          paddingVertical: 6,
-          borderWidth: 1,
-          borderColor: accentColor,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        clickAction="REFRESH_WIDGET"
-      >
-        <TextWidget
-          text={data!.statusText || (isOngoing ? '● LIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
-          style={{
-            color: accentColor,
-            fontSize: 13,
-            fontWeight: 'bold',
-          }}
-        />
-        <TextWidget
-          text=" ↻"
-          style={{
-            color: accentColor,
-            fontSize: 13,
-            fontWeight: 'bold',
-          }}
-        />
-      </FlexWidget>
-    );
 
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0A0C12',
-          borderRadius: 24,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-          padding: 18,
+          backgroundColor: nextClassBg,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1.2,
+          borderColor: nextClassBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
         }}
         clickAction="OPEN_APP"
       >
-        {/* Navigation Bar */}
-        {renderNavBar(stackIndex, largePill, false)}
+        {renderStackHandle()}
+        {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
 
-        {/* Main Hero Card for Current / Next Class */}
+        {/* Hero Card Container */}
         <FlexWidget
           style={{
             width: 'match_parent',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderRadius: 16,
-            padding: 14,
+            padding: 12,
             borderWidth: 1,
             borderColor: 'rgba(255, 255, 255, 0.09)',
-            marginVertical: 6,
+            marginVertical: 4,
           }}
         >
-          {/* Schedule Time Pill */}
+          {/* Schedule Time & Progress Badge */}
           <FlexWidget
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
               width: 'match_parent',
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           >
             <TextWidget
               text={`⏰ ${data!.time}`}
               style={{
                 color: '#E2E8F0',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: '800',
               }}
             />
-            <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {data?.todayTotalClasses ? (
-                <FlexWidget
-                  style={{
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    borderRadius: 8,
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderWidth: 1,
-                    borderColor: 'rgba(56, 189, 248, 0.3)',
-                    marginRight: 6,
-                  }}
-                >
-                  <TextWidget
-                    text={data.currentClassIndex
-                      ? `Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
-                      : `Today: ${data.todayTotalClasses} Classes`}
-                    style={{ color: '#38BDF8', fontSize: 10, fontWeight: 'bold' }}
-                  />
-                </FlexWidget>
-              ) : null}
+            {data?.todayTotalClasses ? (
               <FlexWidget
                 style={{
-                  backgroundColor: accentLight,
-                  borderRadius: 8,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
+                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
                   borderWidth: 1,
-                  borderColor: accentColor,
+                  borderColor: 'rgba(56, 189, 248, 0.3)',
                 }}
               >
                 <TextWidget
-                  text={(data!.type || 'Lecture').toUpperCase()}
-                  style={{ color: accentColor, fontSize: 11, fontWeight: 'bold' }}
+                  text={data.currentClassIndex
+                    ? `Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
+                    : `Today: ${data.todayTotalClasses} Classes`}
+                  style={{ color: '#38BDF8', fontSize: 10, fontWeight: 'bold' }}
                 />
               </FlexWidget>
-            </FlexWidget>
+            ) : null}
           </FlexWidget>
+
+          {/* Subtitle Course Code */}
+          <TextWidget
+            text={courseCodeType}
+            style={{
+              color: nextClassAccent,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 0.5,
+              marginBottom: 2,
+            }}
+          />
 
           {/* Subject Title */}
           <TextWidget
@@ -869,354 +906,217 @@ export function NextClassWidget({
               color: '#FFFFFF',
               fontSize: 20,
               fontWeight: '800',
-              lineHeight: 25,
-              marginBottom: 10,
+              lineHeight: 24,
+              marginBottom: 6,
             }}
           />
 
-          {/* Expanded Info Pills */}
-          <FlexWidget
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              width: 'match_parent',
-            }}
-          >
-            <FlexWidget
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.09)',
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.12)',
-                flex: 1.2,
-                alignItems: 'center',
-                marginRight: 8,
-              }}
-            >
-              <TextWidget
-                text={data!.room && data!.room !== 'TBA'
-                  ? (data!.room.toLowerCase().startsWith('room') ? `📍 ${data!.room}` : `📍 Room ${data!.room}`)
-                  : '📍 Room TBA'}
-                style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}
-              />
-            </FlexWidget>
-
-            {data!.subjectCode ? (
-              <FlexWidget
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.09)',
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.12)',
-                  flex: 1,
-                  alignItems: 'center',
-                }}
-              >
-                <TextWidget
-                  text={data!.subjectCode}
-                  style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '700' }}
-                />
-              </FlexWidget>
-            ) : null}
-          </FlexWidget>
+          {/* Room Badge */}
+          <TextWidget
+            text={data!.room && data!.room !== 'TBA'
+              ? (data!.room.toLowerCase().startsWith('room') ? `📍 ${data!.room}` : `📍 Room ${data!.room}`)
+              : '📍 Room TBA'}
+            style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 11, fontWeight: '700' }}
+          />
         </FlexWidget>
 
-        {/* Schedule Timeline Section */}
-        <FlexWidget
-          style={{
-            width: 'match_parent',
-            flexDirection: 'column',
-          }}
-        >
+        {/* Upcoming Classes Mini Timeline Preview */}
+        <FlexWidget style={{ width: 'match_parent', marginVertical: 2 }}>
           <TextWidget
-            text="TODAY'S TIMELINE"
+            text="UPCOMING TODAY"
             style={{
               color: 'rgba(255, 255, 255, 0.5)',
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: '800',
-              letterSpacing: 1.5,
+              letterSpacing: 0.8,
               marginBottom: 4,
             }}
           />
-
           {upcomingList.length <= 1 ? (
-            <FlexWidget
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                borderRadius: 10,
-                padding: 10,
-                alignItems: 'center',
-              }}
-            >
-              <TextWidget
-                text={attPct > 0 ? `Attendance: ${attPct}% • Safe` : 'All other classes complete for today ✓'}
-                style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: '600' }}
-              />
-            </FlexWidget>
+            <TextWidget
+              text="No more classes after this today ✓"
+              style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11, fontWeight: '600' }}
+            />
           ) : (
-            upcomingList.slice(1, 4).map((item, idx) => (
+            upcomingList.slice(1, 3).map((item, idx) => (
               <FlexWidget
                 key={idx}
                 style={{
                   flexDirection: 'row',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.07)',
-                  marginBottom: 6,
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  marginBottom: 3,
                 }}
               >
                 <TextWidget
                   text={item.time.split('-')[0].trim()}
-                  style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700', width: 70 }}
+                  style={{ color: nextClassAccent, fontSize: 10, fontWeight: '800', width: 62 }}
                 />
-                <FlexWidget style={{ flex: 1, marginHorizontal: 6 }}>
+                <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
                   <TextWidget
                     text={item.subject}
                     maxLines={1}
                     truncate="END"
-                    style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}
+                    style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}
                   />
                 </FlexWidget>
                 <TextWidget
                   text={item.room ? item.room.replace(/^Room\s*/i, '') : 'TBA'}
-                  style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '600' }}
+                  style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: '600' }}
                 />
               </FlexWidget>
             ))
           )}
         </FlexWidget>
 
-        {/* Bottom bar: Academic Stats & ALMS branding */}
+        {/* Footer */}
         <FlexWidget
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
-            marginTop: 4,
           }}
         >
           <TextWidget
-            text={attPct > 0 ? `Attendance: ${attPct}% ${attPct >= 75 ? '✓' : '⚠️'}` : 'ALMS Companion'}
-            style={{ color: attColor, fontSize: 11, fontWeight: '700' }}
+            text={attPct > 0 ? `Attendance: ${attPct}% ${isSafe ? '✓' : '⚠️'}` : 'ALMS Companion'}
+            style={{ color: attColor, fontSize: 10, fontWeight: '700' }}
           />
           <TextWidget
             text={data?.cgpa ? `CGPA: ${data.cgpa}` : 'ALMS'}
-            style={{ color: '#A78BFA', fontSize: 11, fontWeight: 'bold' }}
+            style={{ color: '#A78BFA', fontSize: 10, fontWeight: 'bold' }}
           />
         </FlexWidget>
       </FlexWidget>
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // MEDIUM (4x2 / 3x2) LAYOUT — The Standard Default Home Screen Size
-  // ═════════════════════════════════════════════════════════════════════════
-  const mediumPill = (
-    <FlexWidget
-      style={{
-        backgroundColor: statusBg,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderWidth: 1,
-        borderColor: accentColor,
-        flexDirection: 'row',
-        alignItems: 'center',
-      }}
-      clickAction="REFRESH_WIDGET"
-    >
-      <TextWidget
-        text={data!.statusText || (isOngoing ? '● ACTIVE NOW' : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'))}
-        style={{
-          color: accentColor,
-          fontSize: 11,
-          fontWeight: 'bold',
-        }}
-      />
-      <TextWidget
-        text=" ↻"
-        style={{
-          color: accentColor,
-          fontSize: 11,
-          fontWeight: 'bold',
-        }}
-      />
-    </FlexWidget>
-  );
-
+  // ── 4. MEDIUM (Standard 4x2 / 3x2, 140 <= h < 225) — The Core Utility Stack Card ──
   return (
     <FlexWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0A0C12',
-        borderRadius: 22,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-        padding: 14,
+        backgroundColor: nextClassBg,
+        borderRadius: cfg.borderRadius,
+        borderWidth: 1.2,
+        borderColor: nextClassBorder,
+        paddingHorizontal: cfg.padH,
+        paddingVertical: cfg.padV,
         justifyContent: 'space-between',
       }}
       clickAction="OPEN_APP"
     >
-      {/* Header Row with Left ‹ and Right › Navigation + Live Refresh */}
-      {renderNavBar(0, mediumPill, false)}
+      {/* 1. Top Handle Pill from the app */}
+      {renderStackHandle()}
 
-      {/* Middle Row: Schedule Time, Today's Class Count & Subject Title */}
+      {/* 2. Top Header Row: Status Badge (with time left/ends at) + Category + [‹ 1/3 ›] */}
+      {renderStackHeader(0, statusBadgeText, categoryLabel, nextClassBadgeBg, nextClassBorder, nextClassAccent)}
+
+      {/* 3. Middle Section: Subtitle (Course Code + Type) + Hero Subject Title */}
       <FlexWidget
         style={{
           width: 'match_parent',
-          marginVertical: 4,
+          marginVertical: 2,
         }}
       >
-        <FlexWidget
+        {/* Course Code + Type Tag */}
+        <TextWidget
+          text={courseCodeType}
           style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
+            color: nextClassAccent,
+            fontSize: 10,
+            fontWeight: '800',
+            letterSpacing: 0.6,
             marginBottom: 2,
           }}
-        >
-          <TextWidget
-            text={`⏰ ${data!.time}`}
-            style={{
-              color: '#CBD5E1',
-              fontSize: 12,
-              fontWeight: '700',
-            }}
-          />
-          {data?.todayTotalClasses ? (
-            <FlexWidget
-              style={{
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                borderRadius: 6,
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                borderWidth: 1,
-                borderColor: 'rgba(56, 189, 248, 0.3)',
-              }}
-            >
-              <TextWidget
-                text={data.currentClassIndex
-                  ? `📚 Class ${data.currentClassIndex} of ${data.todayTotalClasses} Today`
-                  : `📚 ${data.todayTotalClasses} Classes Today`}
-                style={{
-                  color: '#38BDF8',
-                  fontSize: 10,
-                  fontWeight: '700',
-                }}
-              />
-            </FlexWidget>
-          ) : null}
-        </FlexWidget>
+        />
+
+        {/* Big Hero Subject Title */}
         <TextWidget
           text={data!.subject}
-          maxLines={2}
+          maxLines={cfg.titleMaxLines}
           truncate="END"
           style={{
             color: '#FFFFFF',
-            fontSize: 17,
+            fontSize: cfg.titleFontSize,
             fontWeight: 'bold',
-            lineHeight: 21,
+            lineHeight: cfg.titleFontSize + 4,
           }}
         />
       </FlexWidget>
 
-      {/* Bottom Info Pills: EXPANDED across full width to eliminate empty space */}
+      {/* 4. Footer Info Row (Directly copying the app's stackFooterRow with vertical separators) */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           width: 'match_parent',
+          paddingTop: 4,
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255, 255, 255, 0.08)',
         }}
       >
-        {/* Room Pill */}
+        {/* Room Info */}
+        <TextWidget
+          text={data!.room && data!.room !== 'TBA'
+            ? (data!.room.toLowerCase().startsWith('room') ? `📍 ${data!.room}` : `📍 Room ${data!.room}`)
+            : '📍 Room TBA'}
+          style={{
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '700',
+          }}
+        />
+
+        {/* Separator Divider */}
         <FlexWidget
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 10,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.12)',
-            flex: 1.2,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: 6,
+            width: 1,
+            height: 10,
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            marginHorizontal: 8,
           }}
-        >
-          <TextWidget
-            text={data!.room && data!.room !== 'TBA'
-              ? (data!.room.toLowerCase().startsWith('room') ? `📍 ${data!.room}` : `📍 Room ${data!.room}`)
-              : '📍 Room TBA'}
+        />
+
+        {/* Time Info */}
+        <TextWidget
+          text={`⏰ ${data!.time}`}
+          style={{
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: 11,
+            fontWeight: '600',
+          }}
+        />
+
+        {/* Separator Divider */}
+        {data?.todayTotalClasses ? (
+          <FlexWidget
             style={{
-              color: '#FFFFFF',
-              fontSize: 12,
+              width: 1,
+              height: 10,
+              backgroundColor: 'rgba(255, 255, 255, 0.25)',
+              marginHorizontal: 8,
+            }}
+          />
+        ) : null}
+
+        {/* Today's Count */}
+        {data?.todayTotalClasses ? (
+          <TextWidget
+            text={data.currentClassIndex
+              ? `📚 Class ${data.currentClassIndex}/${data.todayTotalClasses}`
+              : `📚 ${data.todayTotalClasses} Today`}
+            style={{
+              color: nextClassAccent,
+              fontSize: 11,
               fontWeight: '700',
             }}
           />
-        </FlexWidget>
-
-        {/* Subject Code Pill */}
-        {data!.subjectCode ? (
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 6,
-            }}
-          >
-            <TextWidget
-              text={data!.subjectCode}
-              style={{
-                color: 'rgba(255, 255, 255, 0.85)',
-                fontSize: 12,
-                fontWeight: '700',
-              }}
-            />
-          </FlexWidget>
         ) : null}
-
-        {/* Type Pill */}
-        <FlexWidget
-          style={{
-            backgroundColor: accentLight,
-            borderRadius: 10,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderWidth: 1,
-            borderColor: accentColor,
-            flex: 0.9,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TextWidget
-            text={(data!.type || 'Lecture').toUpperCase()}
-            style={{
-              color: accentColor,
-              fontSize: 11,
-              fontWeight: '800',
-            }}
-          />
-        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );

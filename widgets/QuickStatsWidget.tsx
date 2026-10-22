@@ -326,10 +326,10 @@ export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidget
       {/* Bottom progress bars */}
       <FlexWidget style={{ width: 'match_parent' }}>
         <FlexWidget style={{ width: 'match_parent', height: 4, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 2, marginBottom: 4 }}>
-          <FlexWidget style={{ width: (w * Math.min((cgpaVal / 10), 1)) as any, height: 'match_parent', backgroundColor: cgpaColor, borderRadius: 2 }} />
+          <FlexWidget style={{ width: (Math.max(10, (w - pad * 2)) * Math.min((cgpaVal / 10), 1)) as any, height: 'match_parent', backgroundColor: cgpaColor, borderRadius: 2 }} />
         </FlexWidget>
         <FlexWidget style={{ width: 'match_parent', height: 4, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 2 }}>
-          <FlexWidget style={{ width: (w * Math.min(pct, 100) / 100) as any, height: 'match_parent', backgroundColor: attColor, borderRadius: 2 }} />
+          <FlexWidget style={{ width: (Math.max(10, (w - pad * 2)) * Math.min(pct, 100) / 100) as any, height: 'match_parent', backgroundColor: attColor, borderRadius: 2 }} />
         </FlexWidget>
       </FlexWidget>
     </FlexWidget>
