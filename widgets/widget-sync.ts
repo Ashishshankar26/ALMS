@@ -4,6 +4,7 @@ import React from 'react';
 import { NextClassWidget, NextClassWidgetData, ScheduleItem } from './NextClassWidget';
 import { AttendanceWidget, AttendanceWidgetData } from './AttendanceWidget';
 import { QuickStatsWidget, QuickStatsWidgetData } from './QuickStatsWidget';
+import { getUpcomingExam, decodeLpuRoom } from './theme';
 import type { WidgetInfo } from 'react-native-android-widget';
 
 // Format all-caps subject names into clean Title Case
@@ -305,6 +306,7 @@ export async function getWidgetClassData(): Promise<NextClassWidgetData> {
       result.totalClasses = total;
     }
     result.cgpa = parsed.cgpa || '';
+    result.upcomingExam = getUpcomingExam(parsed.exams || []);
     return result;
   } catch (e) {
     return {
@@ -398,7 +400,7 @@ export async function getWidgetQuickStatsData(): Promise<QuickStatsWidgetData | 
   }
 }
 
-// Schedule notifications at exact class start times today so user stays alerted even when app is killed
+// Schedule 10-minute pre-class alerts and starting transition notifications so user stays alerted even when app is killed
 export async function scheduleClassTransitionAlerts(schedule: ScheduleItem[]): Promise<void> {
   if (Platform.OS !== 'android') return;
   try {
@@ -408,7 +410,7 @@ export async function scheduleClassTransitionAlerts(schedule: ScheduleItem[]): P
 
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     for (const notif of scheduled) {
-      if (notif.content.data?.isClassTransition) {
+      if (notif.content.data?.isClassAlert || notif.content.data?.isClassTransition) {
         await Notifications.cancelScheduledNotificationAsync(notif.identifier);
       }
     }
@@ -420,6 +422,33 @@ export async function scheduleClassTransitionAlerts(schedule: ScheduleItem[]): P
       const slot = parseTimeSlot(item.time);
       if (!slot?.startMinutes) continue;
 
+      const decoded = decodeLpuRoom(item.room);
+      const roomStr = decoded.fullLabel;
+      const formattedSub = formatSubjectTitle(item.subject);
+
+      // 1. Ten-minute pre-class alert
+      const alert10Min = slot.startMinutes - 10;
+      if (alert10Min > currentMinutes) {
+        const trigger10 = new Date();
+        trigger10.setHours(Math.floor(alert10Min / 60));
+        trigger10.setMinutes(alert10Min % 60);
+        trigger10.setSeconds(0);
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `Class in 10m: ${formattedSub}`,
+            body: `📍 ${roomStr} • Starts at ${formatMinutesToTime(slot.startMinutes)}`,
+            data: { isClassAlert: true, url: 'alms://timetable' },
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: trigger10,
+          },
+        });
+      }
+
+      // 2. Class starting now transition alert
       if (slot.startMinutes > currentMinutes) {
         const triggerDate = new Date();
         triggerDate.setHours(Math.floor(slot.startMinutes / 60));
@@ -428,9 +457,9 @@ export async function scheduleClassTransitionAlerts(schedule: ScheduleItem[]): P
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: `Class Starting: ${item.subject}`,
-            body: `📍 ${item.room ? (item.room.startsWith('Room') ? item.room : `Room ${item.room}`) : 'Room TBA'} • ${item.time}`,
-            data: { isClassTransition: true },
+            title: `Class Starting: ${formattedSub}`,
+            body: `📍 ${roomStr} • ${item.time}`,
+            data: { isClassAlert: true, url: 'alms://timetable' },
             sound: true,
           },
           trigger: {
@@ -451,24 +480,30 @@ export async function syncAndroidWidget(): Promise<void> {
   try {
     const { requestWidgetUpdate } = require('react-native-android-widget');
 
-    // Update NextClassWidget
+    // Update NextClassWidget (Smart Stack)
     try {
       const classData = await getWidgetClassData();
+      const hasUpcomingExam = Boolean(classData.upcomingExam && classData.upcomingExam.isApproaching);
+      const totalCards = hasUpcomingExam ? 5 : 4;
+
       await requestWidgetUpdate({
         widgetName: 'NextClassWidget',
         renderWidget: async (widgetInfo: WidgetInfo) => {
           const savedStack =
             (await AsyncStorage.getItem(`@widget_stack_${widgetInfo.widgetId}`)) ||
             (await AsyncStorage.getItem('@widget_active_stack_index'));
-          const stackIndex = savedStack ? parseInt(savedStack, 10) : 0;
+          const rawStack = savedStack ? parseInt(savedStack, 10) : 0;
+          const stackIndex = isNaN(rawStack) ? 0 : ((rawStack % totalCards) + totalCards) % totalCards;
+
           const savedPage =
             (await AsyncStorage.getItem(`@widget_page_${widgetInfo.widgetId}`)) ||
             (await AsyncStorage.getItem('@widget_active_page_index'));
           const schedulePage = savedPage ? parseInt(savedPage, 10) : 0;
+
           return React.createElement(NextClassWidget, {
             data: {
               ...classData,
-              stackIndex: isNaN(stackIndex) ? 0 : stackIndex,
+              stackIndex,
               schedulePage: isNaN(schedulePage) ? 0 : schedulePage,
             },
             widgetInfo,

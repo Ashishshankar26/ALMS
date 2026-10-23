@@ -1,6 +1,14 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import type { WidgetInfo, ColorProp } from 'react-native-android-widget';
+import {
+  ApplePalette,
+  getAppleWidgetConfig,
+  calculateBunkMargin,
+  decodeLpuRoom,
+  type WidgetLayoutConfig,
+} from './theme';
+import { formatAppleTitle } from './NextClassWidget';
 
 export interface QuickStatsWidgetData {
   cgpa: string;
@@ -13,87 +21,86 @@ export interface QuickStatsWidgetData {
   hasClass: boolean;
 }
 
-function getLayoutTier(
-  rawWidth?: number,
-  rawHeight?: number,
-  screenInfo?: WidgetInfo['screenInfo']
-): 'compact' | 'medium' | 'large' {
-  const screenW = screenInfo?.screenWidthDp && screenInfo.screenWidthDp > 0 ? screenInfo.screenWidthDp : 380;
-  const hasValidDims = Boolean(rawWidth && rawWidth > 0 && rawHeight && rawHeight > 0);
-  const w = hasValidDims ? (rawWidth as number) : 175;
-  const h = hasValidDims ? (rawHeight as number) : 140;
-  const widthRatio = w / screenW;
+export function QuickStatsWidget({
+  data,
+  widgetInfo,
+}: {
+  data?: QuickStatsWidgetData;
+  widgetInfo?: WidgetInfo;
+}) {
+  const cfg = getAppleWidgetConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
-  if (!hasValidDims || widthRatio <= 0.62 || w < 240 || (h < 132 && w < 290)) return 'compact';
-  if (h >= 215 && w >= 240) return 'large';
-  return 'medium';
-}
+  const attended = data?.attended ?? 0;
+  const total = data?.total ?? 0;
+  const bunkResult = calculateBunkMargin(attended, total, 0.75);
+  const pct = data?.attendancePercent ?? bunkResult.percentage;
+  const cgpa = data?.cgpa || '--';
+  const decodedRoom = decodeLpuRoom(data?.nextRoom || 'TBA');
+  const nextSubjectTitle = formatAppleTitle(data?.nextSubject || 'No Upcoming Class');
 
-export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidgetData; widgetInfo?: WidgetInfo }) {
-  const hasValidDims = Boolean(widgetInfo?.width && widgetInfo.width > 0 && widgetInfo?.height && widgetInfo.height > 0);
-  const w = hasValidDims ? (widgetInfo!.width) : 175;
-  const h = hasValidDims ? (widgetInfo!.height) : 140;
-  const tier = getLayoutTier(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
+  // CGPA Color tier
+  const cgpaNum = parseFloat(cgpa);
+  const cgpaColor: ColorProp = isNaN(cgpaNum)
+    ? ApplePalette.purple
+    : (cgpaNum >= 9.0 ? ApplePalette.amber : (cgpaNum >= 8.0 ? ApplePalette.mint : ApplePalette.purple));
+  const cgpaBg: ColorProp = isNaN(cgpaNum)
+    ? ApplePalette.purpleBg
+    : (cgpaNum >= 9.0 ? ApplePalette.amberBg : (cgpaNum >= 8.0 ? ApplePalette.mintBg : ApplePalette.purpleBg));
+  const cgpaBorder: ColorProp = isNaN(cgpaNum)
+    ? ApplePalette.purpleBorder
+    : (cgpaNum >= 9.0 ? ApplePalette.amberBorder : (cgpaNum >= 8.0 ? ApplePalette.mintBorder : ApplePalette.purpleBorder));
 
-  const isCompact = tier === 'compact';
-  const isLarge = tier === 'large';
-  const pad = isCompact ? 8 : (isLarge ? 20 : 14);
-  const radius = isCompact ? 16 : 22;
-
-  const pct = data?.attendancePercent ?? 0;
-  const attColor: ColorProp = pct >= 80 ? '#10B981' : (pct >= 75 ? '#F59E0B' : '#EF4444');
-  const attBg: ColorProp = pct >= 80 ? 'rgba(16, 185, 129, 0.15)' : (pct >= 75 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)');
-
-  const cgpaVal = parseFloat(data?.cgpa || '0');
-  const cgpaColor: ColorProp = cgpaVal >= 9 ? '#F59E0B' : (cgpaVal >= 8 ? '#10B981' : (cgpaVal >= 7 ? '#3B82F6' : '#8B5CF6'));
-  const cgpaBg: ColorProp = cgpaVal >= 9 ? 'rgba(245, 158, 11, 0.15)' : (cgpaVal >= 8 ? 'rgba(16, 185, 129, 0.15)' : (cgpaVal >= 7 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)'));
-
+  // ═════════════════════════════════════════════════════════════════════════
+  // NO DATA STATE
+  // ═════════════════════════════════════════════════════════════════════════
   if (!data) {
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0F1117',
-          borderRadius: radius,
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          padding: pad,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'center',
           alignItems: 'center',
         }}
         clickAction="OPEN_APP"
       >
         <TextWidget
-          text="ALMS • Quick Stats"
-          style={{ color: '#6366F1', fontSize: 13, fontWeight: 'bold', marginBottom: 4 }}
+          text="ALMS Quick Stats"
+          style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800', marginBottom: 3 }}
         />
         <TextWidget
-          text="Open app to sync data"
-          style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11 }}
+          text="Tap to load student stats"
+          style={{ color: ApplePalette.textSecondary, fontSize: 11, fontWeight: '500' }}
         />
       </FlexWidget>
     );
   }
 
-  // ── COMPACT: CGPA + Attendance side-by-side ──
-  if (isCompact) {
+  // ═════════════════════════════════════════════════════════════════════════
+  // 1. SMALL 2x2 COMPACT METRICS (Dual Apple Metric Tiles)
+  // ═════════════════════════════════════════════════════════════════════════
+  if (cfg.isSmall) {
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: '#0F1117',
-          borderRadius: radius,
-          borderWidth: 1.2,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          padding: 8,
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
           justifyContent: 'space-between',
-          alignItems: 'center',
         }}
-        clickAction="OPEN_APP"
       >
-        {/* Header */}
+        {/* Top: Category Pill */}
         <FlexWidget
           style={{
             flexDirection: 'row',
@@ -102,309 +109,318 @@ export function QuickStatsWidget({ data, widgetInfo }: { data?: QuickStatsWidget
             width: 'match_parent',
           }}
         >
-          <TextWidget
-            text="ALMS STATS"
-            style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 8.5, fontWeight: '800' }}
-          />
-          <TextWidget
-            text="ALMS"
-            style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 8, fontWeight: 'bold' }}
-          />
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.purpleBg,
+              borderRadius: 14,
+              paddingHorizontal: 7,
+              paddingVertical: 3,
+              borderWidth: 1,
+              borderColor: ApplePalette.purpleBorder,
+            }}
+            clickAction="REFRESH_WIDGET"
+          >
+            <TextWidget
+              text="STUDENT STATS"
+              style={{ color: ApplePalette.purple, fontSize: 8.5, fontWeight: '900', letterSpacing: 0.3 }}
+            />
+          </FlexWidget>
+
+          <FlexWidget
+            style={{
+              backgroundColor: bunkResult.bgColor,
+              borderRadius: 8,
+              paddingHorizontal: 6,
+              paddingVertical: 2.5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+          >
+            <TextWidget
+              text={bunkResult.label}
+              style={{ color: bunkResult.color, fontSize: 8.5, fontWeight: '800' }}
+            />
+          </FlexWidget>
         </FlexWidget>
 
-        {/* Center: CGPA and Attendance */}
+        {/* Middle: Side-by-side Hero Tiles */}
         <FlexWidget
           style={{
             flexDirection: 'row',
-            justifyContent: 'space-around',
-            alignItems: 'center',
+            justifyContent: 'space-between',
             width: 'match_parent',
+            marginVertical: 2,
           }}
         >
-          <FlexWidget style={{ alignItems: 'center' }}>
+          {/* CGPA */}
+          <FlexWidget
+            style={{ flexDirection: 'column' }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/results' }}
+          >
             <TextWidget
-              text={data.cgpa || '--'}
-              style={{ color: cgpaColor, fontSize: 22, fontWeight: '900' }}
+              text={cgpa}
+              style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
             />
             <TextWidget
               text="CGPA"
-              style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: 8, fontWeight: '700', marginTop: 1 }}
+              style={{ color: ApplePalette.purple, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}
             />
           </FlexWidget>
 
-          <FlexWidget style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
-
-          <FlexWidget style={{ alignItems: 'center' }}>
+          {/* Attendance */}
+          <FlexWidget
+            style={{ flexDirection: 'column', alignItems: 'flex-end' }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+          >
             <TextWidget
               text={`${pct}%`}
-              style={{ color: attColor, fontSize: 22, fontWeight: '900' }}
+              style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
             />
             <TextWidget
               text="ATTENDANCE"
-              style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: 8, fontWeight: '700', marginTop: 1 }}
+              style={{ color: bunkResult.color, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}
             />
           </FlexWidget>
         </FlexWidget>
 
-        {/* Bottom */}
+        {/* Bottom: Next Class Pill */}
         <FlexWidget
           style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            backgroundColor: ApplePalette.surfaceSubtle,
+            borderRadius: 8,
+            paddingHorizontal: 6,
+            paddingVertical: 3,
             width: 'match_parent',
-            paddingTop: 2,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(255, 255, 255, 0.08)',
           }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://timetable' }}
         >
           <TextWidget
-            text={data.hasClass ? (data.nextTime ? `Next: ${data.nextTime.split('-')[0].trim()}` : 'Class scheduled') : 'All done ✓'}
+            text={data.hasClass ? `Next: ${nextSubjectTitle.slice(0, 16)}` : 'No more classes today'}
             maxLines={1}
             truncate="END"
-            style={{ color: '#38BDF8', fontSize: 8.5, fontWeight: '700' }}
+            style={{ color: ApplePalette.textSecondary, fontSize: 9.5, fontWeight: '600' }}
           />
         </FlexWidget>
       </FlexWidget>
     );
   }
 
-  // ── LARGE: CGPA + Attendance + Next Class ──
-  if (isLarge) {
-    return (
-      <FlexWidget
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: '#0F1117',
-          borderRadius: radius,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          padding: pad,
-          justifyContent: 'space-between',
-        }}
-        clickAction="OPEN_APP"
-      >
-        {/* Header branding */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <TextWidget
-            text="ALMS DASHBOARD"
-            style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 }}
-          />
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              borderRadius: 8,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderWidth: 1,
-              borderColor: 'rgba(99, 102, 241, 0.25)',
-            }}
-          >
-            <TextWidget
-              text="LIVE"
-              style={{ color: '#6366F1', fontSize: 10, fontWeight: 'bold' }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Two cards side by side: CGPA + Attendance */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            width: 'match_parent',
-          }}
-        >
-          {/* CGPA Card */}
-          <FlexWidget
-            style={{
-              flex: 1,
-              backgroundColor: cgpaBg,
-              borderRadius: 16,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: cgpaColor,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 8,
-            }}
-          >
-            <TextWidget
-              text={data.cgpa || '--'}
-              style={{ color: cgpaColor, fontSize: 32, fontWeight: '900' }}
-            />
-            <TextWidget
-              text="CURRENT CGPA"
-              style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 9, fontWeight: '700', letterSpacing: 1, marginTop: 4 }}
-            />
-          </FlexWidget>
-
-          {/* Attendance Card */}
-          <FlexWidget
-            style={{
-              flex: 1,
-              backgroundColor: attBg,
-              borderRadius: 16,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: attColor,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <TextWidget
-              text={`${pct}%`}
-              style={{ color: attColor, fontSize: 32, fontWeight: '900' }}
-            />
-            <TextWidget
-              text="ATTENDANCE"
-              style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 9, fontWeight: '700', letterSpacing: 1, marginTop: 4 }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Next Class preview if available */}
-        {data.hasClass ? (
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 12,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
-              width: 'match_parent',
-            }}
-          >
-            <TextWidget
-              text="UPCOMING CLASS"
-              style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: 9, fontWeight: '700', letterSpacing: 1 }}
-            />
-            <TextWidget
-              text={data.nextSubject}
-              maxLines={1}
-              truncate="END"
-              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 'bold', marginTop: 2 }}
-            />
-            <TextWidget
-              text={`${data.nextTime} • ${data.nextRoom ? `Room ${data.nextRoom}` : 'Room TBA'}`}
-              style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11, marginTop: 2 }}
-            />
-          </FlexWidget>
-        ) : (
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              borderRadius: 12,
-              padding: 12,
-              alignItems: 'center',
-              width: 'match_parent',
-            }}
-          >
-            <TextWidget
-              text="All Caught Up ✓"
-              style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 12, fontWeight: '600' }}
-            />
-          </FlexWidget>
-        )}
-      </FlexWidget>
-    );
-  }
-
-  // ── MEDIUM: CGPA and Attendance side by side ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // 2. MEDIUM 4x2 & LARGE 4x4 (Apple Modular Glanceable Dashboard)
+  // ═════════════════════════════════════════════════════════════════════════
   return (
     <FlexWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0F1117',
-        borderRadius: radius,
+        backgroundColor: ApplePalette.surface,
+        borderRadius: cfg.borderRadius,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        padding: pad,
+        borderColor: ApplePalette.border,
+        paddingHorizontal: cfg.padH,
+        paddingVertical: cfg.padV,
         justifyContent: 'space-between',
       }}
-      clickAction="OPEN_APP"
     >
-      {/* Header */}
+      {/* ── HEADER ROW: Apple System Category & Refresh ── */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
+          marginBottom: 4,
         }}
       >
-        <TextWidget
-          text="ALMS"
-          style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }}
-        />
+        <FlexWidget
+          style={{
+            backgroundColor: ApplePalette.purpleBg,
+            borderRadius: 16,
+            paddingHorizontal: 9,
+            paddingVertical: 4.5,
+            borderWidth: 1,
+            borderColor: ApplePalette.purpleBorder,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+          clickAction="REFRESH_WIDGET"
+        >
+          <FlexWidget
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: ApplePalette.purple,
+              marginRight: 6,
+            }}
+          />
+          <TextWidget
+            text="ACADEMIC SNAPSHOT"
+            style={{
+              color: ApplePalette.purple,
+              fontSize: cfg.badgeFontSize,
+              fontWeight: '900',
+              letterSpacing: 0.3,
+            }}
+          />
+        </FlexWidget>
+
+        {/* Bunk Margin Status Pill */}
+        <FlexWidget
+          style={{
+            backgroundColor: bunkResult.bgColor,
+            borderRadius: 12,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderWidth: 1,
+            borderColor: bunkResult.borderColor,
+          }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+        >
+          <TextWidget
+            text={bunkResult.pillText}
+            style={{ color: bunkResult.color, fontSize: 10, fontWeight: '800' }}
+          />
+        </FlexWidget>
       </FlexWidget>
 
-      {/* Two values side by side */}
+      {/* ── MIDDLE: 3 Modular Glanceable Metric Cards ── */}
       <FlexWidget
         style={{
           flexDirection: 'row',
+          justifyContent: 'space-between',
           width: 'match_parent',
+          flex: 1,
+          marginVertical: 4,
         }}
       >
-        {/* CGPA */}
+        {/* Card 1: CGPA */}
         <FlexWidget
           style={{
+            backgroundColor: ApplePalette.surfaceSubtle,
+            borderRadius: 14,
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+            borderWidth: 1,
+            borderColor: ApplePalette.border,
             flex: 1,
-            alignItems: 'center',
+            marginRight: 4,
+            justifyContent: 'space-between',
           }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://(tabs)/results' }}
         >
           <TextWidget
-            text={data.cgpa || '--'}
-            style={{ color: cgpaColor, fontSize: 28, fontWeight: '900' }}
+            text="CGPA"
+            style={{ color: cgpaColor, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}
           />
           <TextWidget
-            text="CGPA"
-            style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginTop: 2 }}
+            text={cgpa}
+            style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
+          />
+          <TextWidget
+            text="Cumulative ›"
+            style={{ color: ApplePalette.textTertiary, fontSize: 8.5, fontWeight: '600' }}
           />
         </FlexWidget>
 
-        {/* Divider */}
+        {/* Card 2: Attendance */}
         <FlexWidget
           style={{
-            width: 1,
-            height: 'match_parent',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          }}
-        />
-
-        {/* Attendance */}
-        <FlexWidget
-          style={{
+            backgroundColor: ApplePalette.surfaceSubtle,
+            borderRadius: 14,
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+            borderWidth: 1,
+            borderColor: ApplePalette.border,
             flex: 1,
-            alignItems: 'center',
+            marginHorizontal: 4,
+            justifyContent: 'space-between',
           }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://(tabs)/attendance' }}
         >
           <TextWidget
-            text={`${pct}%`}
-            style={{ color: attColor, fontSize: 28, fontWeight: '900' }}
+            text="ATTENDANCE"
+            style={{ color: bunkResult.color, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}
           />
           <TextWidget
-            text="ATT"
-            style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginTop: 2 }}
+            text={`${pct}%`}
+            style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
+          />
+          <TextWidget
+            text={`${attended}/${total} Held`}
+            style={{ color: ApplePalette.textTertiary, fontSize: 8.5, fontWeight: '600' }}
+          />
+        </FlexWidget>
+
+        {/* Card 3: Next Class */}
+        <FlexWidget
+          style={{
+            backgroundColor: ApplePalette.surfaceSubtle,
+            borderRadius: 14,
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+            borderWidth: 1,
+            borderColor: ApplePalette.border,
+            flex: 1.2,
+            marginLeft: 4,
+            justifyContent: 'space-between',
+          }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://timetable' }}
+        >
+          <TextWidget
+            text="NEXT CLASS"
+            style={{ color: ApplePalette.blue, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}
+          />
+          <TextWidget
+            text={data.hasClass ? nextSubjectTitle : 'All Caught Up'}
+            maxLines={1}
+            truncate="END"
+            style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}
+          />
+          <TextWidget
+            text={data.hasClass ? `${decodedRoom.shortLabel} • ${data.nextTime.split('–')[0].trim()}` : 'Free time'}
+            maxLines={1}
+            truncate="END"
+            style={{ color: ApplePalette.textTertiary, fontSize: 8.5, fontWeight: '600' }}
           />
         </FlexWidget>
       </FlexWidget>
 
-      {/* Bottom progress bars */}
-      <FlexWidget style={{ width: 'match_parent' }}>
-        <FlexWidget style={{ width: 'match_parent', height: 4, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 2, marginBottom: 4 }}>
-          <FlexWidget style={{ width: (Math.max(10, (w - pad * 2)) * Math.min((cgpaVal / 10), 1)) as any, height: 'match_parent', backgroundColor: cgpaColor, borderRadius: 2 }} />
-        </FlexWidget>
-        <FlexWidget style={{ width: 'match_parent', height: 4, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 2 }}>
-          <FlexWidget style={{ width: (Math.max(10, (w - pad * 2)) * Math.min(pct, 100) / 100) as any, height: 'match_parent', backgroundColor: attColor, borderRadius: 2 }} />
+      {/* ── BOTTOM FOOTER: Deep Links ── */}
+      <FlexWidget
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: 'match_parent',
+          marginTop: 2,
+        }}
+      >
+        <TextWidget
+          text="ALMS Companion • Real-time Sync"
+          style={{ color: ApplePalette.textTertiary, fontSize: 9.5, fontWeight: '600' }}
+        />
+
+        <FlexWidget
+          style={{
+            backgroundColor: ApplePalette.surfacePill,
+            borderRadius: 8,
+            paddingHorizontal: 8,
+            paddingVertical: 3.5,
+          }}
+          clickAction="OPEN_APP"
+        >
+          <TextWidget
+            text="Open Portal ›"
+            style={{ color: ApplePalette.textSecondary, fontSize: 10, fontWeight: '700' }}
+          />
         </FlexWidget>
       </FlexWidget>
     </FlexWidget>

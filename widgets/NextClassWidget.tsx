@@ -1,6 +1,14 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import type { WidgetInfo, ColorProp } from 'react-native-android-widget';
+import {
+  ApplePalette,
+  getAppleWidgetConfig,
+  calculateBunkMargin,
+  decodeLpuRoom,
+  type ExamCountdownData,
+  type WidgetLayoutConfig,
+} from './theme';
 
 export interface ScheduleItem {
   time: string;
@@ -33,17 +41,20 @@ export interface NextClassWidgetData {
   nextClassStartTime?: string;
 
   // Stack, pagination & detail enhancements
-  stackIndex?: number; // 0: Next Class, 1: Schedule, 2: Attendance
-  schedulePage?: number; // pagination for today's schedule
+  stackIndex?: number;
+  schedulePage?: number;
   todaySchedule?: ScheduleItem[];
   overallAttendance?: number;
   attendedClasses?: number;
   totalClasses?: number;
   cgpa?: string;
+
+  // Contextual Exam Countdown
+  upcomingExam?: ExamCountdownData | null;
 }
 
-// Format all-caps subject names into clean Title Case (matching the in-app formatSubjectTitle)
-function formatTitle(raw: string): string {
+// Format all-caps subject names into clean Title Case with Apple-standard styling
+export function formatAppleTitle(raw: string): string {
   if (!raw) return 'Class';
   const clean = raw.trim();
   const isAllUpper = clean === clean.toUpperCase();
@@ -78,54 +89,88 @@ function formatTitle(raw: string): string {
     .join(' ');
 }
 
-// ── INTELLIGENT AUTO-RESIZING LAYOUT ENGINE ──
-// Detects smartphone screen ratios, launcher cell widths/heights, and 5x6 / 4x5 grids
-export function getWidgetLayoutConfig(
-  rawWidth?: number,
-  rawHeight?: number,
-  screenInfo?: WidgetInfo['screenInfo']
+// ── APPLE SMART STACK VERTICAL PAGE INDICATOR ──
+// Inspired by iOS Smart Stack: clean vertical capsule dots along the right side
+function renderSmartStackIndicator(
+  activeIndex: number,
+  totalCards: number,
+  cfg: WidgetLayoutConfig
 ) {
-  const screenW = screenInfo?.screenWidthDp && screenInfo.screenWidthDp > 0 ? screenInfo.screenWidthDp : 380;
-  const screenH = screenInfo?.screenHeightDp && screenInfo.screenHeightDp > 0 ? screenInfo.screenHeightDp : 800;
+  const dots = [];
+  for (let i = 0; i < totalCards; i++) {
+    const isActive = i === activeIndex;
+    dots.push(
+      <FlexWidget
+        key={i}
+        style={{
+          width: isActive ? 4 : 3,
+          height: isActive ? 12 : 3,
+          borderRadius: 2,
+          backgroundColor: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.28)',
+          marginVertical: 1.5,
+        }}
+      />
+    );
+  }
 
-  const hasValidDims = Boolean(rawWidth && rawWidth > 0 && rawHeight && rawHeight > 0);
-  // Default to standard 4x2 card dimensions (320 x 150) if launcher hasn't supplied dimensions yet.
-  const w = hasValidDims ? (rawWidth as number) : 320;
-  const h = hasValidDims ? (rawHeight as number) : 150;
+  return (
+    <FlexWidget
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.07)',
+        borderRadius: 14,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.10)',
+      }}
+    >
+      {/* Up navigation button (Previous Card) */}
+      <FlexWidget
+        style={{ paddingHorizontal: 5, paddingVertical: 2 }}
+        clickAction="UP_STACK"
+      >
+        <TextWidget
+          text="‹"
+          style={{
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '900',
+          }}
+        />
+      </FlexWidget>
 
-  const widthRatio = w / screenW;
+      {/* Vertical capsule dots stack */}
+      <FlexWidget
+        style={{
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 4,
+          paddingVertical: 1,
+        }}
+        clickAction="CYCLE_STACK"
+      >
+        {dots}
+      </FlexWidget>
 
-  // 1. Ultra-compact 1-row height strip (e.g. 4x1 horizontal bar, or 2x1)
-  const isMicro = h < 95;
-
-  // 2. Small Box / 2x2 detection:
-  // ONLY true when width is truly narrow (<= 215dp) OR occupies <= 50% screen width
-  const isSmallBox = !isMicro && hasValidDims && (w < 215 || widthRatio <= 0.52);
-
-  // 3. Large multi-row expanded card (e.g. 4x3, 4x4, 5x4)
-  const isLarge = !isMicro && !isSmallBox && h >= 210;
-
-  // 4. Medium / 5-column standard (e.g. 4-cell on 5x6 grid, or 3x2)
-  const isMedium = !isMicro && !isSmallBox && !isLarge && (w < 320 || h < 155);
-
-  // 5. Full Standard 4x2 desktop card (w >= 320 && h >= 155)
-  const isFull = !isMicro && !isSmallBox && !isLarge && !isMedium;
-
-  return {
-    w,
-    h,
-    isSmallBox,
-    isMicro,
-    isMedium,
-    isFull,
-    isLarge,
-    padH: isSmallBox ? 10 : 13,
-    padV: isSmallBox ? 8 : 11,
-    borderRadius: isSmallBox ? 18 : 22,
-    titleFontSize: isSmallBox ? 14 : (isMicro ? 13 : 18),
-    badgeFontSize: isSmallBox || isMicro ? 8.5 : 10.5,
-    scheduleItemsCount: isSmallBox ? 2 : (isMicro ? 1 : (isLarge ? 4 : 3)),
-  };
+      {/* Down navigation button (Next Card) */}
+      <FlexWidget
+        style={{ paddingHorizontal: 5, paddingVertical: 2 }}
+        clickAction="DOWN_STACK"
+      >
+        <TextWidget
+          text="›"
+          style={{
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '900',
+          }}
+        />
+      </FlexWidget>
+    </FlexWidget>
+  );
 }
 
 export function NextClassWidget({
@@ -135,594 +180,147 @@ export function NextClassWidget({
   data?: NextClassWidgetData;
   widgetInfo?: WidgetInfo;
 }) {
-  const cfg = getWidgetLayoutConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
+  const cfg = getAppleWidgetConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
-  const stackIndex = ((data?.stackIndex ?? 0) % 3 + 3) % 3;
+  // Total stack cards count:
+  // 0: Next Class (Calendar)
+  // 1: Attendance & Bunk Margin (Activity)
+  // 2: Today's Schedule (Reminders/Timeline)
+  // 3: Upcoming Exam Countdown (if exam within 14 days)
+  // 4: Academic Quick Stats & CGPA
+  const hasUpcomingExam = Boolean(data?.upcomingExam && data.upcomingExam.isApproaching);
+  const totalCards = hasUpcomingExam ? 5 : 4;
+  const rawIdx = data?.stackIndex ?? 0;
+  const stackIndex = ((rawIdx % totalCards) + totalCards) % totalCards;
+
   const hasClasses = Boolean(data && data.status !== 'no_classes' && data.subject);
-
-  // Status flags
   const isOngoing = data?.status === 'ongoing';
   const isTomorrow = data?.status === 'tomorrow';
-  const isLab = Boolean(
-    (data?.type || '').toLowerCase().includes('lab') ||
-    (data?.type || '').toLowerCase().includes('practical')
-  );
 
-  // ── APP'S EXACT MODERN CARD PALETTE (Matching in-app modernNextClassCard) ──
-  const cardBg: ColorProp = '#141722';
-  const cardBorder: ColorProp = 'rgba(255, 255, 255, 0.09)';
-
-  // Accent Colors matching the app
-  const accentColor: ColorProp = isOngoing ? '#10B981' : (isTomorrow ? '#A855F7' : (isLab ? '#0EA5E9' : '#6366F1'));
-  const statusBadgeBg: ColorProp = isOngoing ? 'rgba(16, 185, 129, 0.14)' : (isTomorrow ? 'rgba(168, 85, 247, 0.14)' : 'rgba(99, 102, 241, 0.14)');
-  const statusBorderColor: ColorProp = isOngoing ? 'rgba(16, 185, 129, 0.28)' : (isTomorrow ? 'rgba(168, 85, 247, 0.28)' : 'rgba(99, 102, 241, 0.28)');
-
-  // Formatted status pill text matching in-app header (e.g. "IN SESSION • 42m left")
-  const statusPillText = isOngoing
-    ? (data?.timeUntilOrLeft ? `IN SESSION • ${data.timeUntilOrLeft}` : 'IN SESSION')
-    : (data?.timeUntilOrLeft ? `STARTS IN ${data.timeUntilOrLeft}` : (isTomorrow ? `TOMORROW • ${data?.time?.split('-')[0]?.trim() || ''}` : 'NEXT CLASS'));
-
-  // Course Code
+  // Apple SF Pro styled title & decoded room
+  const subjectTitle = formatAppleTitle(data?.subject || 'No Upcoming Class');
   const courseCode = data?.subjectCode || '';
-  // Room
-  const roomDisplay = data?.room && data.room !== 'TBA'
-    ? (data.room.toLowerCase().startsWith('room') ? data.room : `Room ${data.room}`)
-    : 'Room TBA';
-  // Time
-  const timeDisplay = data?.time || '04:10-05:00 PM';
-  // Type
+  const decodedRoom = decodeLpuRoom(data?.room || 'TBA');
+  const timeDisplay = data?.time || '04:10 – 05:00 PM';
   const classType = (data?.type || 'Lecture').toUpperCase();
-  // Formatted Subject Title
-  const subjectTitle = formatTitle(data?.subject || 'Class');
 
-  // ── REUSABLE CARD SWITCHER CONTROLS [ ‹  1/3  › ] ──
-  // Spacious, reliable touch targets with generous hitboxes that never get clipped on 5x6 grids
-  const renderCardSwitcher = (activeIdx: number) => {
-    return (
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-          borderRadius: 10,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.12)',
-        }}
-      >
-        {/* Previous Card Button */}
-        <FlexWidget
-          style={{
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-          }}
-          clickAction="PREV_STACK"
-        >
-          <TextWidget
-            text="‹"
-            style={{
-              color: '#FFFFFF',
-              fontSize: 15,
-              fontWeight: '900',
-            }}
-          />
-        </FlexWidget>
-
-        {/* Current / Total Stack Indicator (Tapping also cycles to next) */}
-        <FlexWidget
-          style={{
-            paddingHorizontal: 3,
-            paddingVertical: 4,
-          }}
-          clickAction="NEXT_STACK"
-        >
-          <TextWidget
-            text={`${activeIdx + 1}/3`}
-            style={{
-              color: 'rgba(255, 255, 255, 0.85)',
-              fontSize: 10.5,
-              fontWeight: '800',
-            }}
-          />
-        </FlexWidget>
-
-        {/* Next Card Button */}
-        <FlexWidget
-          style={{
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-          }}
-          clickAction="NEXT_STACK"
-        >
-          <TextWidget
-            text="›"
-            style={{
-              color: '#FFFFFF',
-              fontSize: 15,
-              fontWeight: '900',
-            }}
-          />
-        </FlexWidget>
-      </FlexWidget>
-    );
-  };
+  // Bunk Margin calculation for attendance
+  const attended = data?.attendedClasses ?? 0;
+  const total = data?.totalClasses ?? 0;
+  const bunkResult = calculateBunkMargin(attended, total, 0.75);
+  const attPct = data?.overallAttendance ?? bunkResult.percentage;
+  const cgpa = data?.cgpa || '--';
 
   // ═════════════════════════════════════════════════════════════════════════
-  // CARD 1: TODAY'S SCHEDULE (Matching in-app design language)
+  // 1. SMALL 2x2 COMPACT BOX (Apple Focus Mode Layout)
   // ═════════════════════════════════════════════════════════════════════════
-  if (stackIndex === 1) {
-    const schedule = data?.todaySchedule || [];
-    const count = schedule.length;
-    const pageSize = cfg.scheduleItemsCount;
-    const totalPages = Math.max(1, Math.ceil(count / pageSize));
-    const rawPage = data?.schedulePage ?? 0;
-    const safePage = ((rawPage % totalPages) + totalPages) % totalPages;
-    const visibleClasses = schedule.slice(safePage * pageSize, (safePage + 1) * pageSize);
-
-    return (
-      <FlexWidget
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: cardBg,
-          borderRadius: cfg.borderRadius,
-          borderWidth: 1.2,
-          borderColor: cardBorder,
-          paddingHorizontal: cfg.padH,
-          paddingVertical: cfg.padV,
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Header Row: Status Pill on Left, Top Right Pill on Right */}
+  if (cfg.isSmall) {
+    if (stackIndex === 1) {
+      // 2x2 Attendance & Bunk Card
+      return (
         <FlexWidget
           style={{
-            flexDirection: 'row',
+            height: 'match_parent',
+            width: 'match_parent',
+            backgroundColor: ApplePalette.surface,
+            borderRadius: cfg.borderRadius,
+            borderWidth: 1,
+            borderColor: ApplePalette.border,
+            paddingHorizontal: cfg.padH,
+            paddingVertical: cfg.padV,
             justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-            marginBottom: 6,
           }}
         >
-          {/* Status Pill matching the app */}
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(56, 189, 248, 0.14)',
-              borderRadius: 20,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderWidth: 1,
-              borderColor: 'rgba(56, 189, 248, 0.28)',
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-            clickAction="REFRESH_WIDGET"
-          >
-            <FlexWidget
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: '#38BDF8',
-                marginRight: 6,
-              }}
-            />
-            <TextWidget
-              text={`TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`}
-              maxLines={1}
-              style={{
-                color: '#38BDF8',
-                fontSize: cfg.badgeFontSize,
-                fontWeight: '800',
-                letterSpacing: 0.3,
-              }}
-            />
-          </FlexWidget>
-
-          {/* Top Right Schedule Pill (Tapping also cycles stack) */}
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 12,
-              paddingHorizontal: 9,
-              paddingVertical: 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-            clickAction="NEXT_STACK"
-          >
-            <TextWidget
-              text="📅 Schedule"
-              style={{
-                color: '#FFFFFF',
-                fontSize: 11,
-                fontWeight: '700',
-                letterSpacing: 0.2,
-              }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Schedule Items List */}
-        {count === 0 ? (
-          <FlexWidget
-            style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
-            clickAction="OPEN_APP"
-          >
-            <TextWidget
-              text="No classes today ✓"
-              style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '700' }}
-            />
-          </FlexWidget>
-        ) : (
-          <FlexWidget style={{ width: 'match_parent', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
-            {visibleClasses.map((item, idx) => (
-              <FlexWidget
-                key={idx}
-                style={{
-                  width: 'match_parent',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: item.isOngoing ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: 10,
-                  paddingHorizontal: 8,
-                  paddingVertical: cfg.isSmallBox ? 3 : 5,
-                  borderWidth: 1,
-                  borderColor: item.isOngoing ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                  marginBottom: cfg.isSmallBox ? 3 : 4,
-                }}
-                clickAction="OPEN_APP"
-              >
-                {/* Time Chip */}
-                <TextWidget
-                  text={item.time.split('-')[0].trim()}
-                  style={{
-                    color: item.isOngoing ? '#10B981' : '#E2E8F0',
-                    fontSize: cfg.isSmallBox ? 9.5 : 10.5,
-                    fontWeight: '800',
-                    width: cfg.isSmallBox ? 52 : 62,
-                  }}
-                />
-
-                {/* Subject Title */}
-                <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
-                  <TextWidget
-                    text={cfg.isSmallBox ? (item.subjectCode || item.subject) : item.subject}
-                    maxLines={1}
-                    truncate="END"
-                    style={{
-                      color: '#FFFFFF',
-                      fontSize: cfg.isSmallBox ? 10 : 11.5,
-                      fontWeight: '700',
-                    }}
-                  />
-                </FlexWidget>
-
-                {/* Room */}
-                <TextWidget
-                  text={item.room ? item.room.replace(/^Room\s*/i, '') : 'TBA'}
-                  style={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: cfg.isSmallBox ? 9 : 10,
-                    fontWeight: '700',
-                  }}
-                />
-              </FlexWidget>
-            ))}
-          </FlexWidget>
-        )}
-
-        {/* Footer Row: Pagination on Left, Card Switcher [ ‹  2/3  › ] on Right */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-            marginTop: 4,
-          }}
-        >
-          {/* Left Pagination Info */}
-          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <FlexWidget clickAction="OPEN_APP" style={{ marginRight: 6 }}>
-              <TextWidget
-                text={count > pageSize
-                  ? `Showing ${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, count)} of ${count}`
-                  : `${count} total today`}
-                style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 9.5, fontWeight: '600' }}
-              />
-            </FlexWidget>
-
-            {totalPages > 1 ? (
-              <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FlexWidget
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 8,
-                    paddingHorizontal: 7,
-                    paddingVertical: 3,
-                    marginRight: 4,
-                  }}
-                  clickAction="PREV_SCHEDULE_PAGE"
-                >
-                  <TextWidget
-                    text="▲"
-                    style={{ color: '#38BDF8', fontSize: 9, fontWeight: 'bold' }}
-                  />
-                </FlexWidget>
-
-                <FlexWidget
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 8,
-                    paddingHorizontal: 7,
-                    paddingVertical: 3,
-                  }}
-                  clickAction="NEXT_SCHEDULE_PAGE"
-                >
-                  <TextWidget
-                    text="▼"
-                    style={{ color: '#38BDF8', fontSize: 9, fontWeight: 'bold' }}
-                  />
-                </FlexWidget>
-              </FlexWidget>
-            ) : null}
-          </FlexWidget>
-
-          {/* Right: Card Switcher [ ‹  2/3  › ] */}
-          {renderCardSwitcher(1)}
-        </FlexWidget>
-      </FlexWidget>
-    );
-  }
-
-  // ═════════════════════════════════════════════════════════════════════════
-  // CARD 2: ATTENDANCE & STATS (Matching in-app design language)
-  // ═════════════════════════════════════════════════════════════════════════
-  if (stackIndex === 2) {
-    const total = data?.totalClasses ?? 0;
-    const attended = data?.attendedClasses ?? 0;
-    const attPct = data?.overallAttendance ?? 0;
-    const cgpa = data?.cgpa || '--';
-
-    const isSafe = attPct >= 80;
-    const isWarning = attPct >= 75 && attPct < 80;
-    const attColor: ColorProp = isSafe ? '#10B981' : (isWarning ? '#F59E0B' : '#EF4444');
-    const attBgPill: ColorProp = isSafe ? 'rgba(16, 185, 129, 0.14)' : (isWarning ? 'rgba(245, 158, 11, 0.14)' : 'rgba(239, 68, 68, 0.14)');
-    const attBorderPill: ColorProp = isSafe ? 'rgba(16, 185, 129, 0.28)' : (isWarning ? 'rgba(245, 158, 11, 0.28)' : 'rgba(239, 68, 68, 0.28)');
-
-    return (
-      <FlexWidget
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: cardBg,
-          borderRadius: cfg.borderRadius,
-          borderWidth: 1.2,
-          borderColor: cardBorder,
-          paddingHorizontal: cfg.padH,
-          paddingVertical: cfg.padV,
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Header Row: Status Pill on Left, Attended Chip on Right */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-            marginBottom: 6,
-          }}
-        >
-          {/* Status Pill */}
-          <FlexWidget
-            style={{
-              backgroundColor: attBgPill,
-              borderRadius: 20,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderWidth: 1,
-              borderColor: attBorderPill,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-            clickAction="REFRESH_WIDGET"
-          >
-            <FlexWidget
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: attColor,
-                marginRight: 6,
-              }}
-            />
-            <TextWidget
-              text={isSafe ? `SAFE • ${attPct}%` : (isWarning ? `WARNING • ${attPct}%` : `CRITICAL • ${attPct}%`)}
-              maxLines={1}
-              style={{
-                color: attColor,
-                fontSize: cfg.badgeFontSize,
-                fontWeight: '800',
-                letterSpacing: 0.3,
-              }}
-            />
-          </FlexWidget>
-
-          {/* Top Right Attended Count Pill */}
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 12,
-              paddingHorizontal: 9,
-              paddingVertical: 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-            clickAction="NEXT_STACK"
-          >
-            <TextWidget
-              text={`📚 ${attended}/${total}`}
-              style={{
-                color: '#FFFFFF',
-                fontSize: 11,
-                fontWeight: '700',
-                letterSpacing: 0.2,
-              }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Middle Hero Attendance Content */}
-        <FlexWidget
-          style={{
-            flexDirection: 'column',
-            justifyContent: 'center',
-            width: 'match_parent',
-            flex: 1,
-          }}
-          clickAction="OPEN_APP"
-        >
+          {/* Header Row */}
           <FlexWidget
             style={{
               flexDirection: 'row',
-              alignItems: 'flex-end',
               justifyContent: 'space-between',
-              width: 'match_parent',
-              marginBottom: 4,
-            }}
-          >
-            <FlexWidget style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-              <TextWidget
-                text={`${attPct}%`}
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: cfg.isSmallBox ? 26 : 32,
-                  fontWeight: '900',
-                  letterSpacing: -1,
-                }}
-              />
-              <TextWidget
-                text=" ATTENDANCE"
-                style={{
-                  color: 'rgba(255, 255, 255, 0.55)',
-                  fontSize: 10,
-                  fontWeight: '800',
-                  letterSpacing: 0.8,
-                  marginLeft: 6,
-                }}
-              />
-            </FlexWidget>
-
-            <TextWidget
-              text={`${attended}/${total} attended`}
-              style={{
-                color: 'rgba(255, 255, 255, 0.85)',
-                fontSize: 11,
-                fontWeight: '700',
-              }}
-            />
-          </FlexWidget>
-
-          {/* Progress Bar */}
-          <FlexWidget
-            style={{
-              width: 'match_parent',
-              height: 5,
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 3,
-              marginVertical: 4,
-            }}
-          >
-            <FlexWidget
-              style={{
-                width: (Math.max(10, (cfg.w - cfg.padH * 2) * Math.min(100, Math.max(0, attPct)) / 100)) as any,
-                height: 'match_parent',
-                backgroundColor: attColor,
-                borderRadius: 3,
-              }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Bottom Details Chips Row: Status + CGPA on Left, Card Switcher [ ‹  3/3  › ] on Right */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-            marginTop: 4,
-          }}
-        >
-          {/* Left Details Chips Group */}
-          <FlexWidget
-            style={{
-              flexDirection: 'row',
               alignItems: 'center',
+              width: 'match_parent',
             }}
           >
             <FlexWidget
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderRadius: 10,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
+                backgroundColor: bunkResult.bgColor,
+                borderRadius: 14,
+                paddingHorizontal: 7,
+                paddingVertical: 3,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
-                marginRight: 6,
+                borderColor: bunkResult.borderColor,
               }}
-              clickAction="OPEN_APP"
             >
               <TextWidget
-                text={isSafe ? 'Status: Safe ✓' : (isWarning ? 'Status: Warning ⚠️' : 'Status: Critical ⚠️')}
-                style={{ color: attColor, fontSize: 10, fontWeight: '700' }}
+                text={bunkResult.label}
+                style={{ color: bunkResult.color, fontSize: 8.5, fontWeight: '800' }}
               />
             </FlexWidget>
 
-            {cgpa && cgpa !== '--' && !cfg.isSmallBox ? (
-              <FlexWidget
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  borderRadius: 10,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.08)',
-                }}
-                clickAction="OPEN_APP"
-              >
-                <TextWidget
-                  text={`CGPA: ${cgpa}`}
-                  style={{ color: '#A78BFA', fontSize: 10, fontWeight: '800' }}
-                />
-              </FlexWidget>
-            ) : null}
+            {renderSmartStackIndicator(1, totalCards, cfg)}
           </FlexWidget>
 
-          {/* Right: Card Switcher [ ‹  3/3  › ] */}
-          {renderCardSwitcher(2)}
-        </FlexWidget>
-      </FlexWidget>
-    );
-  }
+          {/* Hero Attendance */}
+          <FlexWidget
+            style={{ flexDirection: 'column', marginVertical: 2 }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+          >
+            <TextWidget
+              text={`${attPct}%`}
+              style={{
+                color: '#FFFFFF',
+                fontSize: 26,
+                fontWeight: '900',
+                letterSpacing: -0.5,
+              }}
+            />
+            <TextWidget
+              text={`${attended}/${total} Classes`}
+              style={{ color: ApplePalette.textSecondary, fontSize: 9.5, fontWeight: '600' }}
+            />
+          </FlexWidget>
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // NO CLASSES / ALL CAUGHT UP STATE (Card 0 when no classes)
-  // ═════════════════════════════════════════════════════════════════════════
-  if (!hasClasses) {
+          {/* Bottom CGPA Pill */}
+          <FlexWidget
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: 'match_parent',
+            }}
+          >
+            <FlexWidget
+              style={{
+                backgroundColor: ApplePalette.purpleBg,
+                borderRadius: 8,
+                paddingHorizontal: 6,
+                paddingVertical: 2.5,
+                borderWidth: 1,
+                borderColor: ApplePalette.purpleBorder,
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+            >
+              <TextWidget
+                text={`CGPA ${cgpa}`}
+                style={{ color: ApplePalette.purple, fontSize: 9, fontWeight: '800' }}
+              />
+            </FlexWidget>
+          </FlexWidget>
+        </FlexWidget>
+      );
+    }
+
+    // 2x2 Class Card (Default)
     return (
       <FlexWidget
         style={{
           height: 'match_parent',
           width: 'match_parent',
-          backgroundColor: cardBg,
+          backgroundColor: ApplePalette.surface,
           borderRadius: cfg.borderRadius,
-          borderWidth: 1.2,
-          borderColor: cardBorder,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
           paddingHorizontal: cfg.padH,
           paddingVertical: cfg.padV,
           justifyContent: 'space-between',
@@ -739,202 +337,56 @@ export function NextClassWidget({
         >
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.14)',
-              borderRadius: 20,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
+              backgroundColor: isOngoing ? ApplePalette.mintBg : ApplePalette.blueBg,
+              borderRadius: 14,
+              paddingHorizontal: 7,
+              paddingVertical: 3,
               borderWidth: 1,
-              borderColor: 'rgba(16, 185, 129, 0.28)',
-              flexDirection: 'row',
-              alignItems: 'center',
+              borderColor: isOngoing ? ApplePalette.mintBorder : ApplePalette.blueBorder,
             }}
             clickAction="REFRESH_WIDGET"
           >
-            <FlexWidget
+            <TextWidget
+              text={isOngoing ? '● LIVE' : (data?.timeUntilOrLeft ? data.timeUntilOrLeft.toUpperCase() : 'NEXT')}
               style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: '#10B981',
-                marginRight: 6,
-              }}
-            />
-            <TextWidget
-              text="ALL CAUGHT UP ✓"
-              style={{ color: '#10B981', fontSize: cfg.badgeFontSize, fontWeight: '800' }}
-            />
-          </FlexWidget>
-
-          <FlexWidget
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: 12,
-              paddingHorizontal: 9,
-              paddingVertical: 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-            }}
-            clickAction="NEXT_STACK"
-          >
-            <TextWidget
-              text="🕒 Free Time"
-              style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}
-            />
-          </FlexWidget>
-        </FlexWidget>
-
-        {/* Center Content */}
-        <FlexWidget
-          style={{ alignItems: 'center', justifyContent: 'center', flex: 1, marginVertical: 4 }}
-          clickAction="OPEN_APP"
-        >
-          <TextWidget
-            text="No classes scheduled"
-            style={{
-              color: '#FFFFFF',
-              fontSize: cfg.isSmallBox ? 13 : 17,
-              fontWeight: '800',
-              marginBottom: 2,
-            }}
-          />
-          <TextWidget
-            text="Enjoy your free time!"
-            style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11 }}
-          />
-        </FlexWidget>
-
-        {/* Bottom Row */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          <FlexWidget clickAction="OPEN_APP">
-            <TextWidget
-              text="Tap to open ALMS"
-              style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 9.5 }}
-            />
-          </FlexWidget>
-
-          {renderCardSwitcher(0)}
-        </FlexWidget>
-      </FlexWidget>
-    );
-  }
-
-  // ═════════════════════════════════════════════════════════════════════════
-  // CARD 0: NEXT CLASS / IN SESSION
-  // EXACT CLONE OF IN-APP modernNextClassCard (IMAGE 1)
-  // ═════════════════════════════════════════════════════════════════════════
-
-  // ── 1. 2x2 COMPACT BOX (Strictly Course Code, Room, Time, Timer & Controls) ──
-  if (cfg.isSmallBox) {
-    return (
-      <FlexWidget
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: cardBg,
-          borderRadius: cfg.borderRadius,
-          borderWidth: 1.2,
-          borderColor: cardBorder,
-          paddingHorizontal: cfg.padH,
-          paddingVertical: cfg.padV,
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Header Row: Status Pill on Left, Switcher on Right */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: 'match_parent',
-          }}
-        >
-          {/* Status Pill */}
-          <FlexWidget
-            style={{
-              backgroundColor: statusBadgeBg,
-              borderRadius: 20,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderWidth: 1,
-              borderColor: statusBorderColor,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-            clickAction="REFRESH_WIDGET"
-          >
-            <FlexWidget
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: accentColor,
-                marginRight: 5,
-              }}
-            />
-            <TextWidget
-              text={isOngoing ? (data?.timeUntilOrLeft || 'LIVE') : (data?.timeUntilOrLeft ? `IN ${data.timeUntilOrLeft}` : 'NEXT')}
-              maxLines={1}
-              style={{
-                color: accentColor,
+                color: isOngoing ? ApplePalette.mint : ApplePalette.blue,
                 fontSize: 8.5,
                 fontWeight: '900',
               }}
             />
           </FlexWidget>
 
-          {/* Switcher [ ‹  1/3  › ] */}
-          {renderCardSwitcher(0)}
+          {renderSmartStackIndicator(stackIndex, totalCards, cfg)}
         </FlexWidget>
 
-        {/* Middle: Course Code + Type Badge */}
+        {/* Middle: Course Code + Short Subject */}
         <FlexWidget
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: 'match_parent',
-            marginVertical: 2,
-          }}
-          clickAction="OPEN_APP"
+          style={{ width: 'match_parent', marginVertical: 1 }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://timetable' }}
         >
           <TextWidget
             text={courseCode || subjectTitle.slice(0, 7)}
             style={{
               color: '#FFFFFF',
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: '900',
-              letterSpacing: -0.5,
+              letterSpacing: -0.3,
             }}
           />
-          <FlexWidget
+          <TextWidget
+            text={subjectTitle}
+            maxLines={1}
+            truncate="END"
             style={{
-              backgroundColor: statusBadgeBg,
-              borderRadius: 6,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderWidth: 1,
-              borderColor: statusBorderColor,
+              color: ApplePalette.textSecondary,
+              fontSize: 10,
+              fontWeight: '600',
             }}
-          >
-            <TextWidget
-              text={classType.slice(0, 3)}
-              style={{
-                color: accentColor,
-                fontSize: 9,
-                fontWeight: '900',
-              }}
-            />
-          </FlexWidget>
+          />
         </FlexWidget>
 
-        {/* Bottom Details Row: Room + Time */}
+        {/* Bottom: Room + Time */}
         <FlexWidget
           style={{
             flexDirection: 'row',
@@ -943,39 +395,251 @@ export function NextClassWidget({
             width: 'match_parent',
           }}
         >
-          {/* Room Chip */}
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              backgroundColor: ApplePalette.surfacePill,
               borderRadius: 8,
               paddingHorizontal: 6,
               paddingVertical: 3,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
             }}
-            clickAction="OPEN_APP"
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://timetable' }}
           >
             <TextWidget
-              text={roomDisplay.replace(/^Room\s*/i, '📍 ')}
+              text={decodedRoom.block.replace('Block ', 'B')}
               style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '700' }}
             />
           </FlexWidget>
 
-          {/* Time Chip */}
+          <TextWidget
+            text={timeDisplay.split('–')[0].trim()}
+            style={{ color: ApplePalette.textTertiary, fontSize: 9.5, fontWeight: '600' }}
+          />
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 2. CARD 1: ATTENDANCE & BUNK MARGIN (Apple Activity Design)
+  // ═════════════════════════════════════════════════════════════════════════
+  if (stackIndex === 1) {
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Top Header Row: Status Pill on Left, Bunk Margin Pill + Indicator on Right */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginBottom: 4,
+          }}
+        >
+          {/* Apple Category Pill */}
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-              borderRadius: 8,
-              paddingHorizontal: 6,
-              paddingVertical: 3,
+              backgroundColor: bunkResult.bgColor,
+              borderRadius: 16,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderColor: bunkResult.borderColor,
+              flexDirection: 'row',
+              alignItems: 'center',
             }}
-            clickAction="OPEN_APP"
+            clickAction="REFRESH_WIDGET"
+          >
+            <FlexWidget
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: bunkResult.color,
+                marginRight: 6,
+              }}
+            />
+            <TextWidget
+              text={`ATTENDANCE • ${bunkResult.label.toUpperCase()}`}
+              maxLines={1}
+              style={{
+                color: bunkResult.color,
+                fontSize: cfg.badgeFontSize,
+                fontWeight: '800',
+                letterSpacing: 0.2,
+              }}
+            />
+          </FlexWidget>
+
+          {/* Smart Stack Page Indicator */}
+          {renderSmartStackIndicator(1, totalCards, cfg)}
+        </FlexWidget>
+
+        {/* Middle Hero: Apple Activity Percent & Bunk Metric */}
+        <FlexWidget
+          style={{
+            flexDirection: 'column',
+            justifyContent: 'center',
+            width: 'match_parent',
+            flex: 1,
+          }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+        >
+          <FlexWidget
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              width: 'match_parent',
+              marginBottom: 4,
+            }}
+          >
+            <FlexWidget style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+              <TextWidget
+                text={`${attPct}%`}
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: cfg.isMedium ? 30 : 34,
+                  fontWeight: '900',
+                  letterSpacing: -1,
+                }}
+              />
+              <TextWidget
+                text=" OVERALL"
+                style={{
+                  color: ApplePalette.textTertiary,
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 0.8,
+                  marginLeft: 6,
+                  marginBottom: 4,
+                }}
+              />
+            </FlexWidget>
+
+            {/* Bunk Margin Callout Badge */}
+            <FlexWidget
+              style={{
+                backgroundColor: bunkResult.bgColor,
+                borderRadius: 10,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: bunkResult.borderColor,
+              }}
+            >
+              <TextWidget
+                text={bunkResult.pillText}
+                style={{
+                  color: bunkResult.color,
+                  fontSize: 10.5,
+                  fontWeight: '800',
+                }}
+              />
+            </FlexWidget>
+          </FlexWidget>
+
+          {/* Apple-style Smooth Horizontal Progress Bar */}
+          <FlexWidget
+            style={{
+              width: 'match_parent',
+              height: 6,
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: 3,
+              marginVertical: 3,
+            }}
+          >
+            <FlexWidget
+              style={{
+                width: (Math.max(10, (cfg.w - cfg.padH * 2) * Math.min(100, Math.max(0, attPct)) / 100)) as any,
+                height: 'match_parent',
+                backgroundColor: bunkResult.color,
+                borderRadius: 3,
+              }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+
+        {/* Bottom Details Row: Deep Link Chips */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginTop: 4,
+          }}
+        >
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Attended Ratio Chip */}
+            <FlexWidget
+              style={{
+                backgroundColor: ApplePalette.surfacePill,
+                borderRadius: 10,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: ApplePalette.borderLight,
+                marginRight: 6,
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+            >
+              <TextWidget
+                text={`📚 ${attended}/${total} Classes`}
+                style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '700' }}
+              />
+            </FlexWidget>
+
+            {/* CGPA Pill */}
+            {cgpa && cgpa !== '--' ? (
+              <FlexWidget
+                style={{
+                  backgroundColor: ApplePalette.purpleBg,
+                  borderRadius: 10,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderWidth: 1,
+                  borderColor: ApplePalette.purpleBorder,
+                }}
+                clickAction="OPEN_URI"
+                clickActionData={{ uri: 'alms://(tabs)/results' }}
+              >
+                <TextWidget
+                  text={`CGPA ${cgpa}`}
+                  style={{ color: ApplePalette.purple, fontSize: 10.5, fontWeight: '800' }}
+                />
+              </FlexWidget>
+            ) : null}
+          </FlexWidget>
+
+          {/* Deep link direct jump */}
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfacePill,
+              borderRadius: 10,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
           >
             <TextWidget
-              text={`🕒 ${timeDisplay.split('-')[0].trim()}`}
-              style={{ color: '#E2E8F0', fontSize: 9.5, fontWeight: '700' }}
+              text="Details ›"
+              style={{ color: ApplePalette.textSecondary, fontSize: 10.5, fontWeight: '700' }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -983,101 +647,762 @@ export function NextClassWidget({
     );
   }
 
-  // ── 2. STANDARD / 5x6 EXPANDED CARD (EXACT IN-APP DESIGN FROM IMAGE 1) ──
+  // ═════════════════════════════════════════════════════════════════════════
+  // 3. CARD 2: TODAY'S SCHEDULE (Apple Reminders / Timeline Design)
+  // ═════════════════════════════════════════════════════════════════════════
+  if (stackIndex === 2) {
+    const schedule = data?.todaySchedule || [];
+    const count = schedule.length;
+    const pageSize = cfg.isLarge ? 4 : 3;
+    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const rawPage = data?.schedulePage ?? 0;
+    const safePage = ((rawPage % totalPages) + totalPages) % totalPages;
+    const visibleClasses = schedule.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Header Row: Schedule Status on Left, Indicator on Right */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginBottom: 4,
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.tealBg,
+              borderRadius: 16,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
+              borderWidth: 1,
+              borderColor: ApplePalette.tealBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+            clickAction="REFRESH_WIDGET"
+          >
+            <FlexWidget
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: ApplePalette.teal,
+                marginRight: 6,
+              }}
+            />
+            <TextWidget
+              text={`TODAY • ${count} ${count === 1 ? 'CLASS' : 'CLASSES'}`}
+              maxLines={1}
+              style={{
+                color: ApplePalette.teal,
+                fontSize: cfg.badgeFontSize,
+                fontWeight: '800',
+                letterSpacing: 0.2,
+              }}
+            />
+          </FlexWidget>
+
+          {renderSmartStackIndicator(2, totalCards, cfg)}
+        </FlexWidget>
+
+        {/* Schedule Items List */}
+        {count === 0 ? (
+          <FlexWidget
+            style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://timetable' }}
+          >
+            <TextWidget
+              text="No Classes Today"
+              style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 2 }}
+            />
+            <TextWidget
+              text="Enjoy your campus free time"
+              style={{ color: ApplePalette.textTertiary, fontSize: 11 }}
+            />
+          </FlexWidget>
+        ) : (
+          <FlexWidget style={{ width: 'match_parent', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
+            {visibleClasses.map((item, idx) => {
+              const itemRoom = decodeLpuRoom(item.room);
+              return (
+                <FlexWidget
+                  key={idx}
+                  style={{
+                    width: 'match_parent',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: item.isOngoing ? ApplePalette.mintBg : ApplePalette.surfaceSubtle,
+                    borderRadius: 10,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderWidth: 1,
+                    borderColor: item.isOngoing ? ApplePalette.mintBorder : ApplePalette.border,
+                    marginBottom: 3.5,
+                  }}
+                  clickAction="OPEN_URI"
+                  clickActionData={{ uri: 'alms://timetable' }}
+                >
+                  {/* Time */}
+                  <TextWidget
+                    text={item.time.split('–')[0].split('-')[0].trim()}
+                    style={{
+                      color: item.isOngoing ? ApplePalette.mint : ApplePalette.textPrimary,
+                      fontSize: 10.5,
+                      fontWeight: '800',
+                      width: 58,
+                    }}
+                  />
+
+                  {/* Subject Name */}
+                  <FlexWidget style={{ flex: 1, marginHorizontal: 4 }}>
+                    <TextWidget
+                      text={formatAppleTitle(item.subject)}
+                      maxLines={1}
+                      truncate="END"
+                      style={{
+                        color: item.isOngoing ? '#FFFFFF' : ApplePalette.textSecondary,
+                        fontSize: 11,
+                        fontWeight: item.isOngoing ? '800' : '600',
+                      }}
+                    />
+                  </FlexWidget>
+
+                  {/* Decoded Room */}
+                  <TextWidget
+                    text={itemRoom.shortLabel}
+                    style={{
+                      color: item.isOngoing ? ApplePalette.mint : ApplePalette.textTertiary,
+                      fontSize: 10,
+                      fontWeight: '700',
+                    }}
+                  />
+                </FlexWidget>
+              );
+            })}
+          </FlexWidget>
+        )}
+
+        {/* Footer: Pagination info on Left, Timetable link on Right */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginTop: 3,
+          }}
+        >
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TextWidget
+              text={count > pageSize
+                ? `Showing ${safePage * pageSize + 1}–${Math.min((safePage + 1) * pageSize, count)} of ${count}`
+                : `${count} scheduled`}
+              style={{ color: ApplePalette.textTertiary, fontSize: 9.5, fontWeight: '600', marginRight: 6 }}
+            />
+
+            {totalPages > 1 ? (
+              <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FlexWidget
+                  style={{
+                    backgroundColor: ApplePalette.surfacePill,
+                    borderRadius: 6,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    marginRight: 3,
+                  }}
+                  clickAction="PREV_SCHEDULE_PAGE"
+                >
+                  <TextWidget text="▲" style={{ color: ApplePalette.teal, fontSize: 8.5, fontWeight: 'bold' }} />
+                </FlexWidget>
+                <FlexWidget
+                  style={{
+                    backgroundColor: ApplePalette.surfacePill,
+                    borderRadius: 6,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                  }}
+                  clickAction="NEXT_SCHEDULE_PAGE"
+                >
+                  <TextWidget text="▼" style={{ color: ApplePalette.teal, fontSize: 8.5, fontWeight: 'bold' }} />
+                </FlexWidget>
+              </FlexWidget>
+            ) : null}
+          </FlexWidget>
+
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfacePill,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://timetable' }}
+          >
+            <TextWidget
+              text="Full Day ›"
+              style={{ color: ApplePalette.textSecondary, fontSize: 10, fontWeight: '700' }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 4. CARD 3: UPCOMING EXAM COUNTDOWN (Apple Event Countdown Design)
+  // Shown when an exam or CA is within 14 days
+  // ═════════════════════════════════════════════════════════════════════════
+  if (stackIndex === 3 && hasUpcomingExam && data?.upcomingExam) {
+    const exam = data.upcomingExam;
+    const isUrgent = exam.daysRemaining <= 3;
+    const examColor = isUrgent ? ApplePalette.coral : ApplePalette.amber;
+    const examBg = isUrgent ? ApplePalette.coralBg : ApplePalette.amberBg;
+    const examBorder = isUrgent ? ApplePalette.coralBorder : ApplePalette.amberBorder;
+
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: examBorder,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Header Row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginBottom: 4,
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: examBg,
+              borderRadius: 16,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
+              borderWidth: 1,
+              borderColor: examBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <FlexWidget
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: examColor,
+                marginRight: 6,
+              }}
+            />
+            <TextWidget
+              text={`EXAM • ${exam.countdownLabel}`}
+              style={{ color: examColor, fontSize: cfg.badgeFontSize, fontWeight: '900', letterSpacing: 0.3 }}
+            />
+          </FlexWidget>
+
+          {renderSmartStackIndicator(3, totalCards, cfg)}
+        </FlexWidget>
+
+        {/* Middle: Exam Subject & Details */}
+        <FlexWidget
+          style={{ width: 'match_parent', marginVertical: 3 }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://exams' }}
+        >
+          <TextWidget
+            text={exam.subjectCode}
+            style={{ color: examColor, fontSize: 11, fontWeight: '900', letterSpacing: 0.5, marginBottom: 1 }}
+          />
+          <TextWidget
+            text={formatAppleTitle(exam.subject)}
+            maxLines={1}
+            truncate="END"
+            style={{
+              color: '#FFFFFF',
+              fontSize: 17,
+              fontWeight: '800',
+              letterSpacing: -0.2,
+            }}
+          />
+        </FlexWidget>
+
+        {/* Footer: Date, Room & Seat */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginTop: 4,
+          }}
+        >
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <FlexWidget
+              style={{
+                backgroundColor: ApplePalette.surfacePill,
+                borderRadius: 8,
+                paddingHorizontal: 7,
+                paddingVertical: 3.5,
+                marginRight: 5,
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: 'alms://exams' }}
+            >
+              <TextWidget
+                text={`📅 ${exam.dateStr} • ${exam.timeStr}`}
+                style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}
+              />
+            </FlexWidget>
+
+            <FlexWidget
+              style={{
+                backgroundColor: ApplePalette.surfacePill,
+                borderRadius: 8,
+                paddingHorizontal: 7,
+                paddingVertical: 3.5,
+              }}
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: 'alms://exams' }}
+            >
+              <TextWidget
+                text={`📍 ${exam.room}${exam.seat ? ` • Seat ${exam.seat}` : ''}`}
+                style={{ color: ApplePalette.textSecondary, fontSize: 10, fontWeight: '700' }}
+              />
+            </FlexWidget>
+          </FlexWidget>
+
+          <FlexWidget
+            style={{
+              backgroundColor: examBg,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://exams' }}
+          >
+            <TextWidget text="Seating ›" style={{ color: examColor, fontSize: 10, fontWeight: '800' }} />
+          </FlexWidget>
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 5. CARD 4: ACADEMIC QUICK STATS (Apple Modular Glanceable Design)
+  // ═════════════════════════════════════════════════════════════════════════
+  if (stackIndex === (hasUpcomingExam ? 4 : 3)) {
+    const currentCardIdx = hasUpcomingExam ? 4 : 3;
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Header Row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+            marginBottom: 4,
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.purpleBg,
+              borderRadius: 16,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
+              borderWidth: 1,
+              borderColor: ApplePalette.purpleBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+            clickAction="REFRESH_WIDGET"
+          >
+            <FlexWidget
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: ApplePalette.purple,
+                marginRight: 6,
+              }}
+            />
+            <TextWidget
+              text="ACADEMIC OVERVIEW"
+              style={{ color: ApplePalette.purple, fontSize: cfg.badgeFontSize, fontWeight: '800', letterSpacing: 0.2 }}
+            />
+          </FlexWidget>
+
+          {renderSmartStackIndicator(currentCardIdx, totalCards, cfg)}
+        </FlexWidget>
+
+        {/* Middle: Dual Modular Stat Columns */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: 'match_parent',
+            flex: 1,
+            marginVertical: 4,
+          }}
+        >
+          {/* CGPA Column */}
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfaceSubtle,
+              borderRadius: 14,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderWidth: 1,
+              borderColor: ApplePalette.border,
+              flex: 1,
+              marginRight: 6,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/results' }}
+          >
+            <TextWidget
+              text={cgpa}
+              style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
+            />
+            <TextWidget
+              text="CUMULATIVE GPA"
+              style={{ color: ApplePalette.purple, fontSize: 8.5, fontWeight: '800', letterSpacing: 0.5, marginTop: 2 }}
+            />
+          </FlexWidget>
+
+          {/* Attendance Column */}
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfaceSubtle,
+              borderRadius: 14,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderWidth: 1,
+              borderColor: ApplePalette.border,
+              flex: 1,
+              marginLeft: 6,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+          >
+            <TextWidget
+              text={`${attPct}%`}
+              style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}
+            />
+            <TextWidget
+              text={bunkResult.pillText.toUpperCase()}
+              style={{ color: bunkResult.color, fontSize: 8.5, fontWeight: '800', letterSpacing: 0.5, marginTop: 2 }}
+            />
+          </FlexWidget>
+        </FlexWidget>
+
+        {/* Footer Row */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <TextWidget
+            text="ALMS Companion • Live Student Portal"
+            style={{ color: ApplePalette.textTertiary, fontSize: 9.5, fontWeight: '600' }}
+          />
+
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfacePill,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+            }}
+            clickAction="OPEN_APP"
+          >
+            <TextWidget text="Dashboard ›" style={{ color: ApplePalette.textSecondary, fontSize: 10, fontWeight: '700' }} />
+          </FlexWidget>
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 6. CARD 0: NO CLASSES STATE (Apple Zen / Free Time)
+  // ═════════════════════════════════════════════════════════════════════════
+  if (!hasClasses) {
+    return (
+      <FlexWidget
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: ApplePalette.surface,
+          borderRadius: cfg.borderRadius,
+          borderWidth: 1,
+          borderColor: ApplePalette.border,
+          paddingHorizontal: cfg.padH,
+          paddingVertical: cfg.padV,
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Header */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.mintBg,
+              borderRadius: 16,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
+              borderWidth: 1,
+              borderColor: ApplePalette.mintBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+            clickAction="REFRESH_WIDGET"
+          >
+            <FlexWidget
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: ApplePalette.mint,
+                marginRight: 6,
+              }}
+            />
+            <TextWidget
+              text="ALL CAUGHT UP"
+              style={{ color: ApplePalette.mint, fontSize: cfg.badgeFontSize, fontWeight: '900', letterSpacing: 0.3 }}
+            />
+          </FlexWidget>
+
+          {renderSmartStackIndicator(0, totalCards, cfg)}
+        </FlexWidget>
+
+        {/* Center Content */}
+        <FlexWidget
+          style={{ alignItems: 'flex-start', justifyContent: 'center', flex: 1, marginVertical: 4 }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://timetable' }}
+        >
+          <TextWidget
+            text="No Classes Scheduled"
+            style={{
+              color: '#FFFFFF',
+              fontSize: 18,
+              fontWeight: '800',
+              letterSpacing: -0.2,
+              marginBottom: 3,
+            }}
+          />
+          <TextWidget
+            text="Enjoy your campus free time or prepare for next semester."
+            maxLines={1}
+            style={{ color: ApplePalette.textSecondary, fontSize: 11, fontWeight: '500' }}
+          />
+        </FlexWidget>
+
+        {/* Bottom Details */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            width: 'match_parent',
+          }}
+        >
+          <FlexWidget
+            style={{
+              backgroundColor: bunkResult.bgColor,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+            }}
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+          >
+            <TextWidget
+              text={`Attendance: ${attPct}% • ${bunkResult.label}`}
+              style={{ color: bunkResult.color, fontSize: 10, fontWeight: '700' }}
+            />
+          </FlexWidget>
+
+          <FlexWidget
+            style={{
+              backgroundColor: ApplePalette.surfacePill,
+              borderRadius: 8,
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+            }}
+            clickAction="OPEN_APP"
+          >
+            <TextWidget text="Open ALMS ›" style={{ color: ApplePalette.textSecondary, fontSize: 10, fontWeight: '700' }} />
+          </FlexWidget>
+        </FlexWidget>
+      </FlexWidget>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 7. CARD 0: NEXT CLASS / IN SESSION (Apple Calendar & Live Activity)
+  // Flagship 4x2 / 4x4 Presentation
+  // ═════════════════════════════════════════════════════════════════════════
+  const statusColor: ColorProp = isOngoing
+    ? ApplePalette.mint
+    : (isTomorrow ? ApplePalette.purple : ApplePalette.blue);
+  const statusBg: ColorProp = isOngoing
+    ? ApplePalette.mintBg
+    : (isTomorrow ? ApplePalette.purpleBg : ApplePalette.blueBg);
+  const statusBorder: ColorProp = isOngoing
+    ? ApplePalette.mintBorder
+    : (isTomorrow ? ApplePalette.purpleBorder : ApplePalette.blueBorder);
+
+  const statusLabel = isOngoing
+    ? (data?.timeUntilOrLeft ? `IN SESSION • ${data.timeUntilOrLeft}` : 'IN SESSION')
+    : (data?.timeUntilOrLeft ? `STARTS IN ${data.timeUntilOrLeft}` : (isTomorrow ? 'TOMORROW' : 'NEXT CLASS'));
+
   return (
     <FlexWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: cardBg,
+        backgroundColor: ApplePalette.surface,
         borderRadius: cfg.borderRadius,
-        borderWidth: 1.2,
-        borderColor: cardBorder,
+        borderWidth: 1,
+        borderColor: ApplePalette.border,
         paddingHorizontal: cfg.padH,
         paddingVertical: cfg.padV,
         justifyContent: 'space-between',
       }}
     >
-      {/* ── TOP STATUS & TIME ROW (Image 1 Header) ── */}
+      {/* ── TOP HEADER ROW: Apple Live Activity Badge on Left, Smart Stack Indicator on Right ── */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
+          marginBottom: 3,
         }}
       >
-        {/* Modern Status Pill: [ ● IN SESSION • 42m left ] */}
+        {/* Status Badge */}
         <FlexWidget
           style={{
-            backgroundColor: statusBadgeBg,
-            borderRadius: 20,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
+            backgroundColor: statusBg,
+            borderRadius: 16,
+            paddingHorizontal: 9,
+            paddingVertical: 4.5,
             borderWidth: 1,
-            borderColor: statusBorderColor,
+            borderColor: statusBorder,
             flexDirection: 'row',
             alignItems: 'center',
           }}
           clickAction="REFRESH_WIDGET"
         >
-          {/* Status Dot */}
+          {/* Apple Live Activity Pulse Dot */}
           <FlexWidget
             style={{
               width: 6,
               height: 6,
               borderRadius: 3,
-              backgroundColor: accentColor,
+              backgroundColor: statusColor,
               marginRight: 6,
             }}
           />
-          {/* Status Text */}
           <TextWidget
-            text={statusPillText}
+            text={statusLabel}
             maxLines={1}
             truncate="END"
             style={{
-              color: accentColor,
+              color: statusColor,
               fontSize: cfg.badgeFontSize,
-              fontWeight: '800',
+              fontWeight: '900',
               letterSpacing: 0.3,
             }}
           />
         </FlexWidget>
 
-        {/* Prominent Time Chip (Image 1 Header Right: [ 🕒 04:10-05:00 PM ]) */}
+        {/* Prominent Apple Time Pill */}
         <FlexWidget
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            backgroundColor: ApplePalette.surfacePill,
             borderRadius: 12,
-            paddingHorizontal: 9,
-            paddingVertical: 5,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
             borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.12)',
+            borderColor: ApplePalette.borderLight,
             flexDirection: 'row',
             alignItems: 'center',
+            marginRight: 6,
           }}
-          clickAction="NEXT_STACK"
+          clickAction="CYCLE_STACK"
         >
           <TextWidget
-            text={`🕒 ${timeDisplay}`}
+            text={timeDisplay}
             style={{
               color: '#FFFFFF',
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: '700',
               letterSpacing: 0.2,
             }}
           />
         </FlexWidget>
+
+        {/* Smart Stack Vertical Indicator */}
+        {renderSmartStackIndicator(0, totalCards, cfg)}
       </FlexWidget>
 
-      {/* ── SUBJECT TITLE (Image 1 Middle: Title-Cased, Clean, Crisp) ── */}
+      {/* ── MIDDLE HERO: Subject Title & Decoded Campus Location ── */}
       <FlexWidget
-        style={{
-          width: 'match_parent',
-          marginVertical: 4,
-        }}
-        clickAction="OPEN_APP"
+        style={{ width: 'match_parent', marginVertical: 3 }}
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'alms://timetable' }}
       >
         <TextWidget
           text={subjectTitle}
@@ -1088,91 +1413,93 @@ export function NextClassWidget({
             fontSize: cfg.titleFontSize,
             fontWeight: '800',
             lineHeight: cfg.titleFontSize + 4,
-            letterSpacing: -0.2,
+            letterSpacing: -0.3,
+          }}
+        />
+
+        {/* Decoded Location Subtitle: e.g. "Block 34 • 1st Floor (Room 34-101)" */}
+        <TextWidget
+          text={`📍 ${decodedRoom.block} • ${decodedRoom.floor} (${decodedRoom.fullLabel.split(', ')[1] || decodedRoom.shortLabel})`}
+          maxLines={1}
+          truncate="END"
+          style={{
+            color: ApplePalette.textSecondary,
+            fontSize: 11,
+            fontWeight: '600',
+            marginTop: 2,
           }}
         />
       </FlexWidget>
 
-      {/* ── BOTTOM DETAILS CHIPS ROW (Image 1 Bottom Row) ── */}
+      {/* ── BOTTOM DEEP LINK CHIPS & ATTENDANCE STATUS ── */}
       <FlexWidget
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           width: 'match_parent',
+          marginTop: 3,
         }}
       >
         {/* Left Chips Group */}
-        <FlexWidget
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}
-        >
-          {/* Room Chip: [ 📍 Room 34-101 ] */}
+        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {/* Room Deep Link */}
           <FlexWidget
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-              borderRadius: 10,
+              backgroundColor: ApplePalette.surfacePill,
+              borderRadius: 9,
               paddingHorizontal: 8,
               paddingVertical: 4,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderColor: ApplePalette.border,
               marginRight: 5,
             }}
-            clickAction="OPEN_APP"
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'alms://timetable' }}
           >
             <TextWidget
-              text={`📍 ${roomDisplay}`}
-              style={{
-                color: '#FFFFFF',
-                fontSize: 10.5,
-                fontWeight: '700',
-              }}
+              text={`📍 ${decodedRoom.shortLabel}`}
+              style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '700' }}
             />
           </FlexWidget>
 
-          {/* Course Code Chip: [ 🏷 PEA306 ] */}
+          {/* Course Code Chip */}
           {courseCode ? (
             <FlexWidget
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderRadius: 10,
+                backgroundColor: ApplePalette.surfacePill,
+                borderRadius: 9,
                 paddingHorizontal: 8,
                 paddingVertical: 4,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: ApplePalette.border,
                 marginRight: 5,
               }}
-              clickAction="OPEN_APP"
+              clickAction="OPEN_URI"
+              clickActionData={{ uri: 'alms://(tabs)/attendance' }}
             >
               <TextWidget
                 text={`🏷 ${courseCode}`}
-                style={{
-                  color: 'rgba(255, 255, 255, 0.75)',
-                  fontSize: 10.5,
-                  fontWeight: '700',
-                }}
+                style={{ color: ApplePalette.textSecondary, fontSize: 10.5, fontWeight: '700' }}
               />
             </FlexWidget>
           ) : null}
 
-          {/* Class Type Badge: [ LECTURE ] */}
+          {/* Type Badge */}
           <FlexWidget
             style={{
-              backgroundColor: statusBadgeBg,
+              backgroundColor: statusBg,
               borderRadius: 8,
               paddingHorizontal: 7,
-              paddingVertical: 3,
+              paddingVertical: 3.5,
               borderWidth: 1,
-              borderColor: statusBorderColor,
+              borderColor: statusBorder,
             }}
-            clickAction="OPEN_APP"
           >
             <TextWidget
               text={classType}
               style={{
-                color: accentColor,
+                color: statusColor,
                 fontSize: 9,
                 fontWeight: '900',
                 letterSpacing: 0.5,
@@ -1181,8 +1508,22 @@ export function NextClassWidget({
           </FlexWidget>
         </FlexWidget>
 
-        {/* Far Right: Card Switcher [ ‹  1/3  › ] */}
-        {renderCardSwitcher(0)}
+        {/* Right Bunk Margin Quick Pill */}
+        <FlexWidget
+          style={{
+            backgroundColor: bunkResult.bgColor,
+            borderRadius: 8,
+            paddingHorizontal: 7,
+            paddingVertical: 3.5,
+          }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'alms://(tabs)/attendance' }}
+        >
+          <TextWidget
+            text={bunkResult.label}
+            style={{ color: bunkResult.color, fontSize: 9.5, fontWeight: '800' }}
+          />
+        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );
