@@ -181,20 +181,27 @@ export function decodeLpuRoom(rawRoom: string): DecodedRoom {
 }
 
 // ── EXAM COUNTDOWN PARSER ──
-export interface ExamCountdownData {
+export interface UpcomingExamInfo {
   subject: string;
+  courseTitle?: string;
   subjectCode: string;
+  courseCode?: string;
   type: string;
   dateStr: string;
+  date?: string;
   timeStr: string;
+  time?: string;
   daysRemaining: number;
   countdownLabel: string;
   room: string;
   seat?: string;
+  seatNo?: string;
   isApproaching: boolean; // within 14 days
 }
 
-export function getUpcomingExam(exams: any[] = []): ExamCountdownData | null {
+export type ExamCountdownData = UpcomingExamInfo;
+
+export function getUpcomingExam(exams: any[] = []): UpcomingExamInfo | null {
   if (!Array.isArray(exams) || exams.length === 0) return null;
 
   const now = new Date();
@@ -243,14 +250,19 @@ export function getUpcomingExam(exams: any[] = []): ExamCountdownData | null {
 
   return {
     subject: next.subject || 'University Examination',
+    courseTitle: next.subject || 'University Examination',
     subjectCode: next.subjectCode || 'EXAM',
+    courseCode: next.subjectCode || 'EXAM',
     type: (next.type || 'MTE EXAM').toUpperCase(),
     dateStr: next.date || '',
+    date: next.date || '',
     timeStr: next.time || '',
+    time: next.time || '',
     daysRemaining: days,
     countdownLabel,
     room: next.room ? (next.room.startsWith('Room') ? next.room : `Room ${next.room}`) : 'Room TBA',
     seat: next.seat || next.seatNo || undefined,
+    seatNo: next.seat || next.seatNo || undefined,
     isApproaching: days <= 14,
   };
 }

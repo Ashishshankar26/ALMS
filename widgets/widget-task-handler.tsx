@@ -41,7 +41,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         data.stackIndex = stackIndex;
         data.schedulePage = isNaN(schedulePage) ? 0 : schedulePage;
-        props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} />);
+        props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} stackIndex={stackIndex} />);
       } else if (widgetInfo.widgetName === 'AttendanceWidget') {
         const data = await getWidgetAttendanceData();
         props.renderWidget(<AttendanceWidget data={data} widgetInfo={widgetInfo} />);
@@ -97,7 +97,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
         data.stackIndex = nextIdx;
         data.schedulePage = nextPage;
-        props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} />);
+        props.renderWidget(<NextClassWidget data={data} widgetInfo={widgetInfo} stackIndex={nextIdx} />);
 
         // Synchronize all instances on the home screen immediately
         syncAndroidWidget().catch(() => {});
