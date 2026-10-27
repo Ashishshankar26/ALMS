@@ -1649,11 +1649,11 @@ export default function DashboardScreen() {
                     position: 'absolute',
                     top: -30,
                     right: -30,
-                    width: 120,
-                    height: 120,
-                    borderRadius: 60,
+                    width: 140,
+                    height: 140,
+                    borderRadius: 70,
                     backgroundColor: accentColor,
-                    opacity: isDark ? 0.08 : 0.04,
+                    opacity: isDark ? 0.14 : 0.05,
                   }}
                 />
 
@@ -1665,7 +1665,11 @@ export default function DashboardScreen() {
                       { 
                         backgroundColor: isOngoing 
                           ? 'rgba(16, 185, 129, 0.14)' 
-                          : (isTomorrow ? 'rgba(168, 85, 247, 0.12)' : accentColor + '14') 
+                          : (isTomorrow ? 'rgba(168, 85, 247, 0.12)' : accentColor + '14'),
+                        borderColor: isOngoing 
+                          ? 'rgba(16, 185, 129, 0.30)' 
+                          : (isTomorrow ? 'rgba(168, 85, 247, 0.30)' : accentColor + '30'),
+                        borderWidth: 1,
                       }
                     ]}
                   >
@@ -3209,9 +3213,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   modernSubjectTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
-    lineHeight: 23,
+    lineHeight: 24,
     marginBottom: 14,
     letterSpacing: -0.2,
   },
