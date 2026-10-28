@@ -122,25 +122,27 @@ export function QuickStatsWidget({
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // 2. FLAGSHIP 4x2 PRESENTATION — EXACT CLONE OF USER IMAGE 1
-  // ═════════════════════════════════════════════════════════════════════════
-  const isCompactHeight = cfg.h < 175;
-  const rootPadV = isCompactHeight ? 7 : 14;
-  const rootPadH = cfg.w < 300 ? 12 : 16;
+  const cleanRoomNumber = nextRoomRaw.includes('-')
+    ? nextRoomRaw
+    : (decodedRoom.roomNumber ? `${decodedRoom.blockNumber || 'B'}-${decodedRoom.roomNumber}` : nextRoomRaw.slice(0, 7));
 
-  // Adaptive tile dimensions
-  const headerSubSize = isCompactHeight ? 16 : 20;
-  const headerMarginB = isCompactHeight ? 3 : 8;
-  const tilePadV = isCompactHeight ? 6 : 11;
-  const tilePadH = isCompactHeight ? 8 : 12;
-  const tileHeroSize = isCompactHeight ? 24 : 32;
-  const tileHeroMarginV = isCompactHeight ? 1 : 4;
-  const tileLine2Size = isCompactHeight ? 10 : 11.5;
-  const tileLine3Size = isCompactHeight ? 8.5 : 9.5;
-  const tileBtnPadV = isCompactHeight ? 4 : 6;
-  const tileBtnMarginT = isCompactHeight ? 3 : 6;
-  const tileBtnFontSize = isCompactHeight ? 8.5 : 9.5;
+  // 4x2 launcher widgets on Android report h ~130-220dp; >= 240dp indicates expanded 3+ rows
+  const isCompactHeight = cfg.h < 240;
+  const rootPadV = isCompactHeight ? 6 : 12;
+  const rootPadH = cfg.w < 300 ? 10 : 14;
+
+  // Adaptive tile dimensions (fits in ~122dp with zero clipping)
+  const headerSubSize = isCompactHeight ? 15 : 18;
+  const headerMarginB = isCompactHeight ? 3 : 6;
+  const tilePadV = isCompactHeight ? 5 : 9;
+  const tilePadH = isCompactHeight ? 6 : 10;
+  const tileHeroSize = isCompactHeight ? 20 : 28;
+  const tileHeroMarginV = isCompactHeight ? 1 : 3;
+  const tileLine2Size = isCompactHeight ? 9.5 : 11;
+  const tileLine3Size = isCompactHeight ? 8 : 9;
+  const tileBtnPadV = isCompactHeight ? 3.5 : 5;
+  const tileBtnMarginT = isCompactHeight ? 3 : 5;
+  const tileBtnFontSize = isCompactHeight ? 8 : 9;
 
   return (
     <FlexWidget
@@ -153,7 +155,7 @@ export function QuickStatsWidget({
         borderColor: '#2C2C2E',
         paddingHorizontal: rootPadH,
         paddingVertical: rootPadV,
-        justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
+        justifyContent: 'flex-start',
       }}
     >
       {/* ── TOP HEADER ── */}
@@ -162,13 +164,15 @@ export function QuickStatsWidget({
           text="ACADEMIC OVERVIEW"
           style={{
             color: '#8E8E93',
-            fontSize: isCompactHeight ? 9 : 10,
+            fontSize: isCompactHeight ? 8.5 : 10,
             fontWeight: '800',
             letterSpacing: 0.8,
           }}
         />
         <TextWidget
           text="Student Portal Glance"
+          maxLines={1}
+          truncate="END"
           style={{
             color: '#FFFFFF',
             fontSize: headerSubSize,
@@ -192,13 +196,13 @@ export function QuickStatsWidget({
         <FlexWidget
           style={{
             backgroundColor: '#2C2C2E',
-            borderRadius: 16,
+            borderRadius: 14,
             borderWidth: 1,
             borderColor: '#38383A',
             paddingHorizontal: tilePadH,
             paddingVertical: tilePadV,
             flex: 1,
-            marginRight: 5,
+            marginRight: isCompactHeight ? 3 : 5,
             justifyContent: 'space-between',
           }}
           clickAction="OPEN_URI"
@@ -207,10 +211,13 @@ export function QuickStatsWidget({
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
               text="CUMULATIVE GPA"
-              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+              maxLines={1}
+              truncate="END"
+              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
             />
             <TextWidget
               text={cgpa}
+              maxLines={1}
               style={{
                 color: '#BF5AF2',
                 fontSize: tileHeroSize,
@@ -221,10 +228,14 @@ export function QuickStatsWidget({
             />
             <TextWidget
               text={`Term GPA: ${termGpa}`}
+              maxLines={1}
+              truncate="END"
               style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
-              text={`${credits} Credits`}
+              text={`${credits} Credits Completed`}
+              maxLines={1}
+              truncate="END"
               style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
             />
           </FlexWidget>
@@ -235,6 +246,7 @@ export function QuickStatsWidget({
               backgroundColor: '#3A3A3C',
               borderRadius: 10,
               paddingVertical: tileBtnPadV,
+              paddingHorizontal: 4,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
@@ -242,7 +254,9 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text="Grade Details ›"
+              text="View Grade Details ›"
+              maxLines={1}
+              truncate="END"
               style={{ color: '#BF5AF2', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>
@@ -252,13 +266,13 @@ export function QuickStatsWidget({
         <FlexWidget
           style={{
             backgroundColor: '#2C2C2E',
-            borderRadius: 16,
+            borderRadius: 14,
             borderWidth: 1,
             borderColor: '#38383A',
             paddingHorizontal: tilePadH,
             paddingVertical: tilePadV,
             flex: 1,
-            marginHorizontal: 5,
+            marginHorizontal: isCompactHeight ? 3 : 5,
             justifyContent: 'space-between',
           }}
           clickAction="OPEN_URI"
@@ -266,11 +280,14 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="ATTENDANCE"
-              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+              text="OVERALL ATTENDANCE"
+              maxLines={1}
+              truncate="END"
+              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
             />
             <TextWidget
               text={`${pct}%`}
+              maxLines={1}
               style={{
                 color: isSafe ? '#30D158' : '#FF453A',
                 fontSize: tileHeroSize,
@@ -281,6 +298,8 @@ export function QuickStatsWidget({
             />
             <TextWidget
               text={bunkResult.label}
+              maxLines={1}
+              truncate="END"
               style={{
                 color: bunkResult.color,
                 fontSize: tileLine2Size,
@@ -290,6 +309,8 @@ export function QuickStatsWidget({
             />
             <TextWidget
               text={`${attended} / ${total} Classes`}
+              maxLines={1}
+              truncate="END"
               style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
             />
           </FlexWidget>
@@ -302,6 +323,7 @@ export function QuickStatsWidget({
               borderColor: isSafe ? '#30D158' : '#FF453A',
               borderRadius: 10,
               paddingVertical: tileBtnPadV,
+              paddingHorizontal: 4,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
@@ -309,7 +331,9 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text={isSafe ? `✓ Margin (+${targetDiff}%)` : `⚠️ Deficit (${targetDiff}%)`}
+              text={isSafe ? `✓ Safe (+${targetDiff}%)` : `⚠️ Need (${Math.abs(Number(targetDiff))}%)`}
+              maxLines={1}
+              truncate="END"
               style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>
@@ -319,13 +343,13 @@ export function QuickStatsWidget({
         <FlexWidget
           style={{
             backgroundColor: '#2C2C2E',
-            borderRadius: 16,
+            borderRadius: 14,
             borderWidth: 1,
             borderColor: '#38383A',
             paddingHorizontal: tilePadH,
             paddingVertical: tilePadV,
             flex: 1,
-            marginLeft: 5,
+            marginLeft: isCompactHeight ? 3 : 5,
             justifyContent: 'space-between',
           }}
           clickAction="OPEN_URI"
@@ -333,11 +357,15 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="NEXT CLASS"
-              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+              text="UPCOMING CLASS"
+              maxLines={1}
+              truncate="END"
+              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
             />
             <TextWidget
-              text={roomShort}
+              text={cleanRoomNumber}
+              maxLines={1}
+              truncate="END"
               style={{
                 color: '#0A84FF',
                 fontSize: tileHeroSize,
@@ -348,10 +376,14 @@ export function QuickStatsWidget({
             />
             <TextWidget
               text={`${classTime} • ${subjectCode}`}
+              maxLines={1}
+              truncate="END"
               style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
               text={`${decodedRoom.block} • ${decodedRoom.floor}`}
+              maxLines={1}
+              truncate="END"
               style={{ color: '#64D2FF', fontSize: tileLine3Size, fontWeight: '600' }}
             />
           </FlexWidget>
@@ -362,6 +394,7 @@ export function QuickStatsWidget({
               backgroundColor: '#3A3A3C',
               borderRadius: 10,
               paddingVertical: tileBtnPadV,
+              paddingHorizontal: 4,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
@@ -369,7 +402,9 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text="Timetable ›"
+              text="Open Timetable ›"
+              maxLines={1}
+              truncate="END"
               style={{ color: '#0A84FF', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>

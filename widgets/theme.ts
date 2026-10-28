@@ -135,6 +135,8 @@ export interface DecodedRoom {
   floor: string;
   shortLabel: string;
   fullLabel: string;
+  roomNumber: string;
+  blockNumber: string;
 }
 
 export function decodeLpuRoom(rawRoom: string): DecodedRoom {
@@ -144,6 +146,8 @@ export function decodeLpuRoom(rawRoom: string): DecodedRoom {
       floor: 'TBA',
       shortLabel: 'Room TBA',
       fullLabel: 'Room TBA',
+      roomNumber: 'TBA',
+      blockNumber: '',
     };
   }
 
@@ -169,6 +173,8 @@ export function decodeLpuRoom(rawRoom: string): DecodedRoom {
       floor: floorText,
       shortLabel: `B${blockNum} • ${floorText}`,
       fullLabel: `Block ${blockNum}, Room ${cleaned}`,
+      roomNumber: cleaned,
+      blockNumber: blockNum,
     };
   }
 
@@ -177,6 +183,8 @@ export function decodeLpuRoom(rawRoom: string): DecodedRoom {
     floor: '',
     shortLabel: cleaned.startsWith('Room') ? cleaned : `Room ${cleaned}`,
     fullLabel: cleaned.startsWith('Room') ? cleaned : `Room ${cleaned}`,
+    roomNumber: cleaned,
+    blockNumber: '',
   };
 }
 

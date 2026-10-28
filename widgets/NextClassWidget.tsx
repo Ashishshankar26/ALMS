@@ -155,6 +155,9 @@ export function NextClassWidget({
   const rawRoom = data?.room || '34-101';
   const decodedRoom = decodeLpuRoom(rawRoom);
   const roomShort = decodedRoom.shortLabel.replace('Room ', '');
+  const tileRoomCode = rawRoom.includes('-')
+    ? rawRoom
+    : (decodedRoom.roomNumber ? `${decodedRoom.blockNumber || 'B'}-${decodedRoom.roomNumber}` : rawRoom.slice(0, 7));
   const timeRemaining = data?.timeUntilOrLeft ? data.timeUntilOrLeft.replace('left', '').replace('in', '').trim() : '42m';
 
   // Up Next Class
@@ -168,54 +171,55 @@ export function NextClassWidget({
     attendanceSafeText: 'Attendance Safe (82.1%)',
   };
 
-  const isCompactHeight = cfg.h < 175;
-  const rootPadV = isCompactHeight ? 7 : 14;
-  const rootPadH = cfg.w < 300 ? 12 : 16;
+  // 4x2 launcher widgets on Android report h ~130-220dp; >= 240dp indicates expanded 3+ rows
+  const isCompactHeight = cfg.h < 240;
+  const rootPadV = isCompactHeight ? 6 : 12;
+  const rootPadH = cfg.w < 300 ? 10 : 14;
 
-  // Adaptive Card 0 dimensions
-  const heroTimeSize = isCompactHeight ? 24 : 32;
-  const heroLocSize = isCompactHeight ? 12 : 14.5;
+  // Adaptive Card 0 dimensions (fits in ~131dp)
+  const heroTimeSize = isCompactHeight ? 20 : 28;
+  const heroLocSize = isCompactHeight ? 11 : 13.5;
   const heroMarginB = isCompactHeight ? 2 : 4;
-  const pillsMarginB = isCompactHeight ? 3 : 6;
-  const pillPadV = isCompactHeight ? 3.5 : 5;
-  const pillPadH = isCompactHeight ? 8 : 11;
-  const pillFontSize = isCompactHeight ? 10 : 11;
-  const upNextPadV = isCompactHeight ? 6 : 10;
-  const upNextPadH = isCompactHeight ? 10 : 14;
-  const upNextSubjSize = isCompactHeight ? 11.5 : 13;
-  const upNextDetailSize = isCompactHeight ? 9 : 10;
-  const btnPadV = isCompactHeight ? 5 : 7;
-  const btnPadH = isCompactHeight ? 9 : 12;
-  const btnFontSize = isCompactHeight ? 10 : 11;
+  const pillsMarginB = isCompactHeight ? 3 : 5;
+  const pillPadV = isCompactHeight ? 2.5 : 4.5;
+  const pillPadH = isCompactHeight ? 7 : 10;
+  const pillFontSize = isCompactHeight ? 9 : 10.5;
+  const upNextPadV = isCompactHeight ? 5 : 9;
+  const upNextPadH = isCompactHeight ? 8 : 12;
+  const upNextSubjSize = isCompactHeight ? 11 : 13;
+  const upNextDetailSize = isCompactHeight ? 8.5 : 10;
+  const btnPadV = isCompactHeight ? 4 : 6;
+  const btnPadH = isCompactHeight ? 8 : 11;
+  const btnFontSize = isCompactHeight ? 9 : 10.5;
 
-  // Adaptive Card 1 dimensions
-  const attPctSize = isCompactHeight ? 28 : 40;
-  const attLabelSize = isCompactHeight ? 9.5 : 11;
-  const bunkTitleSize = isCompactHeight ? 14 : 20;
-  const bunkSubSize = isCompactHeight ? 8.5 : 9.5;
-  const bunkPadV = isCompactHeight ? 5 : 9;
-  const bunkPadH = isCompactHeight ? 10 : 16;
-  const trackHeight = isCompactHeight ? 10 : 14;
-  const cardPadV = isCompactHeight ? 5 : 9;
-  const cardPadH = isCompactHeight ? 8 : 12;
-  const cardSubjSize = isCompactHeight ? 10 : 11.5;
-  const cardPctSize = isCompactHeight ? 14 : 18;
-  const cardMarginSize = isCompactHeight ? 8.5 : 10.5;
+  // Adaptive Card 1 dimensions (fits in ~127dp)
+  const attPctSize = isCompactHeight ? 24 : 32;
+  const attLabelSize = isCompactHeight ? 9 : 10.5;
+  const bunkTitleSize = isCompactHeight ? 13 : 18;
+  const bunkSubSize = isCompactHeight ? 8 : 9;
+  const bunkPadV = isCompactHeight ? 4 : 7;
+  const bunkPadH = isCompactHeight ? 8 : 14;
+  const trackHeight = isCompactHeight ? 9 : 12;
+  const cardPadV = isCompactHeight ? 4 : 8;
+  const cardPadH = isCompactHeight ? 6 : 10;
+  const cardSubjSize = isCompactHeight ? 9.5 : 11;
+  const cardPctSize = isCompactHeight ? 13 : 16;
+  const cardMarginSize = isCompactHeight ? 8.5 : 10;
 
-  // Adaptive Card 2 dimensions
-  const cgpaHeroSize = isCompactHeight ? 24 : 32;
-  const cgpaTermSize = isCompactHeight ? 10 : 11.5;
-  const cgpaCreditSize = isCompactHeight ? 8.5 : 9.5;
-  const tilePadV = isCompactHeight ? 6 : 11;
-  const tilePadH = isCompactHeight ? 8 : 12;
-  const tileBtnPadV = isCompactHeight ? 4 : 6;
-  const tileBtnFontSize = isCompactHeight ? 8.5 : 9.5;
+  // Adaptive Card 2 dimensions (fits in ~122dp)
+  const cgpaHeroSize = isCompactHeight ? 20 : 28;
+  const cgpaTermSize = isCompactHeight ? 9.5 : 11;
+  const cgpaCreditSize = isCompactHeight ? 8 : 9;
+  const tilePadV = isCompactHeight ? 5 : 9;
+  const tilePadH = isCompactHeight ? 6 : 10;
+  const tileBtnPadV = isCompactHeight ? 3.5 : 5;
+  const tileBtnFontSize = isCompactHeight ? 8 : 9;
 
   // Adaptive Card 3 dimensions
-  const examCodeSize = isCompactHeight ? 24 : 32;
-  const examTitleSize = isCompactHeight ? 11 : 13;
-  const examDateSize = isCompactHeight ? 9.5 : 11;
-  const examBarPadV = isCompactHeight ? 5 : 8;
+  const examCodeSize = isCompactHeight ? 22 : 28;
+  const examTitleSize = isCompactHeight ? 10.5 : 12.5;
+  const examDateSize = isCompactHeight ? 9 : 10.5;
+  const examBarPadV = isCompactHeight ? 4 : 7;
 
   // ═════════════════════════════════════════════════════════════════════════
   // 1. SMALL 2x2 COMPACT FOCUS (Glanceable Minimal)
@@ -578,13 +582,13 @@ export function NextClassWidget({
           <FlexWidget
             style={{
               backgroundColor: '#2C2C2E',
-              borderRadius: 16,
+              borderRadius: 14,
               borderWidth: 1,
               borderColor: '#38383A',
               paddingHorizontal: tilePadH,
               paddingVertical: tilePadV,
               flex: 1,
-              marginRight: 5,
+              marginRight: isCompactHeight ? 3 : 5,
               justifyContent: 'space-between',
             }}
             clickAction="OPEN_URI"
@@ -593,18 +597,25 @@ export function NextClassWidget({
             <FlexWidget style={{ flexDirection: 'column' }}>
               <TextWidget
                 text="CUMULATIVE GPA"
-                style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
               />
               <TextWidget
                 text={cgpa}
-                style={{ color: '#BF5AF2', fontSize: cgpaHeroSize, fontWeight: '900', letterSpacing: -0.5, marginVertical: 2 }}
+                maxLines={1}
+                style={{ color: '#BF5AF2', fontSize: cgpaHeroSize, fontWeight: '900', letterSpacing: -0.5, marginVertical: 1 }}
               />
               <TextWidget
                 text={`Term GPA: ${termGpa}`}
-                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 2 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 1 }}
               />
               <TextWidget
                 text={`${credits} Credits Completed`}
+                maxLines={1}
+                truncate="END"
                 style={{ color: '#8E8E93', fontSize: cgpaCreditSize, fontWeight: '500' }}
               />
             </FlexWidget>
@@ -614,14 +625,17 @@ export function NextClassWidget({
                 backgroundColor: '#3A3A3C',
                 borderRadius: 10,
                 paddingVertical: tileBtnPadV,
+                paddingHorizontal: 4,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 4,
+                marginTop: 3,
               }}
             >
               <TextWidget
                 text="View Grade Details ›"
+                maxLines={1}
+                truncate="END"
                 style={{ color: '#BF5AF2', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
@@ -631,13 +645,13 @@ export function NextClassWidget({
           <FlexWidget
             style={{
               backgroundColor: '#2C2C2E',
-              borderRadius: 16,
+              borderRadius: 14,
               borderWidth: 1,
               borderColor: '#38383A',
               paddingHorizontal: tilePadH,
               paddingVertical: tilePadV,
               flex: 1,
-              marginHorizontal: 5,
+              marginHorizontal: isCompactHeight ? 3 : 5,
               justifyContent: 'space-between',
             }}
             clickAction="OPEN_URI"
@@ -646,24 +660,31 @@ export function NextClassWidget({
             <FlexWidget style={{ flexDirection: 'column' }}>
               <TextWidget
                 text="OVERALL ATTENDANCE"
-                style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
               />
               <TextWidget
                 text={`${attPct}%`}
+                maxLines={1}
                 style={{
                   color: isSafe ? '#30D158' : '#FF453A',
                   fontSize: cgpaHeroSize,
                   fontWeight: '900',
                   letterSpacing: -0.5,
-                  marginVertical: 2,
+                  marginVertical: 1,
                 }}
               />
               <TextWidget
                 text={bunkResult.label}
-                style={{ color: bunkResult.color, fontSize: cgpaTermSize, fontWeight: '800', marginBottom: 2 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: bunkResult.color, fontSize: cgpaTermSize, fontWeight: '800', marginBottom: 1 }}
               />
               <TextWidget
-                text={`${attended} / ${total} Classes Attended`}
+                text={`${attended} / ${total} Classes`}
+                maxLines={1}
+                truncate="END"
                 style={{ color: '#8E8E93', fontSize: cgpaCreditSize, fontWeight: '500' }}
               />
             </FlexWidget>
@@ -675,14 +696,17 @@ export function NextClassWidget({
                 borderColor: isSafe ? '#30D158' : '#FF453A',
                 borderRadius: 10,
                 paddingVertical: tileBtnPadV,
+                paddingHorizontal: 4,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 4,
+                marginTop: 3,
               }}
             >
               <TextWidget
-                text={isSafe ? `✓ Safe Margin (+${targetDiff}%)` : `⚠️ Deficit (${targetDiff}%)`}
+                text={isSafe ? `✓ Safe (+${targetDiff}%)` : `⚠️ Need (${Math.abs(Number(targetDiff))}%)`}
+                maxLines={1}
+                truncate="END"
                 style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
@@ -692,13 +716,13 @@ export function NextClassWidget({
           <FlexWidget
             style={{
               backgroundColor: '#2C2C2E',
-              borderRadius: 16,
+              borderRadius: 14,
               borderWidth: 1,
               borderColor: '#38383A',
               paddingHorizontal: tilePadH,
               paddingVertical: tilePadV,
               flex: 1,
-              marginLeft: 5,
+              marginLeft: isCompactHeight ? 3 : 5,
               justifyContent: 'space-between',
             }}
             clickAction="OPEN_URI"
@@ -707,24 +731,32 @@ export function NextClassWidget({
             <FlexWidget style={{ flexDirection: 'column' }}>
               <TextWidget
                 text="UPCOMING CLASS"
-                style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
               />
               <TextWidget
-                text={roomShort}
+                text={tileRoomCode}
+                maxLines={1}
+                truncate="END"
                 style={{
                   color: '#0A84FF',
                   fontSize: cgpaHeroSize,
                   fontWeight: '900',
                   letterSpacing: -0.5,
-                  marginVertical: 2,
+                  marginVertical: 1,
                 }}
               />
               <TextWidget
                 text={`${timeDisplay.split('–')[0].split('-')[0].trim()} • ${courseCode}`}
-                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 2 }}
+                maxLines={1}
+                truncate="END"
+                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 1 }}
               />
               <TextWidget
                 text={`${decodedRoom.block} • ${decodedRoom.floor}`}
+                maxLines={1}
+                truncate="END"
                 style={{ color: '#64D2FF', fontSize: cgpaCreditSize, fontWeight: '600' }}
               />
             </FlexWidget>
@@ -734,14 +766,17 @@ export function NextClassWidget({
                 backgroundColor: '#3A3A3C',
                 borderRadius: 10,
                 paddingVertical: tileBtnPadV,
+                paddingHorizontal: 4,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 4,
+                marginTop: 3,
               }}
             >
               <TextWidget
                 text="Open Timetable ›"
+                maxLines={1}
+                truncate="END"
                 style={{ color: '#0A84FF', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
@@ -969,7 +1004,9 @@ export function NextClassWidget({
           clickActionData={{ uri: 'alms://timetable' }}
         >
           <TextWidget
-            text={`Room ${roomShort}`}
+            text={`Room ${tileRoomCode}`}
+            maxLines={1}
+            truncate="END"
             style={{ color: '#FFFFFF', fontSize: pillFontSize, fontWeight: '700' }}
           />
         </FlexWidget>
@@ -990,6 +1027,8 @@ export function NextClassWidget({
         >
           <TextWidget
             text={bunkResult.label.startsWith('+') ? `✓ ${bunkResult.label}` : bunkResult.label}
+            maxLines={1}
+            truncate="END"
             style={{ color: '#30D158', fontSize: pillFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
@@ -1007,6 +1046,8 @@ export function NextClassWidget({
         >
           <TextWidget
             text={`⏳ ${timeRemaining} Left`}
+            maxLines={1}
+            truncate="END"
             style={{ color: '#0A84FF', fontSize: pillFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
@@ -1018,7 +1059,7 @@ export function NextClassWidget({
           backgroundColor: '#2C2C2E',
           borderWidth: 1,
           borderColor: '#38383A',
-          borderRadius: 16,
+          borderRadius: 14,
           paddingHorizontal: upNextPadH,
           paddingVertical: upNextPadV,
           flexDirection: 'row',
@@ -1028,12 +1069,12 @@ export function NextClassWidget({
         }}
       >
         {/* Left Column */}
-        <FlexWidget style={{ flexDirection: 'column', flex: 1, marginRight: 8 }}>
+        <FlexWidget style={{ flexDirection: 'column', flex: 1, marginRight: isCompactHeight ? 6 : 8 }}>
           <TextWidget
             text={`UP NEXT AT ${upNext.startTime || '10:00 AM'}`}
             style={{
               color: '#8E8E93',
-              fontSize: 9.5,
+              fontSize: isCompactHeight ? 8.5 : 9.5,
               fontWeight: '800',
               letterSpacing: 0.5,
             }}
@@ -1057,7 +1098,7 @@ export function NextClassWidget({
               color: '#8E8E93',
               fontSize: upNextDetailSize,
               fontWeight: '500',
-              marginTop: 2,
+              marginTop: 1,
             }}
           />
         </FlexWidget>
@@ -1077,6 +1118,8 @@ export function NextClassWidget({
         >
           <TextWidget
             text="Timetable ›"
+            maxLines={1}
+            truncate="END"
             style={{ color: '#0A84FF', fontSize: btnFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
