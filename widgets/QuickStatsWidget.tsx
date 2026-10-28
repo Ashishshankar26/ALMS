@@ -125,6 +125,23 @@ export function QuickStatsWidget({
   // ═════════════════════════════════════════════════════════════════════════
   // 2. FLAGSHIP 4x2 PRESENTATION — EXACT CLONE OF USER IMAGE 1
   // ═════════════════════════════════════════════════════════════════════════
+  const isCompactHeight = cfg.h < 175;
+  const rootPadV = isCompactHeight ? 7 : 14;
+  const rootPadH = cfg.w < 300 ? 12 : 16;
+
+  // Adaptive tile dimensions
+  const headerSubSize = isCompactHeight ? 16 : 20;
+  const headerMarginB = isCompactHeight ? 3 : 8;
+  const tilePadV = isCompactHeight ? 6 : 11;
+  const tilePadH = isCompactHeight ? 8 : 12;
+  const tileHeroSize = isCompactHeight ? 24 : 32;
+  const tileHeroMarginV = isCompactHeight ? 1 : 4;
+  const tileLine2Size = isCompactHeight ? 10 : 11.5;
+  const tileLine3Size = isCompactHeight ? 8.5 : 9.5;
+  const tileBtnPadV = isCompactHeight ? 4 : 6;
+  const tileBtnMarginT = isCompactHeight ? 3 : 6;
+  const tileBtnFontSize = isCompactHeight ? 8.5 : 9.5;
+
   return (
     <FlexWidget
       style={{
@@ -134,18 +151,18 @@ export function QuickStatsWidget({
         borderRadius: 24,
         borderWidth: 1.5,
         borderColor: '#2C2C2E',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        justifyContent: 'space-between',
+        paddingHorizontal: rootPadH,
+        paddingVertical: rootPadV,
+        justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
       }}
     >
       {/* ── TOP HEADER ── */}
-      <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', marginBottom: 8 }}>
+      <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', marginBottom: headerMarginB }}>
         <TextWidget
           text="ACADEMIC OVERVIEW"
           style={{
             color: '#8E8E93',
-            fontSize: 10,
+            fontSize: isCompactHeight ? 9 : 10,
             fontWeight: '800',
             letterSpacing: 0.8,
           }}
@@ -154,10 +171,10 @@ export function QuickStatsWidget({
           text="Student Portal Glance"
           style={{
             color: '#FFFFFF',
-            fontSize: 20,
+            fontSize: headerSubSize,
             fontWeight: '800',
             letterSpacing: -0.3,
-            marginTop: 2,
+            marginTop: 1,
           }}
         />
       </FlexWidget>
@@ -178,8 +195,8 @@ export function QuickStatsWidget({
             borderRadius: 16,
             borderWidth: 1,
             borderColor: '#38383A',
-            paddingHorizontal: 12,
-            paddingVertical: 11,
+            paddingHorizontal: tilePadH,
+            paddingVertical: tilePadV,
             flex: 1,
             marginRight: 5,
             justifyContent: 'space-between',
@@ -196,19 +213,19 @@ export function QuickStatsWidget({
               text={cgpa}
               style={{
                 color: '#BF5AF2',
-                fontSize: 32,
+                fontSize: tileHeroSize,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: 4,
+                marginVertical: tileHeroMarginV,
               }}
             />
             <TextWidget
               text={`Term GPA: ${termGpa}`}
-              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', marginBottom: 2 }}
+              style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
-              text={`${credits} Credits Completed`}
-              style={{ color: '#8E8E93', fontSize: 9.5, fontWeight: '500' }}
+              text={`${credits} Credits`}
+              style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
             />
           </FlexWidget>
 
@@ -217,16 +234,16 @@ export function QuickStatsWidget({
             style={{
               backgroundColor: '#3A3A3C',
               borderRadius: 10,
-              paddingVertical: 6,
+              paddingVertical: tileBtnPadV,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
-              marginTop: 6,
+              marginTop: tileBtnMarginT,
             }}
           >
             <TextWidget
-              text="View Grade Details ›"
-              style={{ color: '#BF5AF2', fontSize: 9.5, fontWeight: '800' }}
+              text="Grade Details ›"
+              style={{ color: '#BF5AF2', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -238,8 +255,8 @@ export function QuickStatsWidget({
             borderRadius: 16,
             borderWidth: 1,
             borderColor: '#38383A',
-            paddingHorizontal: 12,
-            paddingVertical: 11,
+            paddingHorizontal: tilePadH,
+            paddingVertical: tilePadV,
             flex: 1,
             marginHorizontal: 5,
             justifyContent: 'space-between',
@@ -249,31 +266,31 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="OVERALL ATTENDANCE"
+              text="ATTENDANCE"
               style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
             />
             <TextWidget
               text={`${pct}%`}
               style={{
                 color: isSafe ? '#30D158' : '#FF453A',
-                fontSize: 32,
+                fontSize: tileHeroSize,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: 4,
+                marginVertical: tileHeroMarginV,
               }}
             />
             <TextWidget
               text={bunkResult.label}
               style={{
                 color: bunkResult.color,
-                fontSize: 11.5,
+                fontSize: tileLine2Size,
                 fontWeight: '800',
-                marginBottom: 2,
+                marginBottom: 1,
               }}
             />
             <TextWidget
-              text={`${attended} / ${total} Classes Attended`}
-              style={{ color: '#8E8E93', fontSize: 9.5, fontWeight: '500' }}
+              text={`${attended} / ${total} Classes`}
+              style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
             />
           </FlexWidget>
 
@@ -284,16 +301,16 @@ export function QuickStatsWidget({
               borderWidth: 1,
               borderColor: isSafe ? '#30D158' : '#FF453A',
               borderRadius: 10,
-              paddingVertical: 6,
+              paddingVertical: tileBtnPadV,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
-              marginTop: 6,
+              marginTop: tileBtnMarginT,
             }}
           >
             <TextWidget
-              text={isSafe ? `✓ Safe Margin (+${targetDiff}%)` : `⚠️ Deficit (${targetDiff}%)`}
-              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: 9.5, fontWeight: '800' }}
+              text={isSafe ? `✓ Margin (+${targetDiff}%)` : `⚠️ Deficit (${targetDiff}%)`}
+              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -305,8 +322,8 @@ export function QuickStatsWidget({
             borderRadius: 16,
             borderWidth: 1,
             borderColor: '#38383A',
-            paddingHorizontal: 12,
-            paddingVertical: 11,
+            paddingHorizontal: tilePadH,
+            paddingVertical: tilePadV,
             flex: 1,
             marginLeft: 5,
             justifyContent: 'space-between',
@@ -316,26 +333,26 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="UPCOMING CLASS"
+              text="NEXT CLASS"
               style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 }}
             />
             <TextWidget
               text={roomShort}
               style={{
                 color: '#0A84FF',
-                fontSize: 32,
+                fontSize: tileHeroSize,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: 4,
+                marginVertical: tileHeroMarginV,
               }}
             />
             <TextWidget
               text={`${classTime} • ${subjectCode}`}
-              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', marginBottom: 2 }}
+              style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
               text={`${decodedRoom.block} • ${decodedRoom.floor}`}
-              style={{ color: '#64D2FF', fontSize: 9.5, fontWeight: '600' }}
+              style={{ color: '#64D2FF', fontSize: tileLine3Size, fontWeight: '600' }}
             />
           </FlexWidget>
 
@@ -344,16 +361,16 @@ export function QuickStatsWidget({
             style={{
               backgroundColor: '#3A3A3C',
               borderRadius: 10,
-              paddingVertical: 6,
+              paddingVertical: tileBtnPadV,
               alignItems: 'center',
               justifyContent: 'center',
               width: 'match_parent',
-              marginTop: 6,
+              marginTop: tileBtnMarginT,
             }}
           >
             <TextWidget
-              text="Open Timetable ›"
-              style={{ color: '#0A84FF', fontSize: 9.5, fontWeight: '800' }}
+              text="Timetable ›"
+              style={{ color: '#0A84FF', fontSize: tileBtnFontSize, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>

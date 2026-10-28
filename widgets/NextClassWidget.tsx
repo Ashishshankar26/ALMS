@@ -168,6 +168,55 @@ export function NextClassWidget({
     attendanceSafeText: 'Attendance Safe (82.1%)',
   };
 
+  const isCompactHeight = cfg.h < 175;
+  const rootPadV = isCompactHeight ? 7 : 14;
+  const rootPadH = cfg.w < 300 ? 12 : 16;
+
+  // Adaptive Card 0 dimensions
+  const heroTimeSize = isCompactHeight ? 24 : 32;
+  const heroLocSize = isCompactHeight ? 12 : 14.5;
+  const heroMarginB = isCompactHeight ? 2 : 4;
+  const pillsMarginB = isCompactHeight ? 3 : 6;
+  const pillPadV = isCompactHeight ? 3.5 : 5;
+  const pillPadH = isCompactHeight ? 8 : 11;
+  const pillFontSize = isCompactHeight ? 10 : 11;
+  const upNextPadV = isCompactHeight ? 6 : 10;
+  const upNextPadH = isCompactHeight ? 10 : 14;
+  const upNextSubjSize = isCompactHeight ? 11.5 : 13;
+  const upNextDetailSize = isCompactHeight ? 9 : 10;
+  const btnPadV = isCompactHeight ? 5 : 7;
+  const btnPadH = isCompactHeight ? 9 : 12;
+  const btnFontSize = isCompactHeight ? 10 : 11;
+
+  // Adaptive Card 1 dimensions
+  const attPctSize = isCompactHeight ? 28 : 40;
+  const attLabelSize = isCompactHeight ? 9.5 : 11;
+  const bunkTitleSize = isCompactHeight ? 14 : 20;
+  const bunkSubSize = isCompactHeight ? 8.5 : 9.5;
+  const bunkPadV = isCompactHeight ? 5 : 9;
+  const bunkPadH = isCompactHeight ? 10 : 16;
+  const trackHeight = isCompactHeight ? 10 : 14;
+  const cardPadV = isCompactHeight ? 5 : 9;
+  const cardPadH = isCompactHeight ? 8 : 12;
+  const cardSubjSize = isCompactHeight ? 10 : 11.5;
+  const cardPctSize = isCompactHeight ? 14 : 18;
+  const cardMarginSize = isCompactHeight ? 8.5 : 10.5;
+
+  // Adaptive Card 2 dimensions
+  const cgpaHeroSize = isCompactHeight ? 24 : 32;
+  const cgpaTermSize = isCompactHeight ? 10 : 11.5;
+  const cgpaCreditSize = isCompactHeight ? 8.5 : 9.5;
+  const tilePadV = isCompactHeight ? 6 : 11;
+  const tilePadH = isCompactHeight ? 8 : 12;
+  const tileBtnPadV = isCompactHeight ? 4 : 6;
+  const tileBtnFontSize = isCompactHeight ? 8.5 : 9.5;
+
+  // Adaptive Card 3 dimensions
+  const examCodeSize = isCompactHeight ? 24 : 32;
+  const examTitleSize = isCompactHeight ? 11 : 13;
+  const examDateSize = isCompactHeight ? 9.5 : 11;
+  const examBarPadV = isCompactHeight ? 5 : 8;
+
   // ═════════════════════════════════════════════════════════════════════════
   // 1. SMALL 2x2 COMPACT FOCUS (Glanceable Minimal)
   // ═════════════════════════════════════════════════════════════════════════
@@ -279,9 +328,9 @@ export function NextClassWidget({
           borderRadius: 24,
           borderWidth: 1.5,
           borderColor: '#2C2C2E',
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          justifyContent: 'space-between',
+          paddingHorizontal: rootPadH,
+          paddingVertical: rootPadV,
+          justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
         }}
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'alms://(tabs)/attendance' }}
@@ -317,14 +366,14 @@ export function NextClassWidget({
               text={`${attPct}%`}
               style={{
                 color: isSafe ? '#30D158' : '#FF453A',
-                fontSize: 40,
+                fontSize: attPctSize,
                 fontWeight: '900',
                 letterSpacing: -1,
               }}
             />
             <TextWidget
               text={isSafe ? `75% Target Threshold: +${targetDiff}% Margin` : `75% Target Threshold: -${Math.abs(Number(targetDiff))}% Deficit`}
-              style={{ color: '#8E8E93', fontSize: 11, fontWeight: '600', marginTop: 2 }}
+              style={{ color: '#8E8E93', fontSize: attLabelSize, fontWeight: '600', marginTop: 2 }}
             />
           </FlexWidget>
 
@@ -334,8 +383,8 @@ export function NextClassWidget({
               borderWidth: 1.5,
               borderColor: isSafe ? '#30D158' : '#FF453A',
               borderRadius: 18,
-              paddingHorizontal: 16,
-              paddingVertical: 9,
+              paddingHorizontal: bunkPadH,
+              paddingVertical: bunkPadV,
               alignItems: 'flex-start',
               justifyContent: 'center',
             }}
@@ -344,14 +393,14 @@ export function NextClassWidget({
               text={isSafe ? `+${bunkResult.margin} CLASSES` : `NEED ${bunkResult.margin || 1} CLASSES`}
               style={{
                 color: isSafe ? '#30D158' : '#FF453A',
-                fontSize: 20,
+                fontSize: bunkTitleSize,
                 fontWeight: '900',
                 letterSpacing: -0.3,
               }}
             />
             <TextWidget
               text={isSafe ? 'Safe to miss without dropping below 75%' : 'Must attend consecutively to reach 75%'}
-              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: 9.5, fontWeight: '600', marginTop: 2 }}
+              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: bunkSubSize, fontWeight: '600', marginTop: 2 }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -448,7 +497,7 @@ export function NextClassWidget({
         </FlexWidget>
 
         {/* 3 Subject Cards */}
-        <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-between', marginTop: 4 }}>
+        <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-between', marginTop: isCompactHeight ? 2 : 4 }}>
           {subList.map((sub, idx) => (
             <FlexWidget
               key={sub.subjectCode}
@@ -457,8 +506,8 @@ export function NextClassWidget({
                 borderRadius: 14,
                 borderWidth: 1,
                 borderColor: '#38383A',
-                paddingHorizontal: 12,
-                paddingVertical: 9,
+                paddingHorizontal: cardPadH,
+                paddingVertical: cardPadV,
                 flex: 1,
                 marginRight: idx < 2 ? 6 : 0,
                 justifyContent: 'space-between',
@@ -466,16 +515,16 @@ export function NextClassWidget({
             >
               <TextWidget
                 text={sub.subjectCode}
-                style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' }}
+                style={{ color: '#FFFFFF', fontSize: cardSubjSize, fontWeight: '800' }}
               />
-              <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4 }}>
+              <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
                 <TextWidget
                   text={`${sub.percentage}%`}
-                  style={{ color: sub.color, fontSize: 18, fontWeight: '900', letterSpacing: -0.3 }}
+                  style={{ color: sub.color, fontSize: cardPctSize, fontWeight: '900', letterSpacing: -0.3 }}
                 />
                 <TextWidget
                   text={sub.marginText}
-                  style={{ color: sub.color, fontSize: 10.5, fontWeight: '800' }}
+                  style={{ color: sub.color, fontSize: cardMarginSize, fontWeight: '800' }}
                 />
               </FlexWidget>
             </FlexWidget>
@@ -502,13 +551,13 @@ export function NextClassWidget({
           borderRadius: 24,
           borderWidth: 1.5,
           borderColor: '#2C2C2E',
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          justifyContent: 'space-between',
+          paddingHorizontal: rootPadH,
+          paddingVertical: rootPadV,
+          justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
         }}
       >
         {/* Header */}
-        <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: 'match_parent', marginBottom: 8 }}>
+        <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: 'match_parent', marginBottom: isCompactHeight ? 4 : 8 }}>
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
               text="ACADEMIC OVERVIEW"
@@ -516,7 +565,7 @@ export function NextClassWidget({
             />
             <TextWidget
               text="Student Portal Glance"
-              style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800', letterSpacing: -0.3, marginTop: 2 }}
+              style={{ color: '#FFFFFF', fontSize: isCompactHeight ? 16 : 20, fontWeight: '800', letterSpacing: -0.3, marginTop: 2 }}
             />
           </FlexWidget>
 
@@ -532,8 +581,8 @@ export function NextClassWidget({
               borderRadius: 16,
               borderWidth: 1,
               borderColor: '#38383A',
-              paddingHorizontal: 12,
-              paddingVertical: 11,
+              paddingHorizontal: tilePadH,
+              paddingVertical: tilePadV,
               flex: 1,
               marginRight: 5,
               justifyContent: 'space-between',
@@ -548,15 +597,15 @@ export function NextClassWidget({
               />
               <TextWidget
                 text={cgpa}
-                style={{ color: '#BF5AF2', fontSize: 32, fontWeight: '900', letterSpacing: -0.5, marginVertical: 4 }}
+                style={{ color: '#BF5AF2', fontSize: cgpaHeroSize, fontWeight: '900', letterSpacing: -0.5, marginVertical: 2 }}
               />
               <TextWidget
                 text={`Term GPA: ${termGpa}`}
-                style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', marginBottom: 2 }}
+                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 2 }}
               />
               <TextWidget
                 text={`${credits} Credits Completed`}
-                style={{ color: '#8E8E93', fontSize: 9.5, fontWeight: '500' }}
+                style={{ color: '#8E8E93', fontSize: cgpaCreditSize, fontWeight: '500' }}
               />
             </FlexWidget>
 
@@ -564,16 +613,16 @@ export function NextClassWidget({
               style={{
                 backgroundColor: '#3A3A3C',
                 borderRadius: 10,
-                paddingVertical: 6,
+                paddingVertical: tileBtnPadV,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 6,
+                marginTop: 4,
               }}
             >
               <TextWidget
                 text="View Grade Details ›"
-                style={{ color: '#BF5AF2', fontSize: 9.5, fontWeight: '800' }}
+                style={{ color: '#BF5AF2', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
           </FlexWidget>
@@ -585,8 +634,8 @@ export function NextClassWidget({
               borderRadius: 16,
               borderWidth: 1,
               borderColor: '#38383A',
-              paddingHorizontal: 12,
-              paddingVertical: 11,
+              paddingHorizontal: tilePadH,
+              paddingVertical: tilePadV,
               flex: 1,
               marginHorizontal: 5,
               justifyContent: 'space-between',
@@ -603,19 +652,19 @@ export function NextClassWidget({
                 text={`${attPct}%`}
                 style={{
                   color: isSafe ? '#30D158' : '#FF453A',
-                  fontSize: 32,
+                  fontSize: cgpaHeroSize,
                   fontWeight: '900',
                   letterSpacing: -0.5,
-                  marginVertical: 4,
+                  marginVertical: 2,
                 }}
               />
               <TextWidget
                 text={bunkResult.label}
-                style={{ color: bunkResult.color, fontSize: 11.5, fontWeight: '800', marginBottom: 2 }}
+                style={{ color: bunkResult.color, fontSize: cgpaTermSize, fontWeight: '800', marginBottom: 2 }}
               />
               <TextWidget
                 text={`${attended} / ${total} Classes Attended`}
-                style={{ color: '#8E8E93', fontSize: 9.5, fontWeight: '500' }}
+                style={{ color: '#8E8E93', fontSize: cgpaCreditSize, fontWeight: '500' }}
               />
             </FlexWidget>
 
@@ -625,16 +674,16 @@ export function NextClassWidget({
                 borderWidth: 1,
                 borderColor: isSafe ? '#30D158' : '#FF453A',
                 borderRadius: 10,
-                paddingVertical: 6,
+                paddingVertical: tileBtnPadV,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 6,
+                marginTop: 4,
               }}
             >
               <TextWidget
                 text={isSafe ? `✓ Safe Margin (+${targetDiff}%)` : `⚠️ Deficit (${targetDiff}%)`}
-                style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: 9.5, fontWeight: '800' }}
+                style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
           </FlexWidget>
@@ -646,8 +695,8 @@ export function NextClassWidget({
               borderRadius: 16,
               borderWidth: 1,
               borderColor: '#38383A',
-              paddingHorizontal: 12,
-              paddingVertical: 11,
+              paddingHorizontal: tilePadH,
+              paddingVertical: tilePadV,
               flex: 1,
               marginLeft: 5,
               justifyContent: 'space-between',
@@ -664,19 +713,19 @@ export function NextClassWidget({
                 text={roomShort}
                 style={{
                   color: '#0A84FF',
-                  fontSize: 32,
+                  fontSize: cgpaHeroSize,
                   fontWeight: '900',
                   letterSpacing: -0.5,
-                  marginVertical: 4,
+                  marginVertical: 2,
                 }}
               />
               <TextWidget
                 text={`${timeDisplay.split('–')[0].split('-')[0].trim()} • ${courseCode}`}
-                style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', marginBottom: 2 }}
+                style={{ color: '#FFFFFF', fontSize: cgpaTermSize, fontWeight: '700', marginBottom: 2 }}
               />
               <TextWidget
                 text={`${decodedRoom.block} • ${decodedRoom.floor}`}
-                style={{ color: '#64D2FF', fontSize: 9.5, fontWeight: '600' }}
+                style={{ color: '#64D2FF', fontSize: cgpaCreditSize, fontWeight: '600' }}
               />
             </FlexWidget>
 
@@ -684,16 +733,16 @@ export function NextClassWidget({
               style={{
                 backgroundColor: '#3A3A3C',
                 borderRadius: 10,
-                paddingVertical: 6,
+                paddingVertical: tileBtnPadV,
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 'match_parent',
-                marginTop: 6,
+                marginTop: 4,
               }}
             >
               <TextWidget
                 text="Open Timetable ›"
-                style={{ color: '#0A84FF', fontSize: 9.5, fontWeight: '800' }}
+                style={{ color: '#0A84FF', fontSize: tileBtnFontSize, fontWeight: '800' }}
               />
             </FlexWidget>
           </FlexWidget>
@@ -719,9 +768,9 @@ export function NextClassWidget({
           borderRadius: 24,
           borderWidth: 1.5,
           borderColor: '#2C2C2E',
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          justifyContent: 'space-between',
+          paddingHorizontal: rootPadH,
+          paddingVertical: rootPadV,
+          justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
         }}
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'alms://exams' }}
@@ -748,20 +797,20 @@ export function NextClassWidget({
           {renderVerticalStackIndicator(3, totalCards)}
         </FlexWidget>
 
-        <FlexWidget style={{ marginVertical: 4 }}>
+        <FlexWidget style={{ marginVertical: isCompactHeight ? 2 : 4 }}>
           <TextWidget
             text={exam.courseCode || exam.subjectCode || 'EXAM'}
-            style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5 }}
+            style={{ color: '#FFFFFF', fontSize: examCodeSize, fontWeight: '900', letterSpacing: -0.5 }}
           />
           <TextWidget
             text={formatAppleTitle(exam.courseTitle || exam.subject || 'University Examination')}
             maxLines={1}
             truncate="END"
-            style={{ color: '#8E8E93', fontSize: 13, fontWeight: '600', marginTop: 2 }}
+            style={{ color: '#8E8E93', fontSize: examTitleSize, fontWeight: '600', marginTop: 2 }}
           />
           <TextWidget
             text={`📅 ${exam.date} • ${exam.time} • Room ${exam.room || 'TBA'}${exam.seatNo ? ` (Seat ${exam.seatNo})` : ''}`}
-            style={{ color: '#64D2FF', fontSize: 11, fontWeight: '700', marginTop: 3 }}
+            style={{ color: '#64D2FF', fontSize: examDateSize, fontWeight: '700', marginTop: 2 }}
           />
         </FlexWidget>
 
@@ -770,7 +819,7 @@ export function NextClassWidget({
             backgroundColor: '#2C2C2E',
             borderRadius: 14,
             paddingHorizontal: 12,
-            paddingVertical: 8,
+            paddingVertical: examBarPadV,
             width: 'match_parent',
             flexDirection: 'row',
             justifyContent: 'space-between',
@@ -802,9 +851,9 @@ export function NextClassWidget({
         borderRadius: 24,
         borderWidth: 1.5,
         borderColor: '#2C2C2E',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        justifyContent: 'space-between',
+        paddingHorizontal: rootPadH,
+        paddingVertical: rootPadV,
+        justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
       }}
     >
       {/* ── TOP HEADER ROW ── */}
@@ -814,6 +863,7 @@ export function NextClassWidget({
           justifyContent: 'space-between',
           alignItems: 'center',
           width: 'match_parent',
+          marginBottom: isCompactHeight ? 2 : 0,
         }}
       >
         {/* Left: Status Pill + Course Info */}
@@ -871,7 +921,7 @@ export function NextClassWidget({
 
       {/* ── MIDDLE HERO: TIME RANGE & DECODED LOCATION ── */}
       <FlexWidget
-        style={{ flexDirection: 'column', width: 'match_parent', marginTop: 2, marginBottom: 4 }}
+        style={{ flexDirection: 'column', width: 'match_parent', marginTop: isCompactHeight ? 1 : 2, marginBottom: heroMarginB }}
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'alms://timetable' }}
       >
@@ -879,7 +929,7 @@ export function NextClassWidget({
           text={timeDisplay}
           style={{
             color: '#FFFFFF',
-            fontSize: 32,
+            fontSize: heroTimeSize,
             fontWeight: '900',
             letterSpacing: -0.5,
           }}
@@ -888,9 +938,9 @@ export function NextClassWidget({
           text={`${decodedRoom.block} • ${decodedRoom.floor}`}
           style={{
             color: '#64D2FF',
-            fontSize: 14.5,
+            fontSize: heroLocSize,
             fontWeight: '600',
-            marginTop: 2,
+            marginTop: 1,
           }}
         />
       </FlexWidget>
@@ -901,7 +951,7 @@ export function NextClassWidget({
           flexDirection: 'row',
           alignItems: 'center',
           width: 'match_parent',
-          marginBottom: 6,
+          marginBottom: pillsMarginB,
         }}
       >
         {/* Pill 1: Room */}
@@ -911,16 +961,16 @@ export function NextClassWidget({
             borderWidth: 1,
             borderColor: '#38383A',
             borderRadius: 10,
-            paddingHorizontal: 11,
-            paddingVertical: 5,
-            marginRight: 7,
+            paddingHorizontal: pillPadH,
+            paddingVertical: pillPadV,
+            marginRight: 6,
           }}
           clickAction="OPEN_URI"
           clickActionData={{ uri: 'alms://timetable' }}
         >
           <TextWidget
             text={`Room ${roomShort}`}
-            style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}
+            style={{ color: '#FFFFFF', fontSize: pillFontSize, fontWeight: '700' }}
           />
         </FlexWidget>
 
@@ -931,16 +981,16 @@ export function NextClassWidget({
             borderWidth: 1,
             borderColor: '#30D158',
             borderRadius: 10,
-            paddingHorizontal: 11,
-            paddingVertical: 5,
-            marginRight: 7,
+            paddingHorizontal: pillPadH,
+            paddingVertical: pillPadV,
+            marginRight: 6,
           }}
           clickAction="OPEN_URI"
           clickActionData={{ uri: 'alms://(tabs)/attendance' }}
         >
           <TextWidget
             text={bunkResult.label.startsWith('+') ? `✓ ${bunkResult.label}` : bunkResult.label}
-            style={{ color: '#30D158', fontSize: 11, fontWeight: '800' }}
+            style={{ color: '#30D158', fontSize: pillFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
 
@@ -951,13 +1001,13 @@ export function NextClassWidget({
             borderWidth: 1,
             borderColor: '#0A84FF',
             borderRadius: 10,
-            paddingHorizontal: 11,
-            paddingVertical: 5,
+            paddingHorizontal: pillPadH,
+            paddingVertical: pillPadV,
           }}
         >
           <TextWidget
             text={`⏳ ${timeRemaining} Left`}
-            style={{ color: '#0A84FF', fontSize: 11, fontWeight: '800' }}
+            style={{ color: '#0A84FF', fontSize: pillFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
       </FlexWidget>
@@ -969,8 +1019,8 @@ export function NextClassWidget({
           borderWidth: 1,
           borderColor: '#38383A',
           borderRadius: 16,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
+          paddingHorizontal: upNextPadH,
+          paddingVertical: upNextPadV,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -994,9 +1044,9 @@ export function NextClassWidget({
             truncate="END"
             style={{
               color: '#FFFFFF',
-              fontSize: 13,
+              fontSize: upNextSubjSize,
               fontWeight: '800',
-              marginTop: 2,
+              marginTop: 1,
             }}
           />
           <TextWidget
@@ -1005,9 +1055,9 @@ export function NextClassWidget({
             truncate="END"
             style={{
               color: '#8E8E93',
-              fontSize: 10,
+              fontSize: upNextDetailSize,
               fontWeight: '500',
-              marginTop: 3,
+              marginTop: 2,
             }}
           />
         </FlexWidget>
@@ -1017,8 +1067,8 @@ export function NextClassWidget({
           style={{
             backgroundColor: '#3A3A3C',
             borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 7,
+            paddingHorizontal: btnPadH,
+            paddingVertical: btnPadV,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -1027,7 +1077,7 @@ export function NextClassWidget({
         >
           <TextWidget
             text="Timetable ›"
-            style={{ color: '#0A84FF', fontSize: 11, fontWeight: '800' }}
+            style={{ color: '#0A84FF', fontSize: btnFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
       </FlexWidget>

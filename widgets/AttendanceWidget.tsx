@@ -152,8 +152,28 @@ export function AttendanceWidget({
   // ═════════════════════════════════════════════════════════════════════════
   // 2. FLAGSHIP 4x2 PRESENTATION — EXACT CLONE OF USER IMAGE 2
   // ═════════════════════════════════════════════════════════════════════════
+  const isCompactHeight = cfg.h < 175;
+  const rootPadV = isCompactHeight ? 7 : 14;
+  const rootPadH = cfg.w < 300 ? 12 : 16;
+
+  // Adaptive sizing
+  const headerSubSize = isCompactHeight ? 16 : 20;
+  const heroPctSize = isCompactHeight ? 28 : 40;
+  const targetLabelSize = isCompactHeight ? 9.5 : 11;
+  const bunkTitleSize = isCompactHeight ? 14 : 20;
+  const bunkSubSize = isCompactHeight ? 8.5 : 9.5;
+  const bunkPadV = isCompactHeight ? 5 : 9;
+  const bunkPadH = isCompactHeight ? 10 : 16;
+  const trackHeight = isCompactHeight ? 10 : 14;
+  const cardPadV = isCompactHeight ? 5 : 9;
+  const cardPadH = isCompactHeight ? 8 : 12;
+  const cardCodeSize = isCompactHeight ? 10.5 : 11.5;
+  const cardPctSize = isCompactHeight ? 14 : 18;
+  const cardMarginSize = isCompactHeight ? 9.5 : 10.5;
+  const sectionMarginV = isCompactHeight ? 2 : 4;
+
   // Dynamic progress track width in dp based on widget size
-  const trackWidth = Math.max(200, cfg.w - 32);
+  const trackWidth = Math.max(200, cfg.w - (rootPadH * 2));
   const fillWidth = Math.max(10, Math.min(trackWidth, Math.round((trackWidth * Math.min(100, pct)) / 100)));
 
   return (
@@ -165,9 +185,9 @@ export function AttendanceWidget({
         borderRadius: 24,
         borderWidth: 1.5,
         borderColor: '#2C2C2E',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        justifyContent: 'space-between',
+        paddingHorizontal: rootPadH,
+        paddingVertical: rootPadV,
+        justifyContent: isCompactHeight ? 'flex-start' : 'space-between',
       }}
       clickAction="OPEN_URI"
       clickActionData={{ uri: 'alms://(tabs)/attendance' }}
@@ -178,7 +198,7 @@ export function AttendanceWidget({
           text="ATTENDANCE & SAFETY"
           style={{
             color: '#8E8E93',
-            fontSize: 10,
+            fontSize: isCompactHeight ? 9 : 10,
             fontWeight: '800',
             letterSpacing: 0.8,
           }}
@@ -187,10 +207,10 @@ export function AttendanceWidget({
           text="University Overall Standing"
           style={{
             color: '#FFFFFF',
-            fontSize: 20,
+            fontSize: headerSubSize,
             fontWeight: '800',
             letterSpacing: -0.3,
-            marginTop: 2,
+            marginTop: 1,
           }}
         />
       </FlexWidget>
@@ -202,7 +222,7 @@ export function AttendanceWidget({
           alignItems: 'center',
           justifyContent: 'space-between',
           width: 'match_parent',
-          marginVertical: 4,
+          marginVertical: sectionMarginV,
         }}
       >
         {/* Left: Giant Percentage Hero */}
@@ -211,18 +231,18 @@ export function AttendanceWidget({
             text={`${pct}%`}
             style={{
               color: isSafe ? '#30D158' : '#FF453A',
-              fontSize: 40,
+              fontSize: heroPctSize,
               fontWeight: '900',
               letterSpacing: -1,
             }}
           />
           <TextWidget
-            text={isSafe ? `75% Target Threshold: +${targetDiff}% Margin` : `75% Target Threshold: -${Math.abs(Number(targetDiff))}% Deficit`}
+            text={isSafe ? `75% Target: +${targetDiff}% Margin` : `75% Target: -${Math.abs(Number(targetDiff))}% Deficit`}
             style={{
               color: '#8E8E93',
-              fontSize: 11,
+              fontSize: targetLabelSize,
               fontWeight: '600',
-              marginTop: 2,
+              marginTop: 1,
             }}
           />
         </FlexWidget>
@@ -233,9 +253,9 @@ export function AttendanceWidget({
             backgroundColor: isSafe ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.15)',
             borderWidth: 1.5,
             borderColor: isSafe ? '#30D158' : '#FF453A',
-            borderRadius: 18,
-            paddingHorizontal: 16,
-            paddingVertical: 9,
+            borderRadius: 16,
+            paddingHorizontal: bunkPadH,
+            paddingVertical: bunkPadV,
             alignItems: 'flex-start',
             justifyContent: 'center',
           }}
@@ -244,7 +264,7 @@ export function AttendanceWidget({
             text={isSafe ? `+${bunkResult.margin} CLASSES` : `NEED ${bunkResult.margin || 1} CLASSES`}
             style={{
               color: isSafe ? '#30D158' : '#FF453A',
-              fontSize: 20,
+              fontSize: bunkTitleSize,
               fontWeight: '900',
               letterSpacing: -0.3,
             }}
@@ -253,30 +273,30 @@ export function AttendanceWidget({
             text={isSafe ? 'Safe to miss without dropping below 75%' : 'Must attend consecutively to reach 75%'}
             style={{
               color: isSafe ? '#30D158' : '#FF453A',
-              fontSize: 9.5,
+              fontSize: bunkSubSize,
               fontWeight: '600',
-              marginTop: 2,
+              marginTop: 1,
             }}
           />
         </FlexWidget>
       </FlexWidget>
 
       {/* ── MIDDLE: PROGRESS BAR SECTION ── */}
-      <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', marginVertical: 3 }}>
+      <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', marginVertical: isCompactHeight ? 2 : 3 }}>
         <FlexWidget
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
             width: 'match_parent',
-            marginBottom: 4,
+            marginBottom: isCompactHeight ? 2 : 4,
           }}
         >
           <TextWidget
             text="ATTENDANCE PROGRESS"
             style={{
               color: '#8E8E93',
-              fontSize: 10,
+              fontSize: isCompactHeight ? 9 : 10,
               fontWeight: '800',
               letterSpacing: 0.5,
             }}
@@ -285,7 +305,7 @@ export function AttendanceWidget({
             text={`${attended} / ${total} Classes`}
             style={{
               color: '#FFFFFF',
-              fontSize: 10.5,
+              fontSize: isCompactHeight ? 9.5 : 10.5,
               fontWeight: '700',
             }}
           />
@@ -294,10 +314,10 @@ export function AttendanceWidget({
         {/* Progress Bar Track with 75% Target Marker */}
         <FlexWidget
           style={{
-            height: 14,
+            height: trackHeight,
             width: 'match_parent',
             backgroundColor: '#2C2C2E',
-            borderRadius: 7,
+            borderRadius: trackHeight / 2,
             flexDirection: 'row',
             alignItems: 'center',
             overflow: 'hidden',
@@ -307,28 +327,28 @@ export function AttendanceWidget({
             <>
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: 75,
                   backgroundColor: '#30D158',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   width: 2.5,
                   backgroundColor: '#FFFFFF',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: Math.max(0.1, pct - 75),
                   backgroundColor: '#30D158',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: Math.max(0.1, 100 - pct),
                   backgroundColor: '#2C2C2E',
                 }}
@@ -338,28 +358,28 @@ export function AttendanceWidget({
             <>
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: Math.max(0.1, pct),
                   backgroundColor: '#FF453A',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: Math.max(0.1, 75 - pct),
                   backgroundColor: '#2C2C2E',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   width: 2.5,
                   backgroundColor: '#FFFFFF',
                 }}
               />
               <FlexWidget
                 style={{
-                  height: 14,
+                  height: trackHeight,
                   flex: 25,
                   backgroundColor: '#2C2C2E',
                 }}
@@ -375,7 +395,7 @@ export function AttendanceWidget({
           flexDirection: 'row',
           width: 'match_parent',
           justifyContent: 'space-between',
-          marginTop: 4,
+          marginTop: isCompactHeight ? 3 : 4,
         }}
       >
         {subjects.map((sub, index) => (
@@ -386,8 +406,8 @@ export function AttendanceWidget({
               borderRadius: 14,
               borderWidth: 1,
               borderColor: '#38383A',
-              paddingHorizontal: 12,
-              paddingVertical: 9,
+              paddingHorizontal: cardPadH,
+              paddingVertical: cardPadV,
               flex: 1,
               marginRight: index < 2 ? 6 : 0,
               justifyContent: 'space-between',
@@ -395,21 +415,21 @@ export function AttendanceWidget({
           >
             <TextWidget
               text={sub.subjectCode}
-              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' }}
+              style={{ color: '#FFFFFF', fontSize: cardCodeSize, fontWeight: '800' }}
             />
             <FlexWidget
               style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
-                marginTop: 4,
+                marginTop: isCompactHeight ? 2 : 4,
               }}
             >
               <TextWidget
                 text={`${sub.percentage}%`}
                 style={{
                   color: sub.color,
-                  fontSize: 18,
+                  fontSize: cardPctSize,
                   fontWeight: '900',
                   letterSpacing: -0.3,
                 }}
@@ -418,7 +438,7 @@ export function AttendanceWidget({
                 text={sub.marginText}
                 style={{
                   color: sub.color,
-                  fontSize: 10.5,
+                  fontSize: cardMarginSize,
                   fontWeight: '800',
                 }}
               />
