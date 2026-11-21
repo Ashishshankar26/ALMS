@@ -297,21 +297,14 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
           }
         }
 
-        // ── Auto-submit once credentials and verification are ready ──
+        // ── Auto-submit once Turnstile response is verified ──
         function tryAutoSubmit() {
-          var href = (window.location.href || '').toLowerCase();
-          var isPlacement = href.indexOf('/placements/') !== -1;
-          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"], #txtRegno, #txtRegistrationNo, #txtUser, #txtLogin, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"]');
-          var pField = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
+          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var pField = document.querySelector('input[type="password"]');
           var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
 
-          // Placement portal does not require Turnstile; submit immediately when inputs are filled
-          var canSubmit = isPlacement
-            ? (uField && uField.value && pField && pField.value)
-            : (responseEl && responseEl.value && uField && uField.value && pField && pField.value);
-
-          if (canSubmit) {
-            var btn = document.querySelector('#btnLogin, #btnSubmit, #btnSignIn, input[type="submit"], button[type="submit"]');
+          if (responseEl && responseEl.value && uField && uField.value && pField && pField.value) {
+            var btn = document.querySelector('#btnLogin, #btnSubmit, input[type="submit"], button[type="submit"]');
             if (btn && !window.__almsAutoSubmitted) {
               window.__almsAutoSubmitted = true;
               btn.click();
@@ -321,21 +314,17 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
 
         function evaluateSession() {
           var href = (window.location.href || '').toLowerCase();
-          var isPlacement = href.indexOf('/placements/') !== -1;
-          var isLoginUrl = href.indexOf('loginnew.aspx') !== -1 || href.indexOf('login.aspx') !== -1 || href.indexOf('index.aspx') !== -1 || (isPlacement && href.indexOf('homeplacementstudent') === -1);
-          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"], #txtRegno, #txtRegistrationNo, #txtUser, #txtLogin, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"]');
-          var pField = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
+          var isLoginUrl = href.indexOf('loginnew.aspx') !== -1 || href.indexOf('login.aspx') !== -1 || href.indexOf('index.aspx') !== -1;
+          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var pField = document.querySelector('input[type="password"]');
           var bodyText = document.body ? (document.body.innerText || '') : '';
           var isSessionExpiredText = bodyText.indexOf('Session Expired') !== -1 || bodyText.indexOf('Object moved') !== -1;
 
           if (isLoginUrl || (uField && pField) || isSessionExpiredText) {
-            // Do NOT emit session expired on placement portal so user is not prompted with login banners
-            if (!isPlacement) {
-              postMsg({
-                type: 'ALMS_SESSION_EXPIRED',
-                url: window.location.href
-              });
-            }
+            postMsg({
+              type: 'ALMS_SESSION_EXPIRED',
+              url: window.location.href
+            });
 
             forceRevealInputs();
             autofillCredentials();

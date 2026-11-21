@@ -28,144 +28,11 @@ export default function UmsFormScreen() {
   const { updateProfile, refreshData } = useScraper();
   const { authData } = useAuth();
   const webViewRef = useRef<WebView>(null);
-  const [savedCreds, setSavedCreds] = useState<{ u?: string; p?: string } | null>(null);
-  const credsRef = useRef<{ u?: string; p?: string } | null>(null);
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
   const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
-  const isPlacement = (title || '').toLowerCase().includes('placement') || fullUrl.toLowerCase().includes('placement');
-
-  // Load credentials from AsyncStorage on mount
-  useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem('@credentials'),
-      AsyncStorage.getItem('@auth_data'),
-    ]).then(([credsStored, authStored]) => {
-      let u = '';
-      let p = '';
-      if (credsStored) {
-        try {
-          const parsed = JSON.parse(credsStored);
-          if (parsed.u) u = parsed.u;
-          if (parsed.p) p = parsed.p;
-          setSavedCreds(parsed);
-          credsRef.current = parsed;
-        } catch (e) {}
-      }
-      if ((!u || !p) && authStored) {
-        try {
-          const parsedAuth = JSON.parse(authStored);
-          if (parsedAuth.username && !u) u = parsedAuth.username;
-          if (parsedAuth.password && !p) p = parsedAuth.password;
-          if (!credsRef.current && (u || p)) {
-            const reconstructed = { u, p };
-            setSavedCreds(reconstructed);
-            credsRef.current = reconstructed;
-          }
-        } catch (e) {}
-      }
-
-      // If Placement portal is loading on default.aspx, trigger immediate auto-login as soon as creds resolve
-      if (isPlacement && u && p && webViewRef.current) {
-        webViewRef.current.injectJavaScript(`
-          (function() {
-            var href = (window.location.href || '').toLowerCase();
-            if (href.indexOf('/placements/') !== -1 && href.indexOf('homeplacementstudent') === -1) {
-              var uField = document.querySelector('#txtRegno, #txtRegistrationNo, #txtUser, #txtUserName, #txtLogin, #txtU, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"], input[type="text"]');
-              var pField = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
-              if (uField) {
-                try {
-                  var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                  nSU.call(uField, ${JSON.stringify(u)});
-                } catch(e) { uField.value = ${JSON.stringify(u)}; }
-                uField.dispatchEvent(new Event('input', { bubbles: true }));
-                uField.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-              if (pField) {
-                try {
-                  var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                  nSP.call(pField, ${JSON.stringify(p)});
-                } catch(e) { pField.value = ${JSON.stringify(p)}; }
-                pField.dispatchEvent(new Event('input', { bubbles: true }));
-                pField.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-              var btn = document.querySelector('#btnLogin, #btnSubmit, #btnSignIn, input[type="submit"], button[type="submit"]');
-              if (btn && !window.__almsPlacementSubmitted) {
-                window.__almsPlacementSubmitted = true;
-                btn.click();
-              }
-            }
-          })();
-          true;
-        `);
-      }
-    }).catch(() => {});
-  }, [isPlacement]);
-
-  const username = authData?.username || credsRef.current?.u || savedCreds?.u || '';
-  const password = authData?.password || credsRef.current?.p || savedCreds?.p || '';
-
-  const placementBeforeContentJS = isPlacement ? `
-    (function() {
-      try {
-        var href = (window.location.href || '').toLowerCase();
-        if (href.indexOf('/placements/') !== -1 && href.indexOf('homeplacementstudent') === -1) {
-          // Permanently hide any login page DOM on placement portal so user never sees it
-          var hideStyle = document.createElement('style');
-          hideStyle.id = '__alms_hide_placement_login';
-          hideStyle.innerHTML = 'body, html, form, .container, #form1, table, div { opacity: 0 !important; visibility: hidden !important; }';
-          (document.head || document.documentElement).appendChild(hideStyle);
-
-          var uVal = ${JSON.stringify(username)};
-          var pVal = ${JSON.stringify(password)};
-
-          function doPlacementLogin() {
-            if (!uVal || !pVal) return;
-            var u = document.querySelector('#txtRegno, #txtRegistrationNo, #txtUser, #txtUserName, #txtLogin, #txtU, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"], input[type="text"]');
-            var p = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
-            if (u && p) {
-              if (!u.value) {
-                try {
-                  var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                  nSU.call(u, uVal);
-                } catch(e) { u.value = uVal; }
-                u.dispatchEvent(new Event('input', { bubbles: true }));
-                u.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-              if (!p.value) {
-                try {
-                  var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                  nSP.call(p, pVal);
-                } catch(e) { p.value = pVal; }
-                p.dispatchEvent(new Event('input', { bubbles: true }));
-                p.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-              var btn = document.querySelector('#btnLogin, #btnSubmit, #btnSignIn, input[type="submit"], button[type="submit"]');
-              if (btn && !window.__almsPlacementSubmitted) {
-                window.__almsPlacementSubmitted = true;
-                btn.click();
-              }
-            }
-          }
-
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', doPlacementLogin);
-          } else {
-            doPlacementLogin();
-          }
-          var poll = setInterval(function() {
-            if (window.__almsPlacementSubmitted) {
-              clearInterval(poll);
-            } else {
-              doPlacementLogin();
-            }
-          }, 60);
-        }
-      } catch(e) {}
-    })();
-  ` : '';
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
@@ -394,12 +261,10 @@ export default function UmsFormScreen() {
         <View style={{ width: 40 }} />
       </View>
  
-      {!isPlacement && (
-        <WebViewSessionBanner
-          visible={isDisconnected}
-          returnTo={returnTo}
-        />
-      )}
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo={returnTo}
+      />
 
       <View style={{ flex: 1 }}>
           <>
@@ -407,58 +272,30 @@ export default function UmsFormScreen() {
               ref={webViewRef}
               source={{ uri: fullUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
               userAgent={SPOOFED_USER_AGENT}
-              injectedJavaScriptBeforeContentLoaded={placementBeforeContentJS ? `${TURNSTILE_BEFORE_CONTENT_JS}\n${placementBeforeContentJS}` : TURNSTILE_BEFORE_CONTENT_JS}
+              injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
               style={{ flex: 1, backgroundColor: colors.background }}
               onLoadStart={() => setLoading(true)}
               onNavigationStateChange={(navState) => {
                 const currentNavUrl = navState.url || '';
-                const lowerNavUrl = currentNavUrl.toLowerCase();
-                if (isPlacement) {
-                  // Never show disconnected session banner on Placement Portal
+                if (isLoginOrSessionUrl(currentNavUrl)) {
+                  setIsDisconnected(true);
+                } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
+                  // In-place login detected!
+                  console.log('[ums_form] In-place login detected!');
                   setIsDisconnected(false);
-                  if (lowerNavUrl.includes('homeplacementstudent') || (lowerNavUrl.includes('/placements/') && !lowerNavUrl.includes('default.aspx'))) {
-                    setLoading(false);
-                  } else if (lowerNavUrl.includes('default.aspx')) {
-                    // Keep loading spinner active while auto-submitting credentials
-                    setLoading(true);
-                    const u = username || credsRef.current?.u || '';
-                    const p = password || credsRef.current?.p || '';
-                    if (u && p) {
-                      webViewRef.current?.injectJavaScript(getSessionWatcherJS(u, p));
-                    }
-                  }
-                } else {
-                  if (isLoginOrSessionUrl(currentNavUrl)) {
-                    setIsDisconnected(true);
-                  } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
-                    // In-place login detected!
-                    console.log('[ums_form] In-place login detected!');
-                    setIsDisconnected(false);
-                    notifySessionRestored({ sourceUrl: fullUrl });
-                    try { refreshData?.(); } catch (e) {}
+                  notifySessionRestored({ sourceUrl: fullUrl });
+                  try { refreshData?.(); } catch (e) {}
 
-                    // If user ended up on default dashboard, redirect back to assigned page
-                    const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
-                    if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
-                      webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
-                    }
+                  // If user ended up on default dashboard, redirect back to assigned page
+                  const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
+                  if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
+                    webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
                   }
                 }
               }}
               onLoadEnd={(event) => {
-                const navUrl = (event.nativeEvent.url || '').toLowerCase();
-                if (isPlacement) {
-                  if (navUrl.includes('homeplacementstudent') || (navUrl.includes('/placements/') && !navUrl.includes('default.aspx'))) {
-                    setLoading(false);
-                  } else {
-                    setLoading(true);
-                  }
-                } else {
-                  setLoading(false);
-                }
-                const u = username || credsRef.current?.u || '';
-                const p = password || credsRef.current?.p || '';
-                webViewRef.current?.injectJavaScript(getSessionWatcherJS(u, p));
+                setLoading(false);
+                webViewRef.current?.injectJavaScript(getSessionWatcherJS());
                 if (title === 'Profile Update' || (event.nativeEvent.url && event.nativeEvent.url.includes('user-profile'))) {
                   webViewRef.current?.injectJavaScript(profileScraperScript);
                 }
@@ -467,9 +304,7 @@ export default function UmsFormScreen() {
                 try {
                   const data = JSON.parse(event.nativeEvent.data);
                   if (data.type === 'ALMS_SESSION_EXPIRED' || data.type === 'SESSION_EXPIRED') {
-                    if (!isPlacement) {
-                      setIsDisconnected(true);
-                    }
+                    setIsDisconnected(true);
                   } else if (data.type === 'PROFILE_UPDATE_SCRAPE') {
                     console.log('UMS_FORM SCRAPE SUCCESS:', data.payload);
                     updateProfile(data.payload);
@@ -485,11 +320,6 @@ export default function UmsFormScreen() {
             {loading && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                {isPlacement && (
-                  <Text style={{ color: colors.textSecondary, marginTop: 14, fontSize: 13, fontWeight: '600' }}>
-                    Connecting to Placement Portal...
-                  </Text>
-                )}
               </View>
             )}
           </>
