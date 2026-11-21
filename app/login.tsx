@@ -145,6 +145,15 @@ export default function LoginScreen() {
         });
       }
 
+      // Also continuously watch and persist credentials as soon as filled (before submit)
+      var credsWatchTimer = setInterval(function() {
+        var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+        var p = document.querySelector('input[type="password"]');
+        if (u && u.value && p && p.value) {
+          postMsg({ type: 'SAVE_CREDENTIALS', u: u.value, p: p.value });
+        }
+      }, 1000);
+
       // Poll for username field, then notify app for auto-fill
       var poll = setInterval(function() {
         var userField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
@@ -196,6 +205,8 @@ export default function LoginScreen() {
           clearInterval(checkTurnstile);
           clearInterval(clickTurnstile);
           clearInterval(revealTimer);
+          if (typeof credsWatchTimer !== 'undefined') clearInterval(credsWatchTimer);
+          postMsg({ type: 'SAVE_CREDENTIALS', u: u.value, p: p.value });
           var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
           if (btn && !window.__almsAutoSubmitted) {
             window.__almsAutoSubmitted = true;

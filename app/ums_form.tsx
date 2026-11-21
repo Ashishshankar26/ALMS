@@ -39,16 +39,70 @@ export default function UmsFormScreen() {
 
   // Load credentials from AsyncStorage on mount
   useEffect(() => {
-    AsyncStorage.getItem('@credentials').then(stored => {
-      if (stored) {
+    Promise.all([
+      AsyncStorage.getItem('@credentials'),
+      AsyncStorage.getItem('@auth_data'),
+    ]).then(([credsStored, authStored]) => {
+      let u = '';
+      let p = '';
+      if (credsStored) {
         try {
-          const parsed = JSON.parse(stored);
+          const parsed = JSON.parse(credsStored);
+          if (parsed.u) u = parsed.u;
+          if (parsed.p) p = parsed.p;
           setSavedCreds(parsed);
           credsRef.current = parsed;
         } catch (e) {}
       }
+      if ((!u || !p) && authStored) {
+        try {
+          const parsedAuth = JSON.parse(authStored);
+          if (parsedAuth.username && !u) u = parsedAuth.username;
+          if (parsedAuth.password && !p) p = parsedAuth.password;
+          if (!credsRef.current && (u || p)) {
+            const reconstructed = { u, p };
+            setSavedCreds(reconstructed);
+            credsRef.current = reconstructed;
+          }
+        } catch (e) {}
+      }
+
+      // If Placement portal is loading on default.aspx, trigger immediate auto-login as soon as creds resolve
+      if (isPlacement && u && p && webViewRef.current) {
+        webViewRef.current.injectJavaScript(`
+          (function() {
+            var href = (window.location.href || '').toLowerCase();
+            if (href.indexOf('/placements/') !== -1 && href.indexOf('homeplacementstudent') === -1) {
+              var uField = document.querySelector('#txtRegno, #txtRegistrationNo, #txtUser, #txtUserName, #txtLogin, #txtU, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"], input[type="text"]');
+              var pField = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
+              if (uField) {
+                try {
+                  var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSU.call(uField, ${JSON.stringify(u)});
+                } catch(e) { uField.value = ${JSON.stringify(u)}; }
+                uField.dispatchEvent(new Event('input', { bubbles: true }));
+                uField.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              if (pField) {
+                try {
+                  var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSP.call(pField, ${JSON.stringify(p)});
+                } catch(e) { pField.value = ${JSON.stringify(p)}; }
+                pField.dispatchEvent(new Event('input', { bubbles: true }));
+                pField.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              var btn = document.querySelector('#btnLogin, #btnSubmit, #btnSignIn, input[type="submit"], button[type="submit"]');
+              if (btn && !window.__almsPlacementSubmitted) {
+                window.__almsPlacementSubmitted = true;
+                btn.click();
+              }
+            }
+          })();
+          true;
+        `);
+      }
     }).catch(() => {});
-  }, []);
+  }, [isPlacement]);
 
   const username = authData?.username || credsRef.current?.u || savedCreds?.u || '';
   const password = authData?.password || credsRef.current?.p || savedCreds?.p || '';
@@ -58,10 +112,10 @@ export default function UmsFormScreen() {
       try {
         var href = (window.location.href || '').toLowerCase();
         if (href.indexOf('/placements/') !== -1 && href.indexOf('homeplacementstudent') === -1) {
-          // Immediately hide login page so student never sees it
+          // Permanently hide any login page DOM on placement portal so user never sees it
           var hideStyle = document.createElement('style');
           hideStyle.id = '__alms_hide_placement_login';
-          hideStyle.innerHTML = 'body, html, form, .container, #form1 { opacity: 0 !important; visibility: hidden !important; }';
+          hideStyle.innerHTML = 'body, html, form, .container, #form1, table, div { opacity: 0 !important; visibility: hidden !important; }';
           (document.head || document.documentElement).appendChild(hideStyle);
 
           var uVal = ${JSON.stringify(username)};
