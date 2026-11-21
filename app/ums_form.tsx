@@ -31,21 +31,27 @@ export default function UmsFormScreen() {
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
-  // Normalize direct Placement Portal URLs to the official UMS entry page
-  const normalizedUrl = (url && url.includes('HomePlacementStudent.aspx'))
-    ? 'frmPlacementHome.aspx'
-    : url;
-  const fullUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `${baseUrl}${normalizedUrl}`;
-  const returnTo = `/ums_form?url=${encodeURIComponent(normalizedUrl)}&title=${encodeURIComponent(title)}`;
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+  
+  const isPlacementPortal = (url || '').toLowerCase().includes('homeplacementstudent') || (url || '').toLowerCase().includes('/placements/');
+  
+  // UMS cross-application bridge: HomePlacementStudent.aspx requires the session handover
+  // from frmPlacementHome.aspx. Starting navigation at frmPlacementHome.aspx seeds the
+  // placement session in IIS and immediately redirects to https://ums.lpu.in/Placements/HomePlacementStudent.aspx
+  const initialUri = isPlacementPortal
+    ? 'https://ums.lpu.in/lpuums/frmPlacementHome.aspx'
+    : fullUrl;
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
       console.log('[ums_form] Session restored, reloading assigned page:', fullUrl);
       setIsDisconnected(false);
-      webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+      const reloadUri = isPlacementPortal ? 'https://ums.lpu.in/lpuums/frmPlacementHome.aspx' : fullUrl;
+      webViewRef.current?.injectJavaScript(`window.location.href = '${reloadUri}'; true;`);
     });
     return () => sub.remove();
-  }, [fullUrl]);
+  }, [fullUrl, isPlacementPortal]);
 
   const profileScraperScript = `
     (function() {
@@ -275,7 +281,7 @@ export default function UmsFormScreen() {
             <WebView
               ref={webViewRef}
               source={{
-                uri: fullUrl,
+                uri: initialUri,
                 headers: {
                   ...TURNSTILE_WEBVIEW_HEADERS,
                   Referer: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
@@ -299,7 +305,7 @@ export default function UmsFormScreen() {
                   // If user ended up on default dashboard, redirect back to assigned page
                   const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
                   if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
-                    webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+                    webViewRef.current?.injectJavaScript(`window.location.href = '${initialUri}'; true;`);
                   }
                 }
               }}

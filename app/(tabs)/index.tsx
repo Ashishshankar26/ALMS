@@ -2563,7 +2563,7 @@ export default function DashboardScreen() {
                 style={styles.sidebarMenuItem} 
                 onPress={() => { 
                   setShowProfileMenu(false); 
-                  openUmsForm('frmPlacementHome.aspx', 'Placement Portal'); 
+                  openUmsForm('https://ums.lpu.in/Placements/HomePlacementStudent.aspx', 'Placement Portal'); 
                 }}
               >
                 <View style={styles.sidebarMenuItemLeft}>
