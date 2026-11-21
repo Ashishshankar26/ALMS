@@ -31,8 +31,12 @@ export default function UmsFormScreen() {
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
-  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-  const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+  // Normalize direct Placement Portal URLs to the official UMS entry page
+  const normalizedUrl = (url && url.includes('HomePlacementStudent.aspx'))
+    ? 'frmPlacementHome.aspx'
+    : url;
+  const fullUrl = normalizedUrl.startsWith('http') ? normalizedUrl : `${baseUrl}${normalizedUrl}`;
+  const returnTo = `/ums_form?url=${encodeURIComponent(normalizedUrl)}&title=${encodeURIComponent(title)}`;
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
@@ -270,7 +274,13 @@ export default function UmsFormScreen() {
           <>
             <WebView
               ref={webViewRef}
-              source={{ uri: fullUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
+              source={{
+                uri: fullUrl,
+                headers: {
+                  ...TURNSTILE_WEBVIEW_HEADERS,
+                  Referer: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
+                },
+              }}
               userAgent={SPOOFED_USER_AGENT}
               injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
               style={{ flex: 1, backgroundColor: colors.background }}

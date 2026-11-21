@@ -72,6 +72,8 @@ export function isAuthenticatedUrl(url: string = ''): boolean {
   return (
     lower.includes('studentdashboard.aspx') ||
     lower.includes('dashboard') ||
+    lower.includes('frmplacementhome') ||
+    lower.includes('frmplacement') ||
     lower.includes('homeplacementstudent') ||
     (lower.includes('/placements/') && !lower.includes('default.aspx')) ||
     lower.includes('frmstudenthostelleaveapplication') ||
