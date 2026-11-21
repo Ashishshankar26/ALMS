@@ -8,10 +8,17 @@ import { useScraper, type ResultSummaryData } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 import { RESULT_SUMMARY_DIRECT_URL, RESULT_SUMMARY_LAUNCH_URL } from '../constants/ums';
 import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
-const MOBILE_USER_AGENT =
-  'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36';
 
 export default function ResultSummaryScreen() {
   const { authData } = useAuth();
@@ -220,17 +227,6 @@ export default function ResultSummaryScreen() {
     `;
   }, [authData?.password, authData?.username]);
 
-  const beforeContentScript = `
-    (function() {
-      Object.defineProperty(navigator, 'webdriver', { get: function() { return false; } });
-      var isLoginPage = window.location.href.indexOf('LoginNew.aspx') !== -1 || window.location.href.indexOf('Login.aspx') !== -1;
-      if (isLoginPage && window.ReactNativeWebView) {
-        window.__RN_WV_REF__ = window.ReactNativeWebView;
-        delete window.ReactNativeWebView;
-      }
-    })();
-    true;
-  `;
 
   const reloadThroughBridge = () => {
     bridgeRetryRef.current = true;
@@ -292,18 +288,12 @@ export default function ResultSummaryScreen() {
           <WebView
             key={webViewKey}
             ref={webViewRef}
-            source={{ uri: sourceUrl }}
+            source={{ uri: sourceUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
             style={[styles.webView, { backgroundColor: isDark ? '#0D0E10' : '#FFFFFF' }]}
-            userAgent={MOBILE_USER_AGENT}
-            originWhitelist={['*']}
-            javaScriptEnabled
-            domStorageEnabled
-            sharedCookiesEnabled
-            thirdPartyCookiesEnabled
-            mixedContentMode="always"
-            setSupportMultipleWindows={false}
-            injectedJavaScriptBeforeContentLoaded={beforeContentScript}
+            userAgent={SPOOFED_USER_AGENT}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             injectedJavaScript={injectedScript}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
             onLoadStart={({ nativeEvent }) => {
               currentUrlRef.current = nativeEvent.url;
               setErrorMessage(null);

@@ -6,7 +6,13 @@ import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from './ThemeContext';
 import { syncAndroidWidget } from '../widgets/widget-sync';
-import { ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 export interface SubjectAttendance {
   subjectCode: string;
@@ -2201,20 +2207,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
             <View style={[styles.reauthWebViewWrapper, { borderColor: colors.border }]}>
               <WebView
                 ref={webViewRef}
-                source={{ uri: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx' }}
+                source={{
+                  uri: 'https://ums.lpu.in/lpuums/StudentDashboard.aspx',
+                  headers: TURNSTILE_WEBVIEW_HEADERS,
+                }}
                 onLoadEnd={handleLoadEnd}
                 onMessage={onMessage}
-                domStorageEnabled={true}
-                javaScriptEnabled={true}
-                sharedCookiesEnabled={true}
-                thirdPartyCookiesEnabled={true}
-                mixedContentMode="always"
-                originWhitelist={['*']}
-                setSupportMultipleWindows={false}
-                userAgent={Platform.OS === 'ios' ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"}
-                injectedJavaScriptBeforeContentLoaded={reauthBeforeContent}
+                userAgent={SPOOFED_USER_AGENT}
+                injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
                 injectedJavaScript={reauthInjectedJs}
                 style={{ flex: 1 }}
+                {...COMMON_TURNSTILE_WEBVIEW_PROPS}
               />
             </View>
             <TouchableOpacity

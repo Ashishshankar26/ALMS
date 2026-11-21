@@ -10,7 +10,17 @@ import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  getSessionWatcherJS,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
 
@@ -34,22 +44,6 @@ export default function ExamsScreen() {
     return () => sub.remove();
   }, [currentExamsUrl]);
 
-  const reauthBeforeContent = `
-    (function() {
-      var isLoginPage = window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx') || window.location.href.includes('index.aspx');
-      if (isLoginPage) {
-        if (window.ReactNativeWebView) {
-          window.__RN_WV_REF__ = window.ReactNativeWebView;
-          delete window.ReactNativeWebView;
-        }
-      }
-      Object.defineProperty(navigator, 'webdriver', { get: function() { return false; } });
-      if (!navigator.plugins || navigator.plugins.length === 0) {
-        Object.defineProperty(navigator, 'plugins', { get: function() { return [1, 2, 3]; } });
-      }
-    })();
-    true;
-  `;
 
   const handleDownload = async (downloadUrl: string) => {
     try {
@@ -235,19 +229,20 @@ export default function ExamsScreen() {
           )}
           <WebView
             ref={webViewRef}
-            source={{ uri: currentExamsUrl }}
-            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            source={{ uri: currentExamsUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
+            userAgent={SPOOFED_USER_AGENT}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             style={[styles.webview]}
             onLoadEnd={() => setLoading(false)}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
-            injectedJavaScriptBeforeContentLoaded={reauthBeforeContent}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
             injectedJavaScript={`
               (function() {
-                // Restore bridge if hidden
-                if (window.__RN_WV_REF__ && !window.ReactNativeWebView) {
-                  window.ReactNativeWebView = window.__RN_WV_REF__;
-                }
+                var postMsg = function(data) {
+                  var bridge = window.ReactNativeWebView || window.__RN_WV_REF__;
+                  if (bridge && bridge.postMessage) {
+                    try { bridge.postMessage(JSON.stringify(data)); } catch(e) {}
+                  }
+                };
 
                 // Auto-fill & auto-submit on login pages
                 var username = '${authData?.username || ''}';
@@ -256,13 +251,17 @@ export default function ExamsScreen() {
                   var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
                   var p = document.querySelector('input[type="password"]');
                   if (u && username) {
-                    var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nSU.call(u, username);
+                    try {
+                      var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                      nSU.call(u, username);
+                    } catch(e) { u.value = username; }
                     u.dispatchEvent(new Event('input', { bubbles: true }));
                   }
                   if (p && password) {
-                    var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nSP.call(p, password);
+                    try {
+                      var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                      nSP.call(p, password);
+                    } catch(e) { p.value = password; }
                     p.dispatchEvent(new Event('input', { bubbles: true }));
                   }
                   
@@ -306,7 +305,7 @@ export default function ExamsScreen() {
                 observer.observe(document.body, { childList: true, subtree: true });
                 
                 if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
+                  postMsg({ type: 'SESSION_EXPIRED' });
                 }
               })(); true;
             `}

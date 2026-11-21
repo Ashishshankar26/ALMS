@@ -8,12 +8,18 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
 import { useScraper } from '../context/ScraperContext';
 import { router, useLocalSearchParams } from 'expo-router';
-import { notifySessionRestored } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 export default function LoginScreen() {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
   const { isScraping, refreshData } = useScraper();
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const { returnTo, reauth } = useLocalSearchParams<{ returnTo?: string; reauth?: string }>();
   const { colors } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(false);
@@ -40,87 +46,94 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── BEFORE page loads ─────────────────────────────────────────────────
-  // 1. Kill blur/focusout/change on UMS INPUT fields only — this prevents
-  //    UMS's own anti-bot AJAX from firing when switching between fields.
-  //    Turnstile runs inside its OWN iframe (challenges.cloudflare.com),
-  //    so these main-document event interceptors do NOT affect it.
-  // 2. Hide WebView fingerprint markers so Cloudflare Turnstile doesn't
-  //    detect that we're in a WebView and auto-fail.
-  const injectedJavaScriptBeforeContentLoaded = `
-    (function() {
-      // Only hide the bridge on login/index pages where Turnstile challenge runs
-      var isLoginPage = window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx') || window.location.href.includes('index.aspx');
-      
-      if (isLoginPage) {
-        if (window.ReactNativeWebView) {
-          window.__RN_WV_REF__ = window.ReactNativeWebView;
-          delete window.ReactNativeWebView;
-        }
-      }
-      
-      // Override webdriver
-      Object.defineProperty(navigator, 'webdriver', {
-        get: function() { return false; }
-      });
-      
-      // Override plugins if empty
-      if (!navigator.plugins || navigator.plugins.length === 0) {
-        Object.defineProperty(navigator, 'plugins', {
-          get: function() { return [1, 2, 3]; }
-        });
-      }
-
-      // --- Anti-UMS-bot: kill blur/focusout/change on login inputs ---
-      if (isLoginPage) {
-        function killEvent(e) {
-          if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
-            e.stopImmediatePropagation();
-            e.stopPropagation();
-          }
-        }
-        document.addEventListener('blur', killEvent, true);
-        document.addEventListener('focusout', killEvent, true);
-        document.addEventListener('change', killEvent, true);
-      }
-    })();
-    true;
-  `;
-
   // ─── AFTER page loads ──────────────────────────────────────────────────
-  // Captures credentials on login click. Uses flexible selectors since
-  // UMS now generates DYNAMIC IDs for password field and login button.
+  // Captures credentials on login click, auto-fills saved credentials,
+  // forces input fields to reveal if UMS hid them under "Loading Portal...",
+  // auto-clicks Turnstile and auto-submits once solved.
   const injectedJavaScript = `
     (function() {
-      // Restore the bridge if we hid it
-      if (window.__RN_WV_REF__ && !window.ReactNativeWebView) {
-        window.ReactNativeWebView = window.__RN_WV_REF__;
-      }
+      var postMsg = function(data) {
+        var bridge = window.ReactNativeWebView || window.__RN_WV_REF__;
+        if (bridge && bridge.postMessage) {
+          try {
+            bridge.postMessage(JSON.stringify(data));
+          } catch(e) {}
+        }
+      };
 
       var username = '${savedCreds?.u || ''}';
       var password = '${savedCreds?.p || ''}';
 
-      if (window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx')) {
+      // ── Force reveal inputs if UMS hides them behind "Loading Portal..." ──
+      function forceRevealInputs() {
         var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
         var p = document.querySelector('input[type="password"]');
-        if (u && username && !u.value) {
-          u.value = username;
-          u.dispatchEvent(new Event('change', { bubbles: true }));
+        if (u) {
+          u.style.display = 'block';
+          u.style.visibility = 'visible';
+          u.style.opacity = '1';
+          if (u.parentElement) {
+            u.parentElement.style.display = 'block';
+            u.parentElement.style.visibility = 'visible';
+          }
         }
-        if (p && password && !p.value) {
-          p.value = password;
-          p.dispatchEvent(new Event('change', { bubbles: true }));
+        if (p) {
+          p.style.display = 'block';
+          p.style.visibility = 'visible';
+          p.style.opacity = '1';
+          if (p.parentElement) {
+            p.parentElement.style.display = 'block';
+            p.parentElement.style.visibility = 'visible';
+          }
+        }
+        var overlays = document.querySelectorAll('.loading-portal, #loadingPortal, #divLoading, .overlay');
+        for (var i = 0; i < overlays.length; i++) {
+          overlays[i].style.display = 'none';
         }
       }
 
-      // Find login button — could be #btnLogin or dynamically-named
+      function fillInputs() {
+        if (window.location.href.includes('LoginNew.aspx') || window.location.href.includes('Login.aspx')) {
+          var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var p = document.querySelector('input[type="password"]');
+          if (u && username && !u.value) {
+            try {
+              var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+              nSU.call(u, username);
+            } catch(e) {
+              u.value = username;
+            }
+            u.dispatchEvent(new Event('input', { bubbles: true }));
+            u.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          if (p && password && !p.value) {
+            try {
+              var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+              nSP.call(p, password);
+            } catch(e) {
+              p.value = password;
+            }
+            p.dispatchEvent(new Event('input', { bubbles: true }));
+            p.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }
+
+      forceRevealInputs();
+      fillInputs();
+      var revealTimer = setInterval(function() {
+        forceRevealInputs();
+        fillInputs();
+      }, 500);
+
+      // Find login button and attach credential-saving listener
       var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
       if (btn) {
         btn.addEventListener('click', function() {
           var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
           var p = document.querySelector('input[type="password"]');
           if (u && u.value && p && p.value) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SAVE_CREDENTIALS', u: u.value, p: p.value }));
+            postMsg({ type: 'SAVE_CREDENTIALS', u: u.value, p: p.value });
           }
         });
       }
@@ -130,7 +143,7 @@ export default function LoginScreen() {
         var userField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
         if (userField) {
           clearInterval(poll);
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'READY_TO_FILL' }));
+          postMsg({ type: 'READY_TO_FILL' });
         }
       }, 500);
 
@@ -147,7 +160,6 @@ export default function LoginScreen() {
         for (var i = 0; i < iframes.length; i++) {
           var src = iframes[i].src || '';
           if (src.includes('challenges.cloudflare.com') || src.includes('turnstile')) {
-            // Click the iframe's parent container (the clickable checkbox area)
             var container = iframes[i].parentElement;
             if (container) {
               container.click();
@@ -166,7 +178,7 @@ export default function LoginScreen() {
             clearInterval(clickTurnstile);
           }
         }
-      }, 1000);
+      }, 800);
 
       // Poll for Turnstile response token and auto-submit if credentials are ready
       var checkTurnstile = setInterval(function() {
@@ -176,8 +188,10 @@ export default function LoginScreen() {
         if (responseEl && responseEl.value && u && u.value && p && p.value) {
           clearInterval(checkTurnstile);
           clearInterval(clickTurnstile);
+          clearInterval(revealTimer);
           var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
-          if (btn) {
+          if (btn && !window.__almsAutoSubmitted) {
+            window.__almsAutoSubmitted = true;
             btn.click();
           }
         }
@@ -198,15 +212,28 @@ export default function LoginScreen() {
         const parsed = JSON.parse(stored);
         setSavedCreds(parsed);
         credsRef.current = parsed;
-        // WebView may already be loaded — push creds into it now
         setTimeout(() => {
           if (webViewRef.current && parsed.u && parsed.p) {
             const fillScript = `
               (function() {
                 var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
                 var p = document.querySelector('input[type="password"]');
-                if (u && !u.value) { u.value = '` + parsed.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
-                if (p && !p.value) { p.value = '` + parsed.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
+                if (u && !u.value) {
+                  try {
+                    var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nSU.call(u, '` + parsed.u + `');
+                  } catch(e) { u.value = '` + parsed.u + `'; }
+                  u.dispatchEvent(new Event('input', { bubbles: true }));
+                  u.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (p && !p.value) {
+                  try {
+                    var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nSP.call(p, '` + parsed.p + `');
+                  } catch(e) { p.value = '` + parsed.p + `'; }
+                  p.dispatchEvent(new Event('input', { bubbles: true }));
+                  p.dispatchEvent(new Event('change', { bubbles: true }));
+                }
               })();
               true;
             `;
@@ -219,16 +246,18 @@ export default function LoginScreen() {
   }, []);
 
   React.useEffect(() => {
-    if (isAuthenticated && !authLoading) {
+    // Only auto-redirect on mount for standard cold-start launches, NOT when returning to a specific page or re-authenticating
+    if (isAuthenticated && !authLoading && !returnTo && !reauth) {
       navigateAfterLogin();
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, returnTo, reauth]);
 
   const handleNavigationStateChange = (navState: any) => {
-    if (navState.url.toLowerCase().includes('dashboard') || navState.url.toLowerCase().includes('home')) {
-        login({ name: 'Student', username: savedCreds?.u, password: savedCreds?.p }).then(() => {
-            navigateAfterLogin();
-        });
+    const navUrl = (navState.url || '').toLowerCase();
+    if (navUrl.includes('dashboard') || navUrl.includes('home') || navUrl.includes('default.aspx')) {
+      login({ name: 'Student', username: credsRef.current?.u || savedCreds?.u, password: credsRef.current?.p || savedCreds?.p }).then(() => {
+        navigateAfterLogin();
+      });
     }
   };
 
@@ -246,8 +275,22 @@ export default function LoginScreen() {
             (function() {
               var u = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
               var p = document.querySelector('input[type="password"]');
-              if (u) { u.value = '` + creds.u + `'; u.dispatchEvent(new Event('change', { bubbles: true })); }
-              if (p) { p.value = '` + creds.p + `'; p.dispatchEvent(new Event('change', { bubbles: true })); }
+              if (u) {
+                try {
+                  var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSU.call(u, '` + creds.u + `');
+                } catch(e) { u.value = '` + creds.u + `'; }
+                u.dispatchEvent(new Event('input', { bubbles: true }));
+                u.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              if (p) {
+                try {
+                  var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSP.call(p, '` + creds.p + `');
+                } catch(e) { p.value = '` + creds.p + `'; }
+                p.dispatchEvent(new Event('input', { bubbles: true }));
+                p.dispatchEvent(new Event('change', { bubbles: true }));
+              }
             })();
             true;
           `;
@@ -257,10 +300,6 @@ export default function LoginScreen() {
     } catch (e) {}
   };
 
-  // Dynamic UserAgent matching platform OS to prevent Turnstile fingerprinting mismatches
-  const spoofedUserAgent = Platform.OS === 'ios' 
-    ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
-    : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
 
   const isDashboardTextFalseError = (message: string) => {
     return /quick links|ums home|lpu touch|lpu live|my class|yourdost|function enabledisable|document\.getelementbyid\('ctl00|go to search menu to add quick link/i.test(message || '');
@@ -304,31 +343,17 @@ export default function LoginScreen() {
           ref={webViewRef}
           source={{
             uri: 'https://ums.lpu.in/lpuums/LoginNew.aspx',
-            headers: {
-              'X-Requested-With': ''
-            }
+            headers: TURNSTILE_WEBVIEW_HEADERS,
           }}
           style={styles.webview}
-          userAgent={spoofedUserAgent}
-          injectedJavaScriptBeforeContentLoaded={injectedJavaScriptBeforeContentLoaded}
+          userAgent={SPOOFED_USER_AGENT}
+          injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
           injectedJavaScript={injectedJavaScript}
           onNavigationStateChange={handleNavigationStateChange}
           onMessage={onMessage}
           onError={() => setError(true)}
           onHttpError={() => setError(true)}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          sharedCookiesEnabled={true}
-          thirdPartyCookiesEnabled={true}
-          mixedContentMode="always"
-          cacheEnabled={true}
-          androidLayerType="hardware"
-          // --- Turnstile compatibility props ---
-          originWhitelist={['*']}
-          setSupportMultipleWindows={false}
-          allowsInlineMediaPlayback={true}
-          allowFileAccess={true}
-          allowUniversalAccessFromFileURLs={true}
+          {...COMMON_TURNSTILE_WEBVIEW_PROPS}
         />
       )}
     </View>

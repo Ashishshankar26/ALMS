@@ -7,7 +7,17 @@ import { useTheme } from '../context/ThemeContext';
 import { useScraper } from '../context/ScraperContext';
 import { useAuth } from '../context/AuthContext';
 import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  getSessionWatcherJS,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 export default function UmsFormScreen() {
   const { url = '', title = '' } = useLocalSearchParams<{ url: string; title: string }>();
@@ -259,7 +269,9 @@ export default function UmsFormScreen() {
           <>
             <WebView
               ref={webViewRef}
-              source={{ uri: fullUrl }}
+              source={{ uri: fullUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
+              userAgent={SPOOFED_USER_AGENT}
+              injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
               style={{ flex: 1, backgroundColor: colors.background }}
               onLoadStart={() => setLoading(true)}
               onNavigationStateChange={(navState) => {
@@ -302,11 +314,7 @@ export default function UmsFormScreen() {
                   console.error('Failed to parse webview message in ums_form:', e);
                 }
               }}
-              incognito={false}
-              domStorageEnabled={true}
-              javaScriptEnabled={true}
-              sharedCookiesEnabled={true}
-              thirdPartyCookiesEnabled={true}
+              {...COMMON_TURNSTILE_WEBVIEW_PROPS}
             />
             {loading && (
               <View style={styles.loadingOverlay}>

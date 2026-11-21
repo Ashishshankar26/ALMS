@@ -30,10 +30,13 @@ export function WebViewSessionBanner({
     } else if (returnTo) {
       router.push({
         pathname: '/login',
-        params: { returnTo },
+        params: { returnTo, reauth: 'true' },
       } as any);
     } else {
-      router.push('/login' as any);
+      router.push({
+        pathname: '/login',
+        params: { reauth: 'true' },
+      } as any);
     }
   };
 

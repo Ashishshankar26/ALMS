@@ -447,7 +447,7 @@ export async function getWidgetAttendanceData(): Promise<AttendanceWidgetData | 
 
     return {
       overallPercentage,
-      attended,
+      attended: totalPresent,
       total,
       dutyLeaves,
       bonusAttendance,
@@ -489,7 +489,7 @@ export async function getWidgetQuickStatsData(): Promise<QuickStatsWidgetData | 
       termGpa: parsed.termGpa || (parsed.resultSummary?.latestTgpa || '--'),
       creditsCompleted: parsed.creditsCompleted || '--',
       attendancePercent,
-      attended,
+      attended: totalPresent,
       total,
       nextSubject: hasClass ? formatSubjectTitle(classData.subject) : 'No Classes',
       nextSubjectCode: hasClass ? (classData.subjectCode || '') : '',

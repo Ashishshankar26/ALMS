@@ -8,7 +8,17 @@ import { useAuth } from '../context/AuthContext';
 import { useScraper } from '../context/ScraperContext';
 import { router } from 'expo-router';
 import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  getSessionWatcherJS,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 type TabType = 'TRACK' | 'LOG';
 
@@ -142,8 +152,9 @@ export default function RMSScreen() {
           )}
           <WebView
             ref={trackWebViewRef}
-            source={{ uri: TRACK_URL, headers: { 'X-Requested-With': '' } }}
-            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            source={{ uri: TRACK_URL, headers: TURNSTILE_WEBVIEW_HEADERS }}
+            userAgent={SPOOFED_USER_AGENT}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             style={[styles.webview, loadingTrack && { opacity: 0 }]}
             onNavigationStateChange={(navState) => {
               const url = navState.url || '';
@@ -172,8 +183,7 @@ export default function RMSScreen() {
               } catch(e) {}
             }}
             injectedJavaScript={injectedJS}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
           />
         </View>
 
@@ -187,8 +197,9 @@ export default function RMSScreen() {
           )}
           <WebView
             ref={logWebViewRef}
-            source={{ uri: LOG_URL, headers: { 'X-Requested-With': '' } }}
-            userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+            source={{ uri: LOG_URL, headers: TURNSTILE_WEBVIEW_HEADERS }}
+            userAgent={SPOOFED_USER_AGENT}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             style={[styles.webview, loadingLog && { opacity: 0 }]}
             onNavigationStateChange={(navState) => {
               const url = navState.url || '';
@@ -217,8 +228,7 @@ export default function RMSScreen() {
               } catch(e) {}
             }}
             injectedJavaScript={injectedJS}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
           />
         </View>
 

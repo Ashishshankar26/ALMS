@@ -7,7 +7,17 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useScraper } from '../../context/ScraperContext';
 import { WebViewSessionBanner } from '../../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  getSessionWatcherJS,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../../utils/webViewSession';
 
 const { width } = Dimensions.get('window');
 
@@ -26,24 +36,6 @@ const injectedJS = `
   })(); true;
 `;
 
-// Kill blur/focusout/change events on UMS login fields to prevent Turnstile reset
-const injectedJSBefore = `
-  (function() {
-    function killEvent(e) {
-      if (e.target && (e.target.id === 'txtU' || e.target.type === 'password' || e.target.tagName === 'INPUT')) {
-        e.stopImmediatePropagation();
-        e.stopPropagation();
-      }
-    }
-    document.addEventListener('blur', killEvent, true);
-    document.addEventListener('focusout', killEvent, true);
-    document.addEventListener('change', killEvent, true);
-  })(); true;
-`;
-
-const spoofedUserAgent = Platform.OS === 'ios'
-  ? "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
-  : "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
 
 
 export default function LeaveScreen() {
@@ -56,8 +48,8 @@ export default function LeaveScreen() {
   const [isDisconnected, setIsDisconnected] = useState(false);
   const slipWebViewRef = React.useRef<WebView>(null);
   const applyWebViewRef = React.useRef<WebView>(null);
-  const [applySource, setApplySource] = useState({ uri: APPLY_URL });
-  const [slipSource, setSlipSource] = useState({ uri: SLIP_URL });
+  const [applySource, setApplySource] = useState({ uri: APPLY_URL, headers: TURNSTILE_WEBVIEW_HEADERS });
+  const [slipSource, setSlipSource] = useState({ uri: SLIP_URL, headers: TURNSTILE_WEBVIEW_HEADERS });
 
   // Session restored listener: reload assigned URLs when login happens anywhere
   useEffect(() => {
@@ -160,15 +152,7 @@ export default function LeaveScreen() {
           <WebView
             ref={applyWebViewRef}
             source={applySource}
-            userAgent={spoofedUserAgent}
-            mixedContentMode="always"
-            cacheEnabled={true}
-            androidLayerType="hardware"
-            originWhitelist={['*']}
-            setSupportMultipleWindows={false}
-            allowsInlineMediaPlayback={true}
-            allowFileAccess={true}
-            allowUniversalAccessFromFileURLs={true}
+            userAgent={SPOOFED_USER_AGENT}
             style={[styles.webview, loadingApply && { opacity: 0 }]}
             onNavigationStateChange={(navState) => {
               const url = navState.url || '';
@@ -202,10 +186,9 @@ export default function LeaveScreen() {
                 }
               } catch(e) {}
             }}
-            injectedJavaScriptBeforeContentLoaded={injectedJSBefore}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             injectedJavaScript={injectedJS}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
           />
         </View>
 
@@ -220,6 +203,7 @@ export default function LeaveScreen() {
           <WebView
             ref={slipWebViewRef}
             source={slipSource}
+            userAgent={SPOOFED_USER_AGENT}
             style={[styles.webview, loadingSlip && { opacity: 0 }]}
             onNavigationStateChange={(navState) => {
               const url = navState.url || '';
@@ -253,19 +237,9 @@ export default function LeaveScreen() {
                 }
               } catch(e) {}
             }}
-            userAgent={spoofedUserAgent}
-            mixedContentMode="always"
-            cacheEnabled={true}
-            androidLayerType="hardware"
-            originWhitelist={['*']}
-            setSupportMultipleWindows={false}
-            allowsInlineMediaPlayback={true}
-            allowFileAccess={true}
-            allowUniversalAccessFromFileURLs={true}
-            injectedJavaScriptBeforeContentLoaded={injectedJSBefore}
+            injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
             injectedJavaScript={injectedJS}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
+            {...COMMON_TURNSTILE_WEBVIEW_PROPS}
           />
           
           <TouchableOpacity 

@@ -63,15 +63,15 @@ export interface BunkMarginResult {
 export function calculateBunkMargin(attended: number, total: number, target: number = 0.75): BunkMarginResult {
   if (total <= 0) {
     return {
-      status: 'neutral',
+      status: 'safe',
       margin: 0,
       percentage: 0,
-      label: 'No Classes',
-      subLabel: 'Term starting',
-      pillText: '0 classes held',
-      color: ApplePalette.textTertiary,
-      bgColor: ApplePalette.surfaceSubtle,
-      borderColor: ApplePalette.border,
+      label: 'Target Met',
+      subLabel: 'University standing',
+      pillText: 'Attendance on track',
+      color: ApplePalette.mint,
+      bgColor: ApplePalette.mintBg,
+      borderColor: ApplePalette.mintBorder,
     };
   }
 

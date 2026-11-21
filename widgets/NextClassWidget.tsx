@@ -1003,12 +1003,12 @@ export function NextClassWidget({
           />
         </FlexWidget>
 
-        {/* Pill 2: Bunk Margin */}
+        {/* Pill 2: Attendance / Margin */}
         <FlexWidget
           style={{
-            backgroundColor: 'rgba(48, 209, 88, 0.15)',
+            backgroundColor: isSafe ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.15)',
             borderWidth: 1,
-            borderColor: '#30D158',
+            borderColor: isSafe ? '#30D158' : '#FF453A',
             borderRadius: 10,
             paddingHorizontal: pillPadH,
             paddingVertical: pillPadV,
@@ -1018,31 +1018,37 @@ export function NextClassWidget({
           clickActionData={{ uri: 'alms://(tabs)/attendance' }}
         >
           <TextWidget
-            text={bunkResult.label.startsWith('+') ? `✓ ${bunkResult.label}` : bunkResult.label}
+            text={
+              total > 0
+                ? (bunkResult.label.startsWith('+') ? `✓ ${bunkResult.label}` : bunkResult.label)
+                : (attPct > 0 ? `✓ ${attPct}% Att.` : '✓ 75% Target')
+            }
             maxLines={1}
             truncate="END"
-            style={{ color: '#30D158', fontSize: pillFontSize, fontWeight: '800' }}
+            style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: pillFontSize, fontWeight: '800' }}
           />
         </FlexWidget>
 
         {/* Pill 3: Time Remaining */}
-        <FlexWidget
-          style={{
-            backgroundColor: 'rgba(10, 132, 255, 0.15)',
-            borderWidth: 1,
-            borderColor: '#0A84FF',
-            borderRadius: 10,
-            paddingHorizontal: pillPadH,
-            paddingVertical: pillPadV,
-          }}
-        >
-          <TextWidget
-            text={`⏳ ${timeRemaining} Left`}
-            maxLines={1}
-            truncate="END"
-            style={{ color: '#0A84FF', fontSize: pillFontSize, fontWeight: '800' }}
-          />
-        </FlexWidget>
+        {Boolean(timeRemaining) && (
+          <FlexWidget
+            style={{
+              backgroundColor: 'rgba(10, 132, 255, 0.15)',
+              borderWidth: 1,
+              borderColor: '#0A84FF',
+              borderRadius: 10,
+              paddingHorizontal: pillPadH,
+              paddingVertical: pillPadV,
+            }}
+          >
+            <TextWidget
+              text={`⏳ ${timeRemaining} Left`}
+              maxLines={1}
+              truncate="END"
+              style={{ color: '#0A84FF', fontSize: pillFontSize, fontWeight: '800' }}
+            />
+          </FlexWidget>
+        )}
       </FlexWidget>
 
       {/* ── BOTTOM CARD: UP NEXT SECTION ── */}
@@ -1063,7 +1069,7 @@ export function NextClassWidget({
         {/* Left Column */}
         <FlexWidget style={{ flexDirection: 'column', flex: 1, marginRight: isCompactHeight ? 6 : 8 }}>
           <TextWidget
-            text={`UP NEXT AT ${upNext.startTime || '10:00 AM'}`}
+            text={`UP NEXT AT ${upNext?.startTime || (hasClasses ? 'Next' : 'Schedule')}`}
             style={{
               color: '#8E8E93',
               fontSize: isCompactHeight ? 8.5 : 9.5,
@@ -1072,7 +1078,7 @@ export function NextClassWidget({
             }}
           />
           <TextWidget
-            text={`${upNext.subjectCode} • ${upNext.subject}`}
+            text={`${upNext?.subjectCode || courseCode || 'UMS'} • ${upNext?.subject || (hasClasses ? 'Class follows' : 'Schedule updated')}`}
             maxLines={1}
             truncate="END"
             style={{
@@ -1083,7 +1089,7 @@ export function NextClassWidget({
             }}
           />
           <TextWidget
-            text={`${upNext.block} • Room ${upNext.room} • ${upNext.attendanceSafeText}`}
+            text={`${upNext?.block || decodedRoom.block || 'Campus'} • Room ${upNext?.room || tileRoomCode || 'TBA'}${upNext?.attendanceSafeText ? ` • ${upNext.attendanceSafeText}` : ''}`}
             maxLines={1}
             truncate="END"
             style={{
@@ -1100,8 +1106,8 @@ export function NextClassWidget({
           style={{
             backgroundColor: '#3A3A3C',
             borderRadius: 10,
-            paddingHorizontal: btnPadH,
-            paddingVertical: btnPadV,
+            paddingHorizontal: isCompactHeight ? 6 : 8,
+            paddingVertical: isCompactHeight ? 3 : 4,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -1109,10 +1115,10 @@ export function NextClassWidget({
           clickActionData={{ uri: 'alms://timetable' }}
         >
           <TextWidget
-            text="Timetable ›"
+            text="Schedule ›"
             maxLines={1}
             truncate="END"
-            style={{ color: '#0A84FF', fontSize: btnFontSize, fontWeight: '800' }}
+            style={{ color: '#0A84FF', fontSize: isCompactHeight ? 8.5 : 9.5, fontWeight: '800' }}
           />
         </FlexWidget>
       </FlexWidget>

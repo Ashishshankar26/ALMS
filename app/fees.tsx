@@ -7,7 +7,17 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useScraper } from '../context/ScraperContext';
 import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
-import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
+import {
+  notifySessionRestored,
+  isLoginOrSessionUrl,
+  isAuthenticatedUrl,
+  getSessionWatcherJS,
+  ALMS_SESSION_RESTORED,
+  SPOOFED_USER_AGENT,
+  TURNSTILE_WEBVIEW_HEADERS,
+  COMMON_TURNSTILE_WEBVIEW_PROPS,
+  TURNSTILE_BEFORE_CONTENT_JS,
+} from '../utils/webViewSession';
 
 const FEES_URL = 'https://ums.lpu.in/lpuums/Reports/frmStatementofAccounts.aspx';
 
@@ -61,8 +71,9 @@ export default function FeesScreen() {
 
       <WebView
         ref={webViewRef}
-        source={{ uri: FEES_URL }}
-        userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
+        source={{ uri: FEES_URL, headers: TURNSTILE_WEBVIEW_HEADERS }}
+        userAgent={SPOOFED_USER_AGENT}
+        injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
         style={[styles.webview, loading && { opacity: 0 }]}
         onNavigationStateChange={(navState) => {
           const currentNavUrl = navState.url || '';
@@ -82,10 +93,15 @@ export default function FeesScreen() {
           setLoading(false);
           webViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
         }}
-        sharedCookiesEnabled={true}
-        thirdPartyCookiesEnabled={true}
+        {...COMMON_TURNSTILE_WEBVIEW_PROPS}
         injectedJavaScript={`
           (function() {
+            var postMsg = function(data) {
+              var bridge = window.ReactNativeWebView || window.__RN_WV_REF__;
+              if (bridge && bridge.postMessage) {
+                try { bridge.postMessage(JSON.stringify(data)); } catch(e) {}
+              }
+            };
             // Hide everything except the main content
             var s = document.createElement('style');
             s.innerHTML = \`
@@ -107,7 +123,7 @@ export default function FeesScreen() {
             
             // Check for session expiry
             if (document.body.innerText.includes('Login') && document.querySelectorAll('input[type="password"]').length > 0) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SESSION_EXPIRED' }));
+              postMsg({ type: 'SESSION_EXPIRED' });
             }
           })(); true;
         `}
