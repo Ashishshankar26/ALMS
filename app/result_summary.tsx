@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { ArrowLeft, RefreshCw, TriangleAlert } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -7,13 +7,15 @@ import { useAuth } from '../context/AuthContext';
 import { useScraper, type ResultSummaryData } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 import { RESULT_SUMMARY_DIRECT_URL, RESULT_SUMMARY_LAUNCH_URL } from '../constants/ums';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 const MOBILE_USER_AGENT =
   'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36';
 
 export default function ResultSummaryScreen() {
   const { authData } = useAuth();
-  const { updateResultSummary } = useScraper();
+  const { updateResultSummary, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const currentUrlRef = useRef(RESULT_SUMMARY_LAUNCH_URL);
@@ -21,7 +23,17 @@ export default function ResultSummaryScreen() {
   const [sourceUrl, setSourceUrl] = useState(RESULT_SUMMARY_LAUNCH_URL);
   const [webViewKey, setWebViewKey] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[result_summary] Session restored, reloading result summary');
+      setIsDisconnected(false);
+      reloadThroughBridge();
+    });
+    return () => sub.remove();
+  }, []);
 
   const injectedScript = useMemo(() => {
     const username = JSON.stringify(authData?.username || '');
@@ -271,6 +283,11 @@ export default function ResultSummaryScreen() {
         </TouchableOpacity>
       </View>
 
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/result_summary"
+      />
+
         <View style={styles.webViewContainer}>
           <WebView
             key={webViewKey}
@@ -299,7 +316,19 @@ export default function ResultSummaryScreen() {
             }}
             onNavigationStateChange={navState => {
               currentUrlRef.current = navState.url;
-              if (/Login(New)?\.aspx/i.test(navState.url)) setLoading(false);
+              if (isLoginOrSessionUrl(navState.url)) {
+                setLoading(false);
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(navState.url)) {
+                console.log('[result_summary] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                reloadThroughBridge();
+              } else if (/Login(New)?\.aspx/i.test(navState.url)) {
+                setLoading(false);
+                setIsDisconnected(true);
+              }
             }}
             onMessage={({ nativeEvent }) => {
               try {
@@ -309,9 +338,9 @@ export default function ResultSummaryScreen() {
                 } else if (message.type === 'RESULT_SUMMARY_DATA') {
                   setLoading(false);
                   acceptSummary(message.payload || {});
-                } else if (message.type === 'SESSION_EXPIRED') {
+                } else if (message.type === 'SESSION_EXPIRED' || message.type === 'ALMS_SESSION_EXPIRED') {
                   setLoading(false);
-                  router.replace('/login');
+                  setIsDisconnected(true);
                 } else if (message.type === 'RESULT_SUMMARY_BLANK') {
                   if (!bridgeRetryRef.current) reloadThroughBridge();
                   else setErrorMessage('The university returned an empty result page. Please refresh your UMS session and try again.');

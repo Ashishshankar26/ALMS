@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { MessageSquare, Search, PlusCircle, RefreshCcw, ChevronLeft } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useScraper } from '../context/ScraperContext';
 import { router } from 'expo-router';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 type TabType = 'TRACK' | 'LOG';
 
@@ -23,11 +27,24 @@ const injectedJS = `
 
 export default function RMSScreen() {
   const { colors, isDark } = useTheme();
+  const { authData } = useAuth();
+  const { refreshData } = useScraper();
   const [activeTab, setActiveTab] = useState<TabType>('TRACK');
   const [loadingTrack, setLoadingTrack] = useState(true);
   const [loadingLog, setLoadingLog] = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const trackWebViewRef = React.useRef<WebView>(null);
   const logWebViewRef = React.useRef<WebView>(null);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[rms] Session restored, reloading RMS pages');
+      setIsDisconnected(false);
+      trackWebViewRef.current?.injectJavaScript(`window.location.href = '${TRACK_URL}'; true;`);
+      logWebViewRef.current?.injectJavaScript(`window.location.href = '${LOG_URL}'; true;`);
+    });
+    return () => sub.remove();
+  }, []);
 
   const refreshWebView = () => {
     if (activeTab === 'TRACK') {
@@ -109,6 +126,11 @@ export default function RMSScreen() {
         </View>
       </Animated.View>
 
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/rms"
+      />
+
       <View style={styles.webviewContainer}>
         {/* ── Track WebView ── */}
         <View style={[styles.webviewWrapper, activeTab !== 'TRACK' && styles.hidden]}>
@@ -123,7 +145,32 @@ export default function RMSScreen() {
             source={{ uri: TRACK_URL, headers: { 'X-Requested-With': '' } }}
             userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
             style={[styles.webview, loadingTrack && { opacity: 0 }]}
-            onLoadEnd={() => setLoadingTrack(false)}
+            onNavigationStateChange={(navState) => {
+              const url = navState.url || '';
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(url)) {
+                console.log('[rms-track] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                if (!url.toLowerCase().includes('frmmtsuserhome')) {
+                  trackWebViewRef.current?.injectJavaScript(`window.location.href = '${TRACK_URL}'; true;`);
+                }
+              }
+            }}
+            onLoadEnd={() => {
+              setLoadingTrack(false);
+              trackWebViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+            }}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'ALMS_SESSION_EXPIRED' || msg.type === 'SESSION_EXPIRED') {
+                  setIsDisconnected(true);
+                }
+              } catch(e) {}
+            }}
             injectedJavaScript={injectedJS}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}
@@ -143,7 +190,32 @@ export default function RMSScreen() {
             source={{ uri: LOG_URL, headers: { 'X-Requested-With': '' } }}
             userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
             style={[styles.webview, loadingLog && { opacity: 0 }]}
-            onLoadEnd={() => setLoadingLog(false)}
+            onNavigationStateChange={(navState) => {
+              const url = navState.url || '';
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(url)) {
+                console.log('[rms-log] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                if (!url.toLowerCase().includes('frmmtsmessage')) {
+                  logWebViewRef.current?.injectJavaScript(`window.location.href = '${LOG_URL}'; true;`);
+                }
+              }
+            }}
+            onLoadEnd={() => {
+              setLoadingLog(false);
+              logWebViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+            }}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'ALMS_SESSION_EXPIRED' || msg.type === 'SESSION_EXPIRED') {
+                  setIsDisconnected(true);
+                }
+              } catch(e) {}
+            }}
             injectedJavaScript={injectedJS}
             sharedCookiesEnabled={true}
             thirdPartyCookiesEnabled={true}

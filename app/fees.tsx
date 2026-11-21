@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useScraper } from '../context/ScraperContext';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 const FEES_URL = 'https://ums.lpu.in/lpuums/Reports/frmStatementofAccounts.aspx';
 
 export default function FeesScreen() {
   const { colors, isDark } = useTheme();
+  const { authData } = useAuth();
+  const { refreshData } = useScraper();
   const [loading, setLoading] = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[fees] Session restored, reloading Statement of Accounts');
+      setIsDisconnected(false);
+      webViewRef.current?.injectJavaScript(`window.location.href = '${FEES_URL}'; true;`);
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -29,6 +46,11 @@ export default function FeesScreen() {
         <View style={{ width: 44 }} />
       </View>
 
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/fees"
+      />
+
       {/* Loading overlay */}
       {loading && (
         <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
@@ -38,10 +60,28 @@ export default function FeesScreen() {
       )}
 
       <WebView
+        ref={webViewRef}
         source={{ uri: FEES_URL }}
         userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
         style={[styles.webview, loading && { opacity: 0 }]}
-        onLoadEnd={() => setLoading(false)}
+        onNavigationStateChange={(navState) => {
+          const currentNavUrl = navState.url || '';
+          if (isLoginOrSessionUrl(currentNavUrl)) {
+            setIsDisconnected(true);
+          } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
+            console.log('[fees] In-place login detected!');
+            setIsDisconnected(false);
+            notifySessionRestored({ sourceUrl: FEES_URL });
+            try { refreshData?.(); } catch (e) {}
+            if (!currentNavUrl.toLowerCase().includes('frmstatementofaccounts')) {
+              webViewRef.current?.injectJavaScript(`window.location.href = '${FEES_URL}'; true;`);
+            }
+          }
+        }}
+        onLoadEnd={() => {
+          setLoading(false);
+          webViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+        }}
         sharedCookiesEnabled={true}
         thirdPartyCookiesEnabled={true}
         injectedJavaScript={`
@@ -74,8 +114,8 @@ export default function FeesScreen() {
         onMessage={(event) => {
           try {
             const msg = JSON.parse(event.nativeEvent.data);
-            if (msg.type === 'SESSION_EXPIRED') {
-              router.replace('/login');
+            if (msg.type === 'SESSION_EXPIRED' || msg.type === 'ALMS_SESSION_EXPIRED') {
+              setIsDisconnected(true);
             }
           } catch(e) {}
         }}

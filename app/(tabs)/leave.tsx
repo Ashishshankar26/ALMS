@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform, SafeAreaView, ActivityIndicator, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, SafeAreaView, ActivityIndicator, Dimensions, DeviceEventEmitter } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { RefreshCcw, CalendarCheck, FileText, Send } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { useScraper } from '../../context/ScraperContext';
+import { WebViewSessionBanner } from '../../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../../utils/webViewSession';
 
 const { width } = Dimensions.get('window');
 
@@ -44,30 +48,27 @@ const spoofedUserAgent = Platform.OS === 'ios'
 
 export default function LeaveScreen() {
   const { colors, isDark } = useTheme();
+  const { authData } = useAuth();
+  const { refreshData } = useScraper();
   const [activeTab, setActiveTab] = useState<TabType>('APPLY');
   const [loadingApply, setLoadingApply] = useState(true);
   const [loadingSlip,  setLoadingSlip]  = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const slipWebViewRef = React.useRef<WebView>(null);
   const applyWebViewRef = React.useRef<WebView>(null);
   const [applySource, setApplySource] = useState({ uri: APPLY_URL });
   const [slipSource, setSlipSource] = useState({ uri: SLIP_URL });
-  const [loginNeededApply, setLoginNeededApply] = useState(false);
-  const [loginNeededSlip, setLoginNeededSlip] = useState(false);
 
-  // Detect when login state changes and ensure the WebView loads the intended page
+  // Session restored listener: reload assigned URLs when login happens anywhere
   useEffect(() => {
-    if (!loginNeededApply) {
-      // Force reload to apply URL after login completes
-      applyWebViewRef.current?.reload();
-    }
-  }, [loginNeededApply]);
-
-  // Same for slip WebView
-  useEffect(() => {
-    if (!loginNeededSlip) {
-      slipWebViewRef.current?.reload();
-    }
-  }, [loginNeededSlip]);
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[leave] Global session restored event received, reloading leave pages');
+      setIsDisconnected(false);
+      applyWebViewRef.current?.injectJavaScript(`window.location.href = '${APPLY_URL}'; true;`);
+      slipWebViewRef.current?.injectJavaScript(`window.location.href = '${SLIP_URL}'; true;`);
+    });
+    return () => sub.remove();
+  }, []);
 
   const refreshSlip = () => {
     setLoadingSlip(true);
@@ -142,6 +143,11 @@ export default function LeaveScreen() {
         </View>
       </Animated.View>
 
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/(tabs)/leave"
+      />
+
       <View style={styles.webviewContainer}>
         {/* ── Apply Leave WebView ── */}
         <View style={[styles.webviewWrapper, activeTab !== 'APPLY' && styles.hidden]}>
@@ -164,14 +170,37 @@ export default function LeaveScreen() {
             allowFileAccess={true}
             allowUniversalAccessFromFileURLs={true}
             style={[styles.webview, loadingApply && { opacity: 0 }]}
+            onNavigationStateChange={(navState) => {
+              const url = navState.url || '';
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(url)) {
+                console.log('[leave-apply] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                if (!url.toLowerCase().includes('frmstudenthostelleaveapplication')) {
+                  applyWebViewRef.current?.injectJavaScript(`window.location.href = '${APPLY_URL}'; true;`);
+                }
+              }
+            }}
             onLoadEnd={(event) => {
               setLoadingApply(false);
               const url = event?.nativeEvent?.url ?? '';
-              if (url.toLowerCase().includes('login')) {
-                setLoginNeededApply(true);
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
               } else {
-                setLoginNeededApply(false);
+                setIsDisconnected(false);
               }
+              applyWebViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+            }}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'ALMS_SESSION_EXPIRED' || msg.type === 'SESSION_EXPIRED') {
+                  setIsDisconnected(true);
+                }
+              } catch(e) {}
             }}
             injectedJavaScriptBeforeContentLoaded={injectedJSBefore}
             injectedJavaScript={injectedJS}
@@ -192,14 +221,37 @@ export default function LeaveScreen() {
             ref={slipWebViewRef}
             source={slipSource}
             style={[styles.webview, loadingSlip && { opacity: 0 }]}
+            onNavigationStateChange={(navState) => {
+              const url = navState.url || '';
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(url)) {
+                console.log('[leave-slip] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                if (!url.toLowerCase().includes('frmhostelleaveslip')) {
+                  slipWebViewRef.current?.injectJavaScript(`window.location.href = '${SLIP_URL}'; true;`);
+                }
+              }
+            }}
             onLoadEnd={(event) => {
               setLoadingSlip(false);
               const url = event?.nativeEvent?.url ?? '';
-              if (url.toLowerCase().includes('login')) {
-                setLoginNeededSlip(true);
+              if (isLoginOrSessionUrl(url)) {
+                setIsDisconnected(true);
               } else {
-                setLoginNeededSlip(false);
+                setIsDisconnected(false);
               }
+              slipWebViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+            }}
+            onMessage={(event) => {
+              try {
+                const msg = JSON.parse(event.nativeEvent.data);
+                if (msg.type === 'ALMS_SESSION_EXPIRED' || msg.type === 'SESSION_EXPIRED') {
+                  setIsDisconnected(true);
+                }
+              } catch(e) {}
             }}
             userAgent={spoofedUserAgent}
             mixedContentMode="always"

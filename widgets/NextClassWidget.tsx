@@ -137,89 +137,81 @@ export function NextClassWidget({
   const resolvedStackIndex = data?.stackIndex !== undefined ? data.stackIndex : (stackIndex ?? 0);
   const activeStackIndex = ((resolvedStackIndex % totalCards) + totalCards) % totalCards;
 
-  // Attendance & Bunk Margin data
-  const attended = data?.attendedClasses ?? 58;
-  const total = data?.totalClasses ?? 74;
+  // Attendance & Standing data
+  const attended = data?.attendedClasses ?? 0;
+  const total = data?.totalClasses ?? 0;
   const bunkResult = calculateBunkMargin(attended, total, 0.75);
-  const attPct = data?.overallAttendance ?? (total > 0 ? Math.round((attended / total) * 100) : 78.4);
+  const attPct = data?.overallAttendance ?? (total > 0 ? Math.round((attended / total) * 100) : 0);
   const isSafe = attPct >= 75;
-  const targetDiff = (attPct - 75).toFixed(1);
+  const targetDiff = Math.abs(attPct - 75).toFixed(1);
 
   // Class Info
   const isOngoing = data?.status === 'ongoing';
   const isTomorrow = data?.status === 'tomorrow';
-  const hasClasses = data && data.status !== 'no_classes' && data.subject;
-  const subjectTitle = formatAppleTitle(data?.subject || 'Software Engineering');
-  const courseCode = data?.subjectCode || 'CSE320';
-  const timeDisplay = data?.time || '09:00 AM – 10:00 AM';
-  const rawRoom = data?.room || '34-101';
-  const decodedRoom = decodeLpuRoom(rawRoom);
+  const hasClasses = Boolean(data && data.status !== 'no_classes' && data.subject);
+  const subjectTitle = hasClasses ? formatAppleTitle(data!.subject) : (data?.status === 'tomorrow' ? 'Classes Tomorrow' : 'No Classes Scheduled');
+  const courseCode = hasClasses ? (data?.subjectCode || '') : '';
+  const timeDisplay = hasClasses ? data!.time : (data?.status === 'tomorrow' ? (data.time || 'Schedule tomorrow') : 'All caught up');
+  const rawRoom = hasClasses ? (data?.room || '') : '';
+  const decodedRoom = rawRoom ? decodeLpuRoom(rawRoom) : { block: 'Campus', floor: 'All Clear', fullLabel: 'Campus', shortLabel: 'Campus', roomNumber: '', blockNumber: '' };
   const roomShort = decodedRoom.shortLabel.replace('Room ', '');
-  const tileRoomCode = rawRoom.includes('-')
+  const tileRoomCode = rawRoom ? (rawRoom.includes('-')
     ? rawRoom
-    : (decodedRoom.roomNumber ? `${decodedRoom.blockNumber || 'B'}-${decodedRoom.roomNumber}` : rawRoom.slice(0, 7));
-  const timeRemaining = data?.timeUntilOrLeft ? data.timeUntilOrLeft.replace('left', '').replace('in', '').trim() : '42m';
+    : (decodedRoom.roomNumber ? `${decodedRoom.blockNumber || 'B'}-${decodedRoom.roomNumber}` : rawRoom.slice(0, 7))) : 'Free';
+  const timeRemaining = data?.timeUntilOrLeft ? data.timeUntilOrLeft.replace('left', '').replace('in', '').trim() : '';
 
   // Up Next Class
-  const upNext = data?.upNext || {
-    time: '10:00 AM',
-    startTime: '10:00 AM',
-    subject: 'Front End Web Development',
-    subjectCode: 'INT219',
-    room: '38-302',
-    block: 'Block 38',
-    attendanceSafeText: 'Attendance Safe (82.1%)',
-  };
+  const upNext = data?.upNext;
 
   // 4x2 launcher widgets on Android report h ~130-220dp; >= 240dp indicates expanded 3+ rows
   const isCompactHeight = cfg.h < 240;
-  const rootPadV = isCompactHeight ? 6 : 12;
-  const rootPadH = cfg.w < 300 ? 10 : 14;
+  const rootPadV = isCompactHeight ? 8 : 12;
+  const rootPadH = cfg.w < 300 ? 10 : 13;
 
-  // Adaptive Card 0 dimensions (fits in ~131dp)
-  const heroTimeSize = isCompactHeight ? 20 : 28;
-  const heroLocSize = isCompactHeight ? 11 : 13.5;
+  // Balanced Apple-style typography (no oversized or tiny illegible fonts)
+  const heroTimeSize = isCompactHeight ? 18 : 22;
+  const heroLocSize = isCompactHeight ? 11 : 12.5;
   const heroMarginB = isCompactHeight ? 2 : 4;
   const pillsMarginB = isCompactHeight ? 3 : 5;
-  const pillPadV = isCompactHeight ? 2.5 : 4.5;
-  const pillPadH = isCompactHeight ? 7 : 10;
-  const pillFontSize = isCompactHeight ? 9 : 10.5;
-  const upNextPadV = isCompactHeight ? 5 : 9;
-  const upNextPadH = isCompactHeight ? 8 : 12;
-  const upNextSubjSize = isCompactHeight ? 11 : 13;
-  const upNextDetailSize = isCompactHeight ? 8.5 : 10;
-  const btnPadV = isCompactHeight ? 4 : 6;
-  const btnPadH = isCompactHeight ? 8 : 11;
-  const btnFontSize = isCompactHeight ? 9 : 10.5;
+  const pillPadV = isCompactHeight ? 2.5 : 4;
+  const pillPadH = isCompactHeight ? 7 : 9;
+  const pillFontSize = isCompactHeight ? 9.5 : 10.5;
+  const upNextPadV = isCompactHeight ? 5 : 8;
+  const upNextPadH = isCompactHeight ? 8 : 11;
+  const upNextSubjSize = isCompactHeight ? 11 : 12.5;
+  const upNextDetailSize = isCompactHeight ? 9.5 : 10.5;
+  const btnPadV = isCompactHeight ? 3.5 : 5;
+  const btnPadH = isCompactHeight ? 7 : 10;
+  const btnFontSize = isCompactHeight ? 9 : 10;
 
-  // Adaptive Card 1 dimensions (fits in ~127dp)
-  const attPctSize = isCompactHeight ? 24 : 32;
-  const attLabelSize = isCompactHeight ? 9 : 10.5;
-  const bunkTitleSize = isCompactHeight ? 13 : 18;
-  const bunkSubSize = isCompactHeight ? 8 : 9;
-  const bunkPadV = isCompactHeight ? 4 : 7;
-  const bunkPadH = isCompactHeight ? 8 : 14;
-  const trackHeight = isCompactHeight ? 9 : 12;
-  const cardPadV = isCompactHeight ? 4 : 8;
-  const cardPadH = isCompactHeight ? 6 : 10;
-  const cardSubjSize = isCompactHeight ? 9.5 : 11;
-  const cardPctSize = isCompactHeight ? 13 : 16;
-  const cardMarginSize = isCompactHeight ? 8.5 : 10;
+  // Adaptive Card 1 dimensions
+  const attPctSize = isCompactHeight ? 20 : 24;
+  const attLabelSize = isCompactHeight ? 9.5 : 10.5;
+  const bunkTitleSize = isCompactHeight ? 12 : 14;
+  const bunkSubSize = isCompactHeight ? 8.5 : 9.5;
+  const bunkPadV = isCompactHeight ? 4 : 6;
+  const bunkPadH = isCompactHeight ? 8 : 12;
+  const trackHeight = isCompactHeight ? 8 : 10;
+  const cardPadV = isCompactHeight ? 4 : 7;
+  const cardPadH = isCompactHeight ? 6 : 9;
+  const cardSubjSize = isCompactHeight ? 10 : 11;
+  const cardPctSize = isCompactHeight ? 12 : 14;
+  const cardMarginSize = isCompactHeight ? 9 : 10;
 
-  // Adaptive Card 2 dimensions (fits in ~122dp)
-  const cgpaHeroSize = isCompactHeight ? 20 : 28;
-  const cgpaTermSize = isCompactHeight ? 9.5 : 11;
-  const cgpaCreditSize = isCompactHeight ? 8 : 9;
-  const tilePadV = isCompactHeight ? 5 : 9;
-  const tilePadH = isCompactHeight ? 6 : 10;
-  const tileBtnPadV = isCompactHeight ? 3.5 : 5;
-  const tileBtnFontSize = isCompactHeight ? 8 : 9;
+  // Adaptive Card 2 dimensions
+  const cgpaHeroSize = isCompactHeight ? 18 : 22;
+  const cgpaTermSize = isCompactHeight ? 9.5 : 10.5;
+  const cgpaCreditSize = isCompactHeight ? 8.5 : 9.5;
+  const tilePadV = isCompactHeight ? 5 : 8;
+  const tilePadH = isCompactHeight ? 6 : 9;
+  const tileBtnPadV = isCompactHeight ? 3 : 4.5;
+  const tileBtnFontSize = isCompactHeight ? 8.5 : 9.5;
 
   // Adaptive Card 3 dimensions
-  const examCodeSize = isCompactHeight ? 22 : 28;
-  const examTitleSize = isCompactHeight ? 10.5 : 12.5;
-  const examDateSize = isCompactHeight ? 9 : 10.5;
-  const examBarPadV = isCompactHeight ? 4 : 7;
+  const examCodeSize = isCompactHeight ? 18 : 22;
+  const examTitleSize = isCompactHeight ? 10.5 : 12;
+  const examDateSize = isCompactHeight ? 9 : 10;
+  const examBarPadV = isCompactHeight ? 4 : 6;
 
   // ═════════════════════════════════════════════════════════════════════════
   // 1. SMALL 2x2 COMPACT FOCUS (Glanceable Minimal)

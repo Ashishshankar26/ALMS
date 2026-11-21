@@ -1,21 +1,36 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Platform, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useScraper } from '../context/ScraperContext';
+import { useAuth } from '../context/AuthContext';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 export default function UmsFormScreen() {
-  const { url, title } = useLocalSearchParams<{ url: string; title: string }>();
+  const { url = '', title = '' } = useLocalSearchParams<{ url: string; title: string }>();
   const { colors, isDark } = useTheme();
-  const [loading, setLoading] = React.useState(true);
-  const { updateProfile } = useScraper();
-  const webViewRef = React.useRef<WebView>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const { updateProfile, refreshData } = useScraper();
+  const { authData } = useAuth();
+  const webViewRef = useRef<WebView>(null);
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[ums_form] Session restored, reloading assigned page:', fullUrl);
+      setIsDisconnected(false);
+      webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+    });
+    return () => sub.remove();
+  }, [fullUrl]);
 
   const profileScraperScript = `
     (function() {
@@ -235,6 +250,11 @@ export default function UmsFormScreen() {
         <View style={{ width: 40 }} />
       </View>
  
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo={returnTo}
+      />
+
       <View style={{ flex: 1 }}>
           <>
             <WebView
@@ -242,8 +262,27 @@ export default function UmsFormScreen() {
               source={{ uri: fullUrl }}
               style={{ flex: 1, backgroundColor: colors.background }}
               onLoadStart={() => setLoading(true)}
+              onNavigationStateChange={(navState) => {
+                const currentNavUrl = navState.url || '';
+                if (isLoginOrSessionUrl(currentNavUrl)) {
+                  setIsDisconnected(true);
+                } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
+                  // In-place login detected!
+                  console.log('[ums_form] In-place login detected!');
+                  setIsDisconnected(false);
+                  notifySessionRestored({ sourceUrl: fullUrl });
+                  try { refreshData?.(); } catch (e) {}
+
+                  // If user ended up on default dashboard, redirect back to assigned page
+                  const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
+                  if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
+                    webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+                  }
+                }
+              }}
               onLoadEnd={(event) => {
                 setLoading(false);
+                webViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
                 if (title === 'Profile Update' || (event.nativeEvent.url && event.nativeEvent.url.includes('user-profile'))) {
                   webViewRef.current?.injectJavaScript(profileScraperScript);
                 }
@@ -251,7 +290,9 @@ export default function UmsFormScreen() {
               onMessage={(event) => {
                 try {
                   const data = JSON.parse(event.nativeEvent.data);
-                  if (data.type === 'PROFILE_UPDATE_SCRAPE') {
+                  if (data.type === 'ALMS_SESSION_EXPIRED' || data.type === 'SESSION_EXPIRED') {
+                    setIsDisconnected(true);
+                  } else if (data.type === 'PROFILE_UPDATE_SCRAPE') {
                     console.log('UMS_FORM SCRAPE SUCCESS:', data.payload);
                     updateProfile(data.payload);
                   } else if (data.type === 'DEBUG') {
@@ -264,6 +305,8 @@ export default function UmsFormScreen() {
               incognito={false}
               domStorageEnabled={true}
               javaScriptEnabled={true}
+              sharedCookiesEnabled={true}
+              thirdPartyCookiesEnabled={true}
             />
             {loading && (
               <View style={styles.loadingOverlay}>

@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useScraper } from '../context/ScraperContext';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, getSessionWatcherJS, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 const UPLOAD_URL = 'https://ums.lpu.in/lpuums/frmstudentassignmentupload.aspx';
 
 export default function AssignmentUploadScreen() {
   const { colors } = useTheme();
+  const { authData } = useAuth();
+  const { refreshData } = useScraper();
   const [loading, setLoading] = useState(true);
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[assignments_upload] Session restored, reloading upload page');
+      setIsDisconnected(false);
+      webViewRef.current?.injectJavaScript(`window.location.href = '${UPLOAD_URL}'; true;`);
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -22,6 +39,11 @@ export default function AssignmentUploadScreen() {
         <View style={{ width: 44 }} />
       </View>
 
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/assignments_upload"
+      />
+
       {/* Loading overlay */}
       {loading && (
         <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
@@ -31,15 +53,33 @@ export default function AssignmentUploadScreen() {
       )}
 
       <WebView
+        ref={webViewRef}
         source={{ uri: UPLOAD_URL }}
         userAgent="Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
         style={[styles.webview, loading && { opacity: 0 }]}
-        onLoadEnd={() => setLoading(false)}
+        onNavigationStateChange={(navState) => {
+          const currentNavUrl = navState.url || '';
+          if (isLoginOrSessionUrl(currentNavUrl)) {
+            setIsDisconnected(true);
+          } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
+            console.log('[assignments_upload] In-place login detected!');
+            setIsDisconnected(false);
+            notifySessionRestored({ sourceUrl: UPLOAD_URL });
+            try { refreshData?.(); } catch (e) {}
+            if (!currentNavUrl.toLowerCase().includes('frmstudentassignmentupload')) {
+              webViewRef.current?.injectJavaScript(`window.location.href = '${UPLOAD_URL}'; true;`);
+            }
+          }
+        }}
+        onLoadEnd={() => {
+          setLoading(false);
+          webViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+        }}
         sharedCookiesEnabled={true}
         thirdPartyCookiesEnabled={true}
         originWhitelist={['*']}
         mixedContentMode="always"
-        allowsFileAccess={true}
+        allowFileAccess={true}
         allowFileAccessFromFileURLs={true}
         allowUniversalAccessFromFileURLs={true}
         javaScriptEnabled={true}
@@ -75,8 +115,8 @@ export default function AssignmentUploadScreen() {
         onMessage={(event) => {
           try {
             const msg = JSON.parse(event.nativeEvent.data);
-            if (msg.type === 'SESSION_EXPIRED') {
-              router.replace('/login');
+            if (msg.type === 'SESSION_EXPIRED' || msg.type === 'ALMS_SESSION_EXPIRED') {
+              setIsDisconnected(true);
             }
           } catch(e) {}
         }}

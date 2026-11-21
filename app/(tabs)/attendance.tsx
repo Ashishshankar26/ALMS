@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, Modal, TextInput } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,28 +20,50 @@ export default function AttendanceScreen() {
   const [targetPct, setTargetPct] = useState(75);
   const [semesterEndDate, setSemesterEndDate] = useState(new Date('2026-06-01'));
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const isLoadedRef = useRef(false);
 
   // Persistence: Load Date & Target on Mount
   useEffect(() => {
+    let mounted = true;
     const loadStoredData = async () => {
       try {
-        const storedDate = await AsyncStorage.getItem(SEMESTER_DATE_KEY);
-        if (storedDate) {
-          setSemesterEndDate(new Date(storedDate));
+        const [storedDate, storedTarget] = await Promise.all([
+          AsyncStorage.getItem(SEMESTER_DATE_KEY),
+          AsyncStorage.getItem(TARGET_PCT_KEY),
+        ]);
+
+        if (mounted && storedDate) {
+          const parsedDate = new Date(storedDate);
+          if (!isNaN(parsedDate.getTime())) {
+            setSemesterEndDate(parsedDate);
+          }
         }
-        const storedTarget = await AsyncStorage.getItem(TARGET_PCT_KEY);
-        if (storedTarget) {
-          setTargetPct(parseInt(storedTarget, 10));
+        if (mounted && storedTarget) {
+          const parsed = parseInt(storedTarget, 10);
+          if (!isNaN(parsed) && parsed >= 50 && parsed <= 100) {
+            setTargetPct(parsed);
+          }
         }
       } catch (e) {
         console.error('Failed to load stored attendance data', e);
+      } finally {
+        if (mounted) {
+          // Delay marking as loaded until state updates are applied
+          setTimeout(() => {
+            isLoadedRef.current = true;
+          }, 100);
+        }
       }
     };
     loadStoredData();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Persistence: Save Date on Change
+  // Persistence: Save Date on Change (only after initial load has finished)
   useEffect(() => {
+    if (!isLoadedRef.current) return;
     const saveDate = async () => {
       try {
         await AsyncStorage.setItem(SEMESTER_DATE_KEY, semesterEndDate.toISOString());
@@ -52,8 +74,9 @@ export default function AttendanceScreen() {
     saveDate();
   }, [semesterEndDate]);
 
-  // Persistence: Save Target on Change
+  // Persistence: Save Target on Change (only after initial load has finished)
   useEffect(() => {
+    if (!isLoadedRef.current) return;
     const saveTarget = async () => {
       try {
         await AsyncStorage.setItem(TARGET_PCT_KEY, targetPct.toString());

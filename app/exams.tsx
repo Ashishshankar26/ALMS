@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, ScrollView, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { router } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, MapPin, User } from 'lucide-react-native';
@@ -9,18 +9,30 @@ import * as Sharing from 'expo-sharing';
 import { useScraper } from '../context/ScraperContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { WebViewSessionBanner } from '../components/WebViewSessionBanner';
+import { notifySessionRestored, isLoginOrSessionUrl, isAuthenticatedUrl, ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 const EXAMS_URL = 'https://studentums.lpu.in/dashboard/examination/conduct/seatingplan';
 
 export default function ExamsScreen() {
-  const { data } = useScraper();
+  const { data, refreshData } = useScraper();
   const { authData } = useAuth();
   const { colors, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
   const [showWebView, setShowWebView] = useState(false);
+  const [isDisconnected, setIsDisconnected] = useState(false);
   const exams = data.exams || [];
   const currentExamsUrl = data.examUrl || EXAMS_URL;
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[exams] Session restored, reloading exams portal');
+      setIsDisconnected(false);
+      webViewRef.current?.injectJavaScript(`window.location.href = '${currentExamsUrl}'; true;`);
+    });
+    return () => sub.remove();
+  }, [currentExamsUrl]);
 
   const reauthBeforeContent = `
     (function() {
@@ -93,6 +105,11 @@ export default function ExamsScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Upcoming Exams</Text>
         <View style={{ width: 44 }} />
       </View>
+
+      <WebViewSessionBanner
+        visible={isDisconnected}
+        returnTo="/exams"
+      />
 
       {/* Native Exam List */}
       {exams.length > 0 && !showWebView ? (
@@ -319,21 +336,29 @@ export default function ExamsScreen() {
             }}
             onNavigationStateChange={(navState) => {
               console.log('WebView Nav State Change:', navState.url);
+              if (isLoginOrSessionUrl(navState.url)) {
+                setIsDisconnected(true);
+              } else if (isDisconnected && isAuthenticatedUrl(navState.url)) {
+                console.log('[exams] In-place login detected!');
+                setIsDisconnected(false);
+                notifySessionRestored();
+                try { refreshData?.(); } catch (e) {}
+                if (!navState.url.toLowerCase().includes('seatingplan')) {
+                  webViewRef.current?.injectJavaScript(`window.location.href = '${currentExamsUrl}'; true;`);
+                }
+              }
               // Intercept happenings.lpu.in redirect and route to LoginNew.aspx
               if (navState.url.includes('happenings.lpu.in')) {
                 console.warn('WebView Redirected to Happenings! Redirecting back to LoginNew.aspx...');
                 webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/LoginNew.aspx'; true;`);
               }
-              if (navState.url.includes('login') || navState.url.includes('Login')) {
-                console.warn('WebView Redirected to Login!');
-              }
             }}
             onMessage={(event) => {
               try {
                 const msg = JSON.parse(event.nativeEvent.data);
-                if (msg.type === 'SESSION_EXPIRED') {
+                if (msg.type === 'SESSION_EXPIRED' || msg.type === 'ALMS_SESSION_EXPIRED') {
                   console.warn('Scraper detected session expiry on Exams portal');
-                  router.replace('/login');
+                  setIsDisconnected(true);
                 }
               } catch(e) {}
               console.log('WebView message:', event.nativeEvent.data);

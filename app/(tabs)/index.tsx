@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // ... (other imports) ...
 import { useScraper } from '../../context/ScraperContext';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download, DownloadCloud, X, ExternalLink } from 'lucide-react-native';
+import { LogOut, Bell, Clock, Award, ChevronRight, CheckCircle2, FileText, UploadCloud, GraduationCap, Moon, Sun, User, Lock, Wifi, UserCheck, Tag, MapPin, Coffee, Layers, BookOpen, PlusCircle, Calendar, Sparkles, Menu, MessageSquare, Mail, Phone, Download, DownloadCloud, X, ExternalLink, Briefcase } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { syncAndroidWidget, initWidgetAutoSync } from '../../widgets/widget-sync';
 import { useTheme, Typography } from '../../context/ThemeContext';
@@ -2551,6 +2551,22 @@ export default function DashboardScreen() {
                     <MessageSquare size={18} color="#007AFF" />
                   </View>
                   <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>RMS Portal</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.sidebarMenuItem} 
+                onPress={() => { 
+                  setShowProfileMenu(false); 
+                  openUmsForm('https://ums.lpu.in/Placements/HomePlacementStudent.aspx', 'Placement Portal'); 
+                }}
+              >
+                <View style={styles.sidebarMenuItemLeft}>
+                  <View style={[styles.sidebarIconBg, { backgroundColor: '#5856D615' }]}>
+                    <Briefcase size={18} color="#5856D6" />
+                  </View>
+                  <Text style={[styles.sidebarMenuItemText, { color: colors.text }]}>Placement Portal</Text>
                 </View>
                 <ChevronRight size={16} color={colors.textSecondary} style={{ opacity: 0.6 }} />
               </TouchableOpacity>

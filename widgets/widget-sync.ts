@@ -174,7 +174,7 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
   const todayRemainingClasses = todaySchedule.filter(s => s.isUpcoming).length;
 
   // Helper to find the class immediately following a given minute threshold
-  const findUpNextClass = (afterMin: number): UpNextClassInfo => {
+  const findUpNextClass = (afterMin: number): UpNextClassInfo | undefined => {
     const nextCandidates = parsed.filter(c => (c.startMin || 0) >= afterMin);
     if (nextCandidates.length > 0) {
       nextCandidates.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
@@ -185,21 +185,13 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
         time: startStr,
         startTime: startStr,
         subject: formatSubjectTitle(n.subject || 'Class'),
-        subjectCode: n.subjectCode || 'INT219',
-        room: n.room || '38-302',
+        subjectCode: n.subjectCode || '',
+        room: n.room || 'TBA',
         block: dec.block,
-        attendanceSafeText: 'Attendance Safe (82.1%)',
+        attendanceSafeText: '',
       };
     }
-    return {
-      time: '10:00 AM',
-      startTime: '10:00 AM',
-      subject: 'Front End Web Development',
-      subjectCode: 'INT219',
-      room: '38-302',
-      block: 'Block 38',
-      attendanceSafeText: 'Attendance Safe (82.1%)',
-    };
+    return undefined;
   };
 
   // 1. Ongoing class
@@ -283,23 +275,15 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
         const second = dayClasses.length > 1 ? dayClasses[1] : undefined;
         const decSecond = second ? decodeLpuRoom(second.room || 'TBA') : undefined;
 
-        const upNext: UpNextClassInfo = second ? {
+        const upNext: UpNextClassInfo | undefined = second ? {
           time: second.time.split('–')[0].trim(),
           startTime: second.time.split('–')[0].trim(),
           subject: formatSubjectTitle(second.subject || 'Class'),
-          subjectCode: second.subjectCode || 'SUB',
+          subjectCode: second.subjectCode || '',
           room: second.room || 'TBA',
           block: decSecond?.block || 'Block',
-          attendanceSafeText: 'Attendance Safe (82.1%)',
-        } : {
-          time: '10:00 AM',
-          startTime: '10:00 AM',
-          subject: 'Front End Web Development',
-          subjectCode: 'INT219',
-          room: '38-302',
-          block: 'Block 38',
-          attendanceSafeText: 'Attendance Safe (82.1%)',
-        };
+          attendanceSafeText: '',
+        } : undefined;
 
         return {
           status: offset === 1 ? 'tomorrow' : 'upcoming',
@@ -314,7 +298,7 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
           todayCompletedClasses,
           todayRemainingClasses,
           currentClassIndex: 0,
-          timeUntilOrLeft: startTimeStr,
+          timeUntilOrLeft: offset === 1 ? 'Tomorrow' : targetDay,
           nextClassStartTime: startTimeStr,
           upNext,
         };
@@ -335,15 +319,8 @@ export function calculateNextClass(timetable: any = {}, makeupClasses: any[] = [
     todayCompletedClasses,
     todayRemainingClasses,
     currentClassIndex: 0,
-    upNext: {
-      time: '10:00 AM',
-      startTime: '10:00 AM',
-      subject: 'Front End Web Development',
-      subjectCode: 'INT219',
-      room: '38-302',
-      block: 'Block 38',
-      attendanceSafeText: 'Attendance Safe (82.1%)',
-    },
+    timeUntilOrLeft: '',
+    upNext: undefined,
   };
 }
 
@@ -403,9 +380,9 @@ export async function getWidgetClassData(): Promise<NextClassWidgetData> {
       });
     }
 
-    result.cgpa = parsed.cgpa || '8.42';
-    result.termGpa = parsed.termGpa || '8.60';
-    result.creditsCompleted = parsed.creditsCompleted || '36';
+    result.cgpa = parsed.cgpa || (parsed.resultSummary?.cgpa || '--');
+    result.termGpa = parsed.termGpa || (parsed.resultSummary?.latestTgpa || '--');
+    result.creditsCompleted = parsed.creditsCompleted || '--';
     result.upcomingExam = getUpcomingExam(parsed.exams || []);
     return result;
   } catch (e) {
@@ -505,18 +482,20 @@ export async function getWidgetQuickStatsData(): Promise<QuickStatsWidgetData | 
 
     const classData = calculateNextClass(parsed.timetable || {}, parsed.makeupClasses || []);
 
+    const hasClass = classData.status !== 'no_classes' && Boolean(classData.subject);
+
     return {
-      cgpa: parsed.cgpa || '8.42',
-      termGpa: parsed.termGpa || '8.60',
-      creditsCompleted: parsed.creditsCompleted || '36',
+      cgpa: parsed.cgpa || (parsed.resultSummary?.cgpa || '--'),
+      termGpa: parsed.termGpa || (parsed.resultSummary?.latestTgpa || '--'),
+      creditsCompleted: parsed.creditsCompleted || '--',
       attendancePercent,
       attended,
       total,
-      nextSubject: classData.subject ? formatSubjectTitle(classData.subject) : 'Software Engineering',
-      nextSubjectCode: classData.subjectCode || 'CSE320',
-      nextTime: classData.time || '09:00 AM',
-      nextRoom: classData.room || '34-101',
-      hasClass: classData.status !== 'no_classes',
+      nextSubject: hasClass ? formatSubjectTitle(classData.subject) : 'No Classes',
+      nextSubjectCode: hasClass ? (classData.subjectCode || '') : '',
+      nextTime: hasClass ? (classData.time || '') : '',
+      nextRoom: hasClass ? (classData.room || 'Free') : 'Free',
+      hasClass,
     };
   } catch (e) {
     return undefined;

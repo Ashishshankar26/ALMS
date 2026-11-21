@@ -1,17 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, Platform, RefreshControl, Modal } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useScraper } from '../../context/ScraperContext';
-import { Clock, MapPin, Tag, User, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Clock, MapPin, Tag, User, ChevronDown, ChevronUp, Sparkles, Calendar, ExternalLink, RefreshCw, X } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TimetableScreen() {
+  const router = useRouter();
   const { data, isScraping, refreshData } = useScraper();
   const { colors, isDark } = useTheme();
   const timetable = data.timetable || {};
+  const [showMakeupModal, setShowMakeupModal] = useState(false);
   
   // Default to current day
   const getCurrentDay = () => {
@@ -153,6 +156,30 @@ export default function TimetableScreen() {
               </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[
+              styles.makeupCheckButton,
+              {
+                backgroundColor: makeupClasses.length > 0
+                  ? (isDark ? 'rgba(255, 149, 0, 0.15)' : '#FFF9E6')
+                  : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
+                borderColor: makeupClasses.length > 0
+                  ? (isDark ? 'rgba(255, 149, 0, 0.35)' : '#FFEAA7')
+                  : (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'),
+              }
+            ]}
+            onPress={() => setShowMakeupModal(true)}
+            activeOpacity={0.7}
+          >
+            <Sparkles size={13} color={makeupClasses.length > 0 ? '#FF9F0A' : colors.primary} />
+            <Text style={[
+              styles.makeupCheckButtonText,
+              { color: makeupClasses.length > 0 ? (isDark ? '#FF9F0A' : '#D97706') : colors.text }
+            ]}>
+              Makeup {makeupClasses.length > 0 ? `(${makeupClasses.length})` : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Day Selector */}
@@ -541,6 +568,153 @@ export default function TimetableScreen() {
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* Makeup Classes Modal */}
+      <Modal
+        visible={showMakeupModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowMakeupModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleRow}>
+                <View style={[styles.modalIconWrap, { backgroundColor: 'rgba(255, 159, 10, 0.15)' }]}>
+                  <Sparkles size={18} color="#FF9F0A" />
+                </View>
+                <View>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Makeup & Adjustments</Text>
+                  <Text style={[styles.modalSub, { color: colors.textSecondary }]}>
+                    {makeupClasses.length > 0
+                      ? `${makeupClasses.length} assigned session${makeupClasses.length > 1 ? 's' : ''}`
+                      : 'Assigned makeup schedule'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.modalCloseBtn, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+                onPress={() => setShowMakeupModal(false)}
+              >
+                <X size={18} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Content List or Empty State */}
+            <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.55 }} showsVerticalScrollIndicator={false}>
+              {makeupClasses.length > 0 ? (
+                <View style={{ gap: 12, paddingVertical: 8 }}>
+                  {makeupClasses.map((cls: any, index: number) => (
+                    <View
+                      key={`modal_makeup_${index}`}
+                      style={[
+                        styles.makeupModalCard,
+                        {
+                          backgroundColor: isDark ? '#252528' : '#F8F9FA',
+                          borderColor: isDark ? '#333336' : '#E9ECEF',
+                        }
+                      ]}
+                    >
+                      <View style={styles.makeupCardTop}>
+                        <View style={styles.makeupModalBadgeCapsule}>
+                          <Text style={styles.makeupModalBadgeText}>
+                            {cls.category || cls.type || 'ADJUSTMENT'}
+                          </Text>
+                        </View>
+                        {cls.date && (
+                          <View style={styles.makeupDateRow}>
+                            <Calendar size={12} color="#8E8E93" />
+                            <Text style={styles.makeupDateText}>{cls.date}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <Text style={[styles.makeupCourseCode, { color: colors.text }]}>
+                        {cls.subjectCode}
+                      </Text>
+                      <Text style={[styles.makeupCourseName, { color: colors.textSecondary }]} numberOfLines={2}>
+                        {cls.subject}
+                      </Text>
+
+                      <View style={styles.makeupDivider} />
+
+                      <View style={styles.makeupMetaRow}>
+                        <View style={styles.makeupMetaItem}>
+                          <Clock size={13} color={colors.primary} />
+                          <Text style={[styles.makeupMetaLabel, { color: colors.text }]}>{cls.time}</Text>
+                        </View>
+                        <View style={styles.makeupMetaItem}>
+                          <MapPin size={13} color="#30D158" />
+                          <Text style={[styles.makeupMetaLabel, { color: colors.text }]}>
+                            {cls.room?.includes('Room') ? cls.room : `Room ${cls.room}`}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {cls.faculty && (
+                        <View style={[styles.makeupMetaItem, { marginTop: 6 }]}>
+                          <User size={13} color="#8E8E93" />
+                          <Text style={[styles.makeupMetaLabel, { color: colors.textSecondary }]}>{cls.faculty}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.makeupEmptyWrap}>
+                  <View style={[styles.makeupEmptyIcon, { backgroundColor: isDark ? '#252528' : '#F2F2F7' }]}>
+                    <Calendar size={32} color="#8E8E93" />
+                  </View>
+                  <Text style={[styles.makeupEmptyTitle, { color: colors.text }]}>No Makeup Classes Assigned</Text>
+                  <Text style={[styles.makeupEmptyDesc, { color: colors.textSecondary }]}>
+                    There are currently no makeup or adjustment lectures assigned to your university schedule.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Bottom Actions */}
+            <View style={styles.modalBottomActions}>
+              <TouchableOpacity
+                style={[styles.modalActionBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setShowMakeupModal(false);
+                  router.push({
+                    pathname: '/ums_form',
+                    params: {
+                      url: 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/Student-MakeupAdjustment',
+                      title: 'Makeup & Adjustments'
+                    }
+                  } as any);
+                }}
+                activeOpacity={0.8}
+              >
+                <ExternalLink size={16} color="#FFFFFF" />
+                <Text style={styles.modalActionBtnText}>Check UMS Portal Live</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalSecondaryBtn,
+                  {
+                    backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
+                    borderColor: isDark ? '#38383A' : '#E5E5EA',
+                  }
+                ]}
+                onPress={() => {
+                  refreshData();
+                  setShowMakeupModal(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <RefreshCw size={14} color={colors.text} />
+                <Text style={[styles.modalSecondaryBtnText, { color: colors.text }]}>Sync Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -949,5 +1123,183 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
     fontWeight: '500',
-  }
+  },
+  makeupCheckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  makeupCheckButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  modalSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  makeupModalCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+  },
+  makeupCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  makeupModalBadgeCapsule: {
+    backgroundColor: 'rgba(255, 159, 10, 0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  makeupModalBadgeText: {
+    color: '#FF9F0A',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  makeupDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  makeupDateText: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '600',
+  },
+  makeupCourseCode: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  makeupCourseName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  makeupDivider: {
+    height: 1,
+    backgroundColor: 'rgba(142, 142, 147, 0.15)',
+    marginVertical: 10,
+  },
+  makeupMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  makeupMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  makeupMetaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  makeupEmptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+  },
+  makeupEmptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  makeupEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  makeupEmptyDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  modalBottomActions: {
+    marginTop: 16,
+    gap: 10,
+  },
+  modalActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  modalActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  modalSecondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

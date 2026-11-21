@@ -36,42 +36,17 @@ export function AttendanceWidget({
 }) {
   const cfg = getAppleWidgetConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
-  const attended = (data?.attended ?? 58) + (data?.dutyLeaves ?? 0) + (data?.bonusAttendance ?? 0);
-  const total = data?.total ?? 74;
+  const attended = (data?.attended ?? 0) + (data?.dutyLeaves ?? 0) + (data?.bonusAttendance ?? 0);
+  const total = data?.total ?? 0;
   const bunkResult = calculateBunkMargin(attended, total, 0.75);
-  const pct = data?.overallPercentage ?? (total > 0 ? Math.round((attended / total) * 100) : 78.4);
+  const pct = data?.overallPercentage ?? (total > 0 ? Math.round((attended / total) * 100) : 0);
   const isSafe = pct >= 75;
   const targetDiff = (pct - 75).toFixed(1);
 
-  // Default / Scraped 3 subjects matching Image 2
-  const subjects: SubjectAttendanceItem[] = (data?.subjects && data.subjects.length >= 3)
+  // Scraped subjects
+  const subjects: SubjectAttendanceItem[] = (data?.subjects && data.subjects.length > 0)
     ? data.subjects.slice(0, 3)
-    : [
-        {
-          subjectCode: 'CSE320',
-          percentage: 84.2,
-          attended: 32,
-          total: 38,
-          marginText: '+4 Safe',
-          color: '#30D158',
-        },
-        {
-          subjectCode: 'INT219',
-          percentage: 76.0,
-          attended: 19,
-          total: 25,
-          marginText: '+1 Safe',
-          color: '#FF9F0A',
-        },
-        {
-          subjectCode: 'MTH401',
-          percentage: 72.5,
-          attended: 29,
-          total: 40,
-          marginText: 'Need 2',
-          color: '#FF453A',
-        },
-      ];
+    : [];
 
   // ═════════════════════════════════════════════════════════════════════════
   // 1. SMALL 2x2 COMPACT FOCUS
@@ -267,7 +242,7 @@ export function AttendanceWidget({
           }}
         >
           <TextWidget
-            text={isSafe ? `+${bunkResult.margin} CLASSES` : `NEED ${bunkResult.margin || 1} CLASSES`}
+            text={isSafe ? `+${bunkResult.margin} SAFE` : `NEED ${bunkResult.margin || 1} CLASSES`}
             maxLines={1}
             truncate="END"
             style={{
@@ -278,7 +253,7 @@ export function AttendanceWidget({
             }}
           />
           <TextWidget
-            text={isSafe ? 'Safe to miss without dropping below 75%' : 'Must attend consecutively to reach 75%'}
+            text={isSafe ? 'Standing safely above 75% target' : 'Required to restore 75% target'}
             maxLines={1}
             truncate="END"
             style={{
@@ -401,68 +376,95 @@ export function AttendanceWidget({
         </FlexWidget>
       </FlexWidget>
 
-      {/* ── BOTTOM: 3 SUBJECT CARDS ── */}
-      <FlexWidget
-        style={{
-          flexDirection: 'row',
-          width: 'match_parent',
-          justifyContent: 'space-between',
-          marginTop: isCompactHeight ? 3 : 4,
-        }}
-      >
-        {subjects.map((sub, index) => (
-          <FlexWidget
-            key={sub.subjectCode}
-            style={{
-              backgroundColor: '#2C2C2E',
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: '#38383A',
-              paddingHorizontal: cardPadH,
-              paddingVertical: cardPadV,
-              flex: 1,
-              marginRight: index < 2 ? (isCompactHeight ? 4 : 6) : 0,
-              justifyContent: 'space-between',
-            }}
-          >
-            <TextWidget
-              text={sub.subjectCode}
-              maxLines={1}
-              truncate="END"
-              style={{ color: '#FFFFFF', fontSize: cardCodeSize, fontWeight: '800' }}
-            />
+      {/* ── BOTTOM: SUBJECT CARDS OR CLEAN STANDING STATE ── */}
+      {subjects.length > 0 ? (
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            width: 'match_parent',
+            justifyContent: 'space-between',
+            marginTop: isCompactHeight ? 3 : 4,
+          }}
+        >
+          {subjects.map((sub, index) => (
             <FlexWidget
+              key={sub.subjectCode}
               style={{
-                flexDirection: 'row',
+                backgroundColor: '#2C2C2E',
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: '#38383A',
+                paddingHorizontal: cardPadH,
+                paddingVertical: cardPadV,
+                flex: 1,
+                marginRight: index < subjects.length - 1 ? (isCompactHeight ? 4 : 6) : 0,
                 justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                marginTop: isCompactHeight ? 2 : 4,
               }}
             >
               <TextWidget
-                text={`${sub.percentage}%`}
-                maxLines={1}
-                style={{
-                  color: sub.color,
-                  fontSize: cardPctSize,
-                  fontWeight: '900',
-                  letterSpacing: -0.3,
-                }}
-              />
-              <TextWidget
-                text={sub.marginText}
+                text={sub.subjectCode}
                 maxLines={1}
                 truncate="END"
-                style={{
-                  color: sub.color,
-                  fontSize: cardMarginSize,
-                  fontWeight: '800',
-                }}
+                style={{ color: '#FFFFFF', fontSize: cardCodeSize, fontWeight: '800' }}
               />
+              <FlexWidget
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-end',
+                  marginTop: isCompactHeight ? 2 : 4,
+                }}
+              >
+                <TextWidget
+                  text={`${sub.percentage}%`}
+                  maxLines={1}
+                  style={{
+                    color: sub.color,
+                    fontSize: cardPctSize,
+                    fontWeight: '900',
+                    letterSpacing: -0.3,
+                  }}
+                />
+                <TextWidget
+                  text={sub.marginText}
+                  maxLines={1}
+                  truncate="END"
+                  style={{
+                    color: sub.color,
+                    fontSize: cardMarginSize,
+                    fontWeight: '800',
+                  }}
+                />
+              </FlexWidget>
             </FlexWidget>
-          </FlexWidget>
-        ))}
-      </FlexWidget>
+          ))}
+        </FlexWidget>
+      ) : (
+        <FlexWidget
+          style={{
+            backgroundColor: '#2C2C2E',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: '#38383A',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            width: 'match_parent',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: isCompactHeight ? 3 : 4,
+          }}
+        >
+          <TextWidget
+            text="All Subject Attendance Synchronized"
+            style={{ color: '#8E8E93', fontSize: 10, fontWeight: '600' }}
+          />
+          <TextWidget
+            text="Standing: Safe ›"
+            style={{ color: '#30D158', fontSize: 10, fontWeight: '800' }}
+          />
+        </FlexWidget>
+      )}
     </FlexWidget>
   );
 }

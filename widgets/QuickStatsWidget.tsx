@@ -31,19 +31,24 @@ export function QuickStatsWidget({
 }) {
   const cfg = getAppleWidgetConfig(widgetInfo?.width, widgetInfo?.height, widgetInfo?.screenInfo);
 
-  const attended = data?.attended ?? 58;
-  const total = data?.total ?? 74;
+  const attended = data?.attended ?? 0;
+  const total = data?.total ?? 0;
   const bunkResult = calculateBunkMargin(attended, total, 0.75);
-  const pct = data?.attendancePercent ?? (total > 0 ? Math.round((attended / total) * 100) : 78.4);
-  const cgpa = data?.cgpa && data.cgpa !== '--' ? data.cgpa : '8.42';
-  const termGpa = data?.termGpa || '8.60';
-  const credits = data?.creditsCompleted || '36';
+  const pct = data?.attendancePercent ?? (total > 0 ? Math.round((attended / total) * 100) : 0);
+  const cgpa = (data?.cgpa && data.cgpa !== '--') ? data.cgpa : '--';
+  const termGpa = (data?.termGpa && data.termGpa !== '--') ? data.termGpa : '';
+  const credits = (data?.creditsCompleted && data.creditsCompleted !== '--') ? data.creditsCompleted : '';
 
-  const nextRoomRaw = data?.nextRoom || '34-101';
-  const decodedRoom = decodeLpuRoom(nextRoomRaw);
+  const nextRoomRaw = data?.nextRoom || '';
+  const decodedRoom = nextRoomRaw ? decodeLpuRoom(nextRoomRaw) : { block: 'Campus', floor: 'All Clear', fullLabel: 'Campus', shortLabel: 'Campus', roomNumber: '', blockNumber: '' };
   const roomShort = decodedRoom.shortLabel.replace('Room ', '');
-  const subjectCode = data?.nextSubjectCode || (data?.nextSubject ? data.nextSubject.slice(0, 6).toUpperCase() : 'CSE320');
-  const classTime = data?.nextTime ? data.nextTime.split('–')[0].split('-')[0].trim() : '09:00 AM';
+  const subjectCode = data?.nextSubjectCode || '';
+  const classTime = data?.nextTime ? data.nextTime.split('–')[0].split('-')[0].trim() : '';
+
+  const hasClass = Boolean(data?.hasClass && subjectCode);
+  const cleanRoomNumber = hasClass
+    ? (decodedRoom.roomNumber ? `B${decodedRoom.blockNumber || '33'}-${decodedRoom.roomNumber}` : (roomShort || subjectCode || 'Class'))
+    : 'Free';
 
   // Difference from 75% target threshold
   const targetDiff = (pct - 75).toFixed(1);
@@ -121,10 +126,6 @@ export function QuickStatsWidget({
       </FlexWidget>
     );
   }
-
-  const cleanRoomNumber = nextRoomRaw.includes('-')
-    ? nextRoomRaw
-    : (decodedRoom.roomNumber ? `${decodedRoom.blockNumber || 'B'}-${decodedRoom.roomNumber}` : nextRoomRaw.slice(0, 7));
 
   // 4x2 launcher widgets on Android report h ~130-220dp; >= 240dp indicates expanded 3+ rows
   const isCompactHeight = cfg.h < 240;
@@ -210,33 +211,33 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="CUMULATIVE GPA"
+              text="GPA"
               maxLines={1}
               truncate="END"
-              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
+              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}
             />
             <TextWidget
               text={cgpa}
               maxLines={1}
               style={{
                 color: '#BF5AF2',
-                fontSize: tileHeroSize,
+                fontSize: 20,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: tileHeroMarginV,
+                marginVertical: 1,
               }}
             />
             <TextWidget
-              text={`Term GPA: ${termGpa}`}
+              text={termGpa ? `Term: ${termGpa}` : 'Cumulative'}
               maxLines={1}
               truncate="END"
-              style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
+              style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
-              text={`${credits} Credits Completed`}
+              text={credits ? `${credits} Credits` : 'Validated'}
               maxLines={1}
               truncate="END"
-              style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
+              style={{ color: '#8E8E93', fontSize: 8.5, fontWeight: '500' }}
             />
           </FlexWidget>
 
@@ -254,10 +255,10 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text="View Grade Details ›"
+              text="Results ›"
               maxLines={1}
               truncate="END"
-              style={{ color: '#BF5AF2', fontSize: tileBtnFontSize, fontWeight: '800' }}
+              style={{ color: '#BF5AF2', fontSize: 8.5, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -280,38 +281,38 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="OVERALL ATTENDANCE"
+              text="ATTENDANCE"
               maxLines={1}
               truncate="END"
-              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
+              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}
             />
             <TextWidget
               text={`${pct}%`}
               maxLines={1}
               style={{
                 color: isSafe ? '#30D158' : '#FF453A',
-                fontSize: tileHeroSize,
+                fontSize: 20,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: tileHeroMarginV,
+                marginVertical: 1,
               }}
             />
             <TextWidget
-              text={bunkResult.label}
+              text={isSafe ? 'Target Met' : 'Attention'}
               maxLines={1}
               truncate="END"
               style={{
-                color: bunkResult.color,
-                fontSize: tileLine2Size,
+                color: isSafe ? '#30D158' : '#FF453A',
+                fontSize: 9,
                 fontWeight: '800',
                 marginBottom: 1,
               }}
             />
             <TextWidget
-              text={`${attended} / ${total} Classes`}
+              text={total > 0 ? `${attended} / ${total} Classes` : `${pct}% Overall`}
               maxLines={1}
               truncate="END"
-              style={{ color: '#8E8E93', fontSize: tileLine3Size, fontWeight: '500' }}
+              style={{ color: '#8E8E93', fontSize: 8.5, fontWeight: '500' }}
             />
           </FlexWidget>
 
@@ -331,10 +332,10 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text={isSafe ? `✓ Safe (+${targetDiff}%)` : `⚠️ Need (${Math.abs(Number(targetDiff))}%)`}
+              text={isSafe ? `✓ +${targetDiff}% Safe` : `⚠️ -${Math.abs(Number(targetDiff))}%`}
               maxLines={1}
               truncate="END"
-              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: tileBtnFontSize, fontWeight: '800' }}
+              style={{ color: isSafe ? '#30D158' : '#FF453A', fontSize: 8.5, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>
@@ -357,10 +358,10 @@ export function QuickStatsWidget({
         >
           <FlexWidget style={{ flexDirection: 'column' }}>
             <TextWidget
-              text="UPCOMING CLASS"
+              text="UPCOMING"
               maxLines={1}
               truncate="END"
-              style={{ color: '#8E8E93', fontSize: isCompactHeight ? 7.5 : 9, fontWeight: '800', letterSpacing: 0.2 }}
+              style={{ color: '#8E8E93', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}
             />
             <TextWidget
               text={cleanRoomNumber}
@@ -368,23 +369,23 @@ export function QuickStatsWidget({
               truncate="END"
               style={{
                 color: '#0A84FF',
-                fontSize: tileHeroSize,
+                fontSize: 20,
                 fontWeight: '900',
                 letterSpacing: -0.5,
-                marginVertical: tileHeroMarginV,
+                marginVertical: 1,
               }}
             />
             <TextWidget
-              text={`${classTime} • ${subjectCode}`}
+              text={hasClass ? `${classTime} • ${subjectCode}` : 'All Clear'}
               maxLines={1}
               truncate="END"
-              style={{ color: '#FFFFFF', fontSize: tileLine2Size, fontWeight: '700', marginBottom: 1 }}
+              style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '700', marginBottom: 1 }}
             />
             <TextWidget
-              text={`${decodedRoom.block} • ${decodedRoom.floor}`}
+              text={hasClass ? `${decodedRoom.block} • ${decodedRoom.floor}` : 'No more classes'}
               maxLines={1}
               truncate="END"
-              style={{ color: '#64D2FF', fontSize: tileLine3Size, fontWeight: '600' }}
+              style={{ color: '#8E8E93', fontSize: 8.5, fontWeight: '500' }}
             />
           </FlexWidget>
 
@@ -402,10 +403,10 @@ export function QuickStatsWidget({
             }}
           >
             <TextWidget
-              text="Open Timetable ›"
+              text="Schedule ›"
               maxLines={1}
               truncate="END"
-              style={{ color: '#0A84FF', fontSize: tileBtnFontSize, fontWeight: '800' }}
+              style={{ color: '#0A84FF', fontSize: 8.5, fontWeight: '800' }}
             />
           </FlexWidget>
         </FlexWidget>

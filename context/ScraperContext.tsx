@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 // Cache breaker: 2026-04-19 13:16
-import { View, Platform, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Platform, Text, StyleSheet, TouchableOpacity, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from './ThemeContext';
 import { syncAndroidWidget } from '../widgets/widget-sync';
+import { ALMS_SESSION_RESTORED } from '../utils/webViewSession';
 
 export interface SubjectAttendance {
   subjectCode: string;
@@ -2103,6 +2104,17 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => clearInterval(heartbeat);
   }, [isAuthenticated, isScraping]);
+
+  // Global Session Restored listener: refreshes all student background data automatically
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
+      console.log('[ScraperContext] ALMS_SESSION_RESTORED event received — refreshing data in background');
+      if (isAuthenticated) {
+        refreshData();
+      }
+    });
+    return () => sub.remove();
+  }, [isAuthenticated]);
 
   const updateProfile = (profileData: any) => {
     setData(prev => {

@@ -3,15 +3,17 @@ import { StyleSheet, View, Text, ActivityIndicator, Platform, TouchableOpacity, 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { WebView } from 'react-native-webview';
-import { GraduationCap, Lock } from 'lucide-react-native';
+import { GraduationCap, Lock, ArrowLeft } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
 import { useScraper } from '../context/ScraperContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { notifySessionRestored } from '../utils/webViewSession';
 
 export default function LoginScreen() {
   const { login, isAuthenticated, loading: authLoading } = useAuth();
-  const { isScraping } = useScraper();
+  const { isScraping, refreshData } = useScraper();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { colors } = useTheme();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(false);
@@ -20,6 +22,23 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [savedCreds, setSavedCreds] = useState<any>(null);
   const credsRef = useRef<any>(null);
+  const hasNavigatedAway = useRef(false);
+
+  const navigateAfterLogin = () => {
+    if (hasNavigatedAway.current) return;
+    hasNavigatedAway.current = true;
+    notifySessionRestored();
+    try {
+      refreshData?.();
+    } catch (e) {
+      console.warn('refreshData error on login:', e);
+    }
+    if (returnTo) {
+      router.replace(returnTo as any);
+    } else {
+      router.replace('/');
+    }
+  };
 
   // ─── BEFORE page loads ─────────────────────────────────────────────────
   // 1. Kill blur/focusout/change on UMS INPUT fields only — this prevents
@@ -201,14 +220,14 @@ export default function LoginScreen() {
 
   React.useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      router.replace('/');
+      navigateAfterLogin();
     }
   }, [isAuthenticated, authLoading]);
 
   const handleNavigationStateChange = (navState: any) => {
     if (navState.url.toLowerCase().includes('dashboard') || navState.url.toLowerCase().includes('home')) {
         login({ name: 'Student', username: savedCreds?.u, password: savedCreds?.p }).then(() => {
-            router.replace('/');
+            navigateAfterLogin();
         });
     }
   };
@@ -250,8 +269,23 @@ export default function LoginScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerText, { color: colors.text }]}>LPU UMS Login</Text>
-        <Text style={[styles.subText, { color: colors.textSecondary }]}>Please log in to sync your data.</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {(returnTo || router.canGoBack()) && (
+            <TouchableOpacity 
+              onPress={() => {
+                if (returnTo) router.replace(returnTo as any);
+                else router.back();
+              }}
+              style={{ marginRight: 12, padding: 4 }}
+            >
+              <ArrowLeft size={22} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerText, { color: colors.text }]}>LPU UMS Login</Text>
+            <Text style={[styles.subText, { color: colors.textSecondary }]}>Please log in to sync your data.</Text>
+          </View>
+        </View>
       </View>
 
       {error ? (
