@@ -29,22 +29,89 @@ export default function UmsFormScreen() {
   const { authData } = useAuth();
   const webViewRef = useRef<WebView>(null);
   const [savedCreds, setSavedCreds] = useState<{ u?: string; p?: string } | null>(null);
+  const credsRef = useRef<{ u?: string; p?: string } | null>(null);
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
   const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+  const isPlacement = (title || '').toLowerCase().includes('placement') || fullUrl.toLowerCase().includes('placement');
 
   // Load credentials from AsyncStorage on mount
   useEffect(() => {
     AsyncStorage.getItem('@credentials').then(stored => {
       if (stored) {
         try {
-          setSavedCreds(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          setSavedCreds(parsed);
+          credsRef.current = parsed;
         } catch (e) {}
       }
     }).catch(() => {});
   }, []);
+
+  const username = authData?.username || credsRef.current?.u || savedCreds?.u || '';
+  const password = authData?.password || credsRef.current?.p || savedCreds?.p || '';
+
+  const placementBeforeContentJS = isPlacement ? `
+    (function() {
+      try {
+        var href = (window.location.href || '').toLowerCase();
+        if (href.indexOf('/placements/') !== -1 && href.indexOf('homeplacementstudent') === -1) {
+          // Immediately hide login page so student never sees it
+          var hideStyle = document.createElement('style');
+          hideStyle.id = '__alms_hide_placement_login';
+          hideStyle.innerHTML = 'body, html, form, .container, #form1 { opacity: 0 !important; visibility: hidden !important; }';
+          (document.head || document.documentElement).appendChild(hideStyle);
+
+          var uVal = ${JSON.stringify(username)};
+          var pVal = ${JSON.stringify(password)};
+
+          function doPlacementLogin() {
+            if (!uVal || !pVal) return;
+            var u = document.querySelector('#txtRegno, #txtRegistrationNo, #txtUser, #txtUserName, #txtLogin, #txtU, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"], input[type="text"]');
+            var p = document.querySelector('input[type="password"], #txtPassword, #txtPass, input[name*="Pass"], input[name*="pass"]');
+            if (u && p) {
+              if (!u.value) {
+                try {
+                  var nSU = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSU.call(u, uVal);
+                } catch(e) { u.value = uVal; }
+                u.dispatchEvent(new Event('input', { bubbles: true }));
+                u.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              if (!p.value) {
+                try {
+                  var nSP = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                  nSP.call(p, pVal);
+                } catch(e) { p.value = pVal; }
+                p.dispatchEvent(new Event('input', { bubbles: true }));
+                p.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              var btn = document.querySelector('#btnLogin, #btnSubmit, #btnSignIn, input[type="submit"], button[type="submit"]');
+              if (btn && !window.__almsPlacementSubmitted) {
+                window.__almsPlacementSubmitted = true;
+                btn.click();
+              }
+            }
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', doPlacementLogin);
+          } else {
+            doPlacementLogin();
+          }
+          var poll = setInterval(function() {
+            if (window.__almsPlacementSubmitted) {
+              clearInterval(poll);
+            } else {
+              doPlacementLogin();
+            }
+          }, 60);
+        }
+      } catch(e) {}
+    })();
+  ` : '';
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
@@ -273,10 +340,12 @@ export default function UmsFormScreen() {
         <View style={{ width: 40 }} />
       </View>
  
-      <WebViewSessionBanner
-        visible={isDisconnected}
-        returnTo={returnTo}
-      />
+      {!isPlacement && (
+        <WebViewSessionBanner
+          visible={isDisconnected}
+          returnTo={returnTo}
+        />
+      )}
 
       <View style={{ flex: 1 }}>
           <>
@@ -284,32 +353,58 @@ export default function UmsFormScreen() {
               ref={webViewRef}
               source={{ uri: fullUrl, headers: TURNSTILE_WEBVIEW_HEADERS }}
               userAgent={SPOOFED_USER_AGENT}
-              injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
+              injectedJavaScriptBeforeContentLoaded={placementBeforeContentJS ? `${TURNSTILE_BEFORE_CONTENT_JS}\n${placementBeforeContentJS}` : TURNSTILE_BEFORE_CONTENT_JS}
               style={{ flex: 1, backgroundColor: colors.background }}
               onLoadStart={() => setLoading(true)}
               onNavigationStateChange={(navState) => {
                 const currentNavUrl = navState.url || '';
-                if (isLoginOrSessionUrl(currentNavUrl)) {
-                  setIsDisconnected(true);
-                } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
-                  // In-place login detected!
-                  console.log('[ums_form] In-place login detected!');
+                const lowerNavUrl = currentNavUrl.toLowerCase();
+                if (isPlacement) {
+                  // Never show disconnected session banner on Placement Portal
                   setIsDisconnected(false);
-                  notifySessionRestored({ sourceUrl: fullUrl });
-                  try { refreshData?.(); } catch (e) {}
+                  if (lowerNavUrl.includes('homeplacementstudent') || (lowerNavUrl.includes('/placements/') && !lowerNavUrl.includes('default.aspx'))) {
+                    setLoading(false);
+                  } else if (lowerNavUrl.includes('default.aspx')) {
+                    // Keep loading spinner active while auto-submitting credentials
+                    setLoading(true);
+                    const u = username || credsRef.current?.u || '';
+                    const p = password || credsRef.current?.p || '';
+                    if (u && p) {
+                      webViewRef.current?.injectJavaScript(getSessionWatcherJS(u, p));
+                    }
+                  }
+                } else {
+                  if (isLoginOrSessionUrl(currentNavUrl)) {
+                    setIsDisconnected(true);
+                  } else if (isDisconnected && isAuthenticatedUrl(currentNavUrl)) {
+                    // In-place login detected!
+                    console.log('[ums_form] In-place login detected!');
+                    setIsDisconnected(false);
+                    notifySessionRestored({ sourceUrl: fullUrl });
+                    try { refreshData?.(); } catch (e) {}
 
-                  // If user ended up on default dashboard, redirect back to assigned page
-                  const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
-                  if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
-                    webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+                    // If user ended up on default dashboard, redirect back to assigned page
+                    const targetSlug = fullUrl.split('/').pop()?.split('?')[0]?.toLowerCase() || '';
+                    if (targetSlug && !currentNavUrl.toLowerCase().includes(targetSlug)) {
+                      webViewRef.current?.injectJavaScript(`window.location.href = '${fullUrl}'; true;`);
+                    }
                   }
                 }
               }}
               onLoadEnd={(event) => {
-                setLoading(false);
-                const username = authData?.username || savedCreds?.u || '';
-                const password = authData?.password || savedCreds?.p || '';
-                webViewRef.current?.injectJavaScript(getSessionWatcherJS(username, password));
+                const navUrl = (event.nativeEvent.url || '').toLowerCase();
+                if (isPlacement) {
+                  if (navUrl.includes('homeplacementstudent') || (navUrl.includes('/placements/') && !navUrl.includes('default.aspx'))) {
+                    setLoading(false);
+                  } else {
+                    setLoading(true);
+                  }
+                } else {
+                  setLoading(false);
+                }
+                const u = username || credsRef.current?.u || '';
+                const p = password || credsRef.current?.p || '';
+                webViewRef.current?.injectJavaScript(getSessionWatcherJS(u, p));
                 if (title === 'Profile Update' || (event.nativeEvent.url && event.nativeEvent.url.includes('user-profile'))) {
                   webViewRef.current?.injectJavaScript(profileScraperScript);
                 }
@@ -318,7 +413,9 @@ export default function UmsFormScreen() {
                 try {
                   const data = JSON.parse(event.nativeEvent.data);
                   if (data.type === 'ALMS_SESSION_EXPIRED' || data.type === 'SESSION_EXPIRED') {
-                    setIsDisconnected(true);
+                    if (!isPlacement) {
+                      setIsDisconnected(true);
+                    }
                   } else if (data.type === 'PROFILE_UPDATE_SCRAPE') {
                     console.log('UMS_FORM SCRAPE SUCCESS:', data.payload);
                     updateProfile(data.payload);
@@ -334,6 +431,11 @@ export default function UmsFormScreen() {
             {loading && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color={colors.primary} />
+                {isPlacement && (
+                  <Text style={{ color: colors.textSecondary, marginTop: 14, fontSize: 13, fontWeight: '600' }}>
+                    Connecting to Placement Portal...
+                  </Text>
+                )}
               </View>
             )}
           </>
