@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     marginTop: -20, // Negative margin to tuck under header slightly
   },
   webviewWrapper: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   hidden: {
     display: 'none',
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     marginBottom: Platform.OS === 'ios' ? 100 : 80,
   },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,

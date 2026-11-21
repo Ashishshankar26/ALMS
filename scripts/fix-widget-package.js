@@ -30,3 +30,17 @@ if (fs.existsSync(srcIndexPath)) {
 const dummyTypeJs = path.join(pkgDir, 'src', 'config-plugin.type.js');
 fs.writeFileSync(dummyTypeJs, 'module.exports = {};\n', 'utf8');
 console.log('Created dummy config-plugin.type.js in src');
+
+// 4. Fix react-native-webview index.d.ts P = undefined TS bug in React 19
+const webviewDtsPath = path.join(__dirname, '..', 'node_modules', 'react-native-webview', 'index.d.ts');
+if (fs.existsSync(webviewDtsPath)) {
+  let webviewDts = fs.readFileSync(webviewDtsPath, 'utf8');
+  if (webviewDts.includes('class WebView<P = undefined>')) {
+    webviewDts = webviewDts.replace('class WebView<P = undefined>', 'class WebView<P = {}>');
+    if (!webviewDts.includes('render():')) {
+      webviewDts = webviewDts.replace('class WebView<P = {}> extends Component<WebViewProps & P> {', 'class WebView<P = {}> extends Component<WebViewProps & P> {\n  render(): import("react").ReactNode;\n');
+    }
+    fs.writeFileSync(webviewDtsPath, webviewDts, 'utf8');
+    console.log('Patched react-native-webview index.d.ts');
+  }
+}

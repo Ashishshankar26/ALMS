@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700' },
   webview: { flex: 1 },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: 100,
     justifyContent: 'center', alignItems: 'center',
     zIndex: 1,

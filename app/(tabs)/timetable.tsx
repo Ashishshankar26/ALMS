@@ -64,36 +64,69 @@ export default function TimetableScreen() {
         let hasHappened = false;
         if (cls.date) {
           try {
-            // Parse date: e.g., "15-May-2026"
-            const dateParts = cls.date.split('-');
+            // Parse date flexibly: "15-May-2026", "25 Apr 2026", "25/04/2026"
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const classDate = new Date(
-              parseInt(dateParts[2]), 
-              months.indexOf(dateParts[1]), 
-              parseInt(dateParts[0])
-            );
-            
-            // Set to end of day for basic date comparison
-            classDate.setHours(23, 59, 59);
+            const normalized = cls.date.replace(/-/g, ' ').replace(/\//g, ' ');
+            const dateParts = normalized.split(/\s+/).filter(Boolean);
+            let classDate: Date | null = null;
 
-            if (classDate < now) {
-              hasHappened = true;
-            } else if (classDate.toDateString() === now.toDateString()) {
-              // If today, check the time
-              const timeParts = (cls.time || "").split(/\s*-\s*/);
-              const endTimeStr = timeParts[1] || ""; // e.g., "04:50 PM"
-              if (endTimeStr) {
-                 const [time, ampm] = endTimeStr.split(' ');
-                 let [hours, minutes] = time.split(':').map(Number);
-                 if (ampm === 'PM' && hours < 12) hours += 12;
-                 if (ampm === 'AM' && hours === 12) hours = 0;
-                 
-                 const classEndTime = new Date(now);
-                 classEndTime.setHours(hours, minutes, 0);
-                 
-                 if (now > classEndTime) {
-                   hasHappened = true;
-                 }
+            if (dateParts.length === 3) {
+              // Try "DD Mon YYYY" first
+              const monthIdx = months.indexOf(dateParts[1]);
+              if (monthIdx !== -1) {
+                classDate = new Date(
+                  parseInt(dateParts[2]),
+                  monthIdx,
+                  parseInt(dateParts[0])
+                );
+              } else {
+                // Try "Mon DD YYYY" (e.g. from new Date().toString())
+                const monthIdx2 = months.indexOf(dateParts[0]);
+                if (monthIdx2 !== -1) {
+                  classDate = new Date(
+                    parseInt(dateParts[2]),
+                    monthIdx2,
+                    parseInt(dateParts[1])
+                  );
+                } else {
+                  // Numeric: DD MM YYYY
+                  classDate = new Date(
+                    parseInt(dateParts[2]),
+                    parseInt(dateParts[1]) - 1,
+                    parseInt(dateParts[0])
+                  );
+                }
+              }
+            }
+
+            // Fallback: let JS parse it
+            if (!classDate || isNaN(classDate.getTime())) {
+              classDate = new Date(cls.date);
+            }
+
+            if (classDate && !isNaN(classDate.getTime())) {
+              // Set to end of day for basic date comparison
+              classDate.setHours(23, 59, 59);
+
+              if (classDate < now) {
+                hasHappened = true;
+              } else if (classDate.toDateString() === now.toDateString()) {
+                // If today, check the time
+                const timeParts = (cls.time || "").split(/\s*-\s*/);
+                const endTimeStr = timeParts[1] || ""; // e.g., "04:50 PM"
+                if (endTimeStr) {
+                   const [time, ampm] = endTimeStr.split(' ');
+                   let [hours, minutes] = time.split(':').map(Number);
+                   if (ampm === 'PM' && hours < 12) hours += 12;
+                   if (ampm === 'AM' && hours === 12) hours = 0;
+                   
+                   const classEndTime = new Date(now);
+                   classEndTime.setHours(hours, minutes, 0);
+                   
+                   if (now > classEndTime) {
+                     hasHappened = true;
+                   }
+                }
               }
             }
           } catch (e) {
@@ -101,8 +134,7 @@ export default function TimetableScreen() {
           }
         }
 
-        if (hasHappened) return;
-
+        // Keep all classes — mark completed ones instead of hiding them
         // Internal deduplication check for safety
         const exists = list.some(m =>
           m.time === cls.time &&
@@ -110,7 +142,7 @@ export default function TimetableScreen() {
           m.date === cls.date
         );
         if (!exists) {
-          list.push({ ...cls, isMakeup: true });
+          list.push({ ...cls, isMakeup: true, isCompleted: hasHappened });
         }
       });
     }
@@ -251,7 +283,7 @@ export default function TimetableScreen() {
                 </View>
                 <View>
                   <Text style={[styles.makeupTitle, { color: colors.text }]}>Makeup Classes</Text>
-                  <Text style={[styles.makeupSub, { color: colors.textSecondary }]}>{makeupClasses.length} sessions available</Text>
+                  <Text style={[styles.makeupSub, { color: colors.textSecondary }]}>{makeupClasses.filter((c: any) => !c.isCompleted).length} upcoming · {makeupClasses.filter((c: any) => c.isCompleted).length} completed</Text>
                 </View>
               </View>
               {showMakeup ? <ChevronUp size={20} color={colors.textSecondary} /> : <ChevronDown size={20} color={colors.textSecondary} />}
@@ -309,7 +341,7 @@ export default function TimetableScreen() {
                           >
                             <View 
                               style={{ 
-                                ...StyleSheet.absoluteFillObject, 
+                                ...StyleSheet.absoluteFill, 
                                 backgroundColor: accentColor, 
                                 opacity: isDark ? 0.08 : 0.05,
                                 zIndex: -1 
@@ -325,6 +357,11 @@ export default function TimetableScreen() {
                                     {cls.date}
                                   </Text>
                                 </View>
+                                {cls.isCompleted && (
+                                  <View style={{ backgroundColor: 'rgba(142,142,147,0.15)', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 2 }}>
+                                    <Text style={{ color: '#8E8E93', fontSize: 8, fontWeight: '800' }}>COMPLETED</Text>
+                                  </View>
+                                )}
                                 <Text 
                                   style={[styles.subjectName, { color: colors.text, fontSize: 12, fontWeight: '800', lineHeight: 16, marginBottom: 0 }]}
                                   numberOfLines={3}
@@ -370,7 +407,7 @@ export default function TimetableScreen() {
                             {/* Subtle Frosted Dynamic Color Tint Overlay */}
                             <View 
                               style={{ 
-                                ...StyleSheet.absoluteFillObject, 
+                                ...StyleSheet.absoluteFill, 
                                 backgroundColor: accentColor, 
                                 opacity: isDark ? 0.08 : 0.05,
                                 zIndex: -1 
@@ -399,6 +436,11 @@ export default function TimetableScreen() {
                                   <View style={[styles.practicalBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: 'rgba(255, 149, 0, 0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
                                     <Text style={[styles.practicalBadgeText, { color: '#FF9500', fontSize: 9, fontWeight: '800' }]}>MAKEUP</Text>
                                   </View>
+                                  {cls.isCompleted && (
+                                    <View style={[styles.practicalBadge, { backgroundColor: 'rgba(142,142,147,0.15)', borderColor: 'rgba(142,142,147,0.3)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                                      <Text style={[styles.practicalBadgeText, { color: '#8E8E93', fontSize: 9, fontWeight: '800' }]}>COMPLETED</Text>
+                                    </View>
+                                  )}
                                   {cls.date && (
                                     <View style={[styles.practicalBadge, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
                                       <Text style={[styles.practicalBadgeText, { color: colors.textSecondary, fontSize: 9, fontWeight: '800' }]}>{cls.date}</Text>
@@ -489,7 +531,7 @@ export default function TimetableScreen() {
                     {/* Subtle Frosted Dynamic Color Tint Overlay */}
                     <View 
                       style={{ 
-                        ...StyleSheet.absoluteFillObject, 
+                        ...StyleSheet.absoluteFill, 
                         backgroundColor: accentColor, 
                         opacity: isDark ? 0.08 : 0.05,
                         zIndex: -1 

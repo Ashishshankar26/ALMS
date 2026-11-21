@@ -141,7 +141,7 @@ export default function AnimatedSplashScreen({ onAnimationComplete }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 99999,
     backgroundColor: '#000000', // Ultra-minimal black
     alignItems: 'center',

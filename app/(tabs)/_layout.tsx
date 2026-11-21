@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, useRouter } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet, Platform, Dimensions, TouchableOpacity } from 'react-native';
 import { Home, Calendar, Award, CheckCircle, FileText, MessageSquare } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
@@ -20,7 +20,9 @@ const ICON_MAP: Record<string, any> = {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-function MyTabBar({ state, navigation }: any) {
+function MyTabBar(props: any) {
+  const { state, navigation, navigateToTab } = props;
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom > 0 ? insets.bottom + 8 : 20;
   const { isDark } = useTheme();
@@ -30,7 +32,15 @@ function MyTabBar({ state, navigation }: any) {
       {state.routes.map((route: any, i: number) => {
         const focused = i === state.index;
         const Icon = ICON_MAP[route.name] || Home;
-        const onPress = () => { navigation.navigate(route.name); };
+        const onPress = () => {
+          if (typeof navigateToTab === 'function') {
+            navigateToTab(route.key);
+          } else if (navigation?.navigate) {
+            navigation.navigate(route.name);
+          } else {
+            router.navigate(route.name === 'index' ? '/(tabs)' : (`/(tabs)/${route.name}` as any));
+          }
+        };
         return (
           <TouchableOpacity key={route.key} onPress={onPress} activeOpacity={0.7} style={[
             styles.tabBtn,

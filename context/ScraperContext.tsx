@@ -116,6 +116,8 @@ export const useScraper = () => useContext(ScraperContext);
 const DASHBOARD_SCRIPT = `
 (function() {
   try {
+    // Restore bridge if Turnstile hid it
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: "DASHBOARD SCRIPT LOADED - DIRECT POST" }));
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
@@ -810,6 +812,7 @@ const DASHBOARD_SCRIPT = `
 const ROOM_BOOKING_SCRIPT = `
 (function() {
   try {
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
     };
@@ -901,6 +904,7 @@ const ROOM_BOOKING_SCRIPT = `
 const TIMETABLE_SCRIPT = `
 (function() {
   try {
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
     };
@@ -1018,6 +1022,7 @@ const TIMETABLE_SCRIPT = `
 const MAKEUP_SCRIPT = `
 (function() {
   try {
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
     };
@@ -1109,6 +1114,7 @@ const MAKEUP_SCRIPT = `
 const EXAMS_SCRIPT = `
 (function() {
   try {
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG', message: msg }));
     };
@@ -1224,6 +1230,7 @@ const EXAMS_SCRIPT = `
 export const BACKGROUND_PROFILE_SCRAPER_SCRIPT = `
 (function() {
   try {
+    if (!window.ReactNativeWebView && window.__RN_WV_REF__) window.ReactNativeWebView = window.__RN_WV_REF__;
     var log = function(msg) {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: "DEBUG", message: msg }));
     };
@@ -1909,8 +1916,8 @@ export const ScraperProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (prev.makeupUrl) {
             webViewRef.current?.injectJavaScript(`window.location.href = '${prev.makeupUrl}'; true;`);
           } else {
-            const targetExamUrl = prev.examUrl || 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/examination/conduct/seatingplan';
-            webViewRef.current?.injectJavaScript(`window.location.href = '${targetExamUrl}'; true;`);
+            // Fallback: navigate to makeup page via SSO redirect
+            webViewRef.current?.injectJavaScript(`window.location.href = 'https://ums.lpu.in/lpuums/openapp.aspx?from=ums&toApp=nextproject&pagename=dashboard/Student-MakeupAdjustment'; true;`);
           }
 
           return merged;

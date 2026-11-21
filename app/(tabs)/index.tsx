@@ -16,7 +16,7 @@ import { useTheme, Typography } from '../../context/ThemeContext';
 import { router, Redirect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { updateStickyClassNotification, cancelAllNotifications } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
@@ -1126,6 +1126,10 @@ export default function DashboardScreen() {
 
   React.useEffect(() => {
     async function checkApkVersion() {
+      // Don't show standalone APK download banner inside Expo Go
+      const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+      if (isExpoGo) return;
+
       try {
         const res = await fetch(`https://raw.githubusercontent.com/Ashishshankar26/ALMS/main/version.json?t=${Date.now()}`);
         if (!res.ok) return;
@@ -1135,7 +1139,7 @@ export default function DashboardScreen() {
         // user definitely needs to install the v1.0.4 native APK!
         const hasNativeWidget = Platform.OS === 'android' ? !!(NativeModules && NativeModules.AndroidWidget) : true;
 
-        const currentVersion = Constants.expoConfig?.version || '1.0.3';
+        const currentVersion = Constants.expoConfig?.version || '1.0.4';
         const parseVer = (v: string) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
         const [cMaj, cMin, cPatch] = parseVer(currentVersion);
         const [rMaj, rMin, rPatch] = parseVer(info.version || '0.0.0');
@@ -2782,7 +2786,7 @@ const styles = StyleSheet.create({
     borderRadius: 85,
   },
   cardDoodleContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   cardDoodleRing: {

@@ -19,13 +19,17 @@ Notifications.setNotificationHandler({
 const STICKY_NOTIFICATION_ID = 'next-class-sticky';
 
 export async function setupNotificationChannels() {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('sticky-class', {
-      name: 'Next Class (Sticky)',
-      importance: Notifications.AndroidImportance.LOW, // Low importance so it doesn't vibrate constantly
-      vibrationPattern: [0, 0, 0, 0],
-      lightColor: '#4C0099',
-    });
+  if (Platform.OS === 'android' && !isExpoGo) {
+    try {
+      await Notifications.setNotificationChannelAsync('sticky-class', {
+        name: 'Next Class (Sticky)',
+        importance: Notifications.AndroidImportance.LOW, // Low importance so it doesn't vibrate constantly
+        vibrationPattern: [0, 0, 0, 0],
+        lightColor: '#4C0099',
+      });
+    } catch (e) {
+      console.warn('Failed to setup notification channels:', e);
+    }
   }
 }
 

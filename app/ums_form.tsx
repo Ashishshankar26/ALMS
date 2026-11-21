@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, Platform, 
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import { useScraper } from '../context/ScraperContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,11 +28,23 @@ export default function UmsFormScreen() {
   const { updateProfile, refreshData } = useScraper();
   const { authData } = useAuth();
   const webViewRef = useRef<WebView>(null);
+  const [savedCreds, setSavedCreds] = useState<{ u?: string; p?: string } | null>(null);
   
   // Get the base UMS URL
   const baseUrl = 'https://ums.lpu.in/lpuums/';
   const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
   const returnTo = `/ums_form?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+
+  // Load credentials from AsyncStorage on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@credentials').then(stored => {
+      if (stored) {
+        try {
+          setSavedCreds(JSON.parse(stored));
+        } catch (e) {}
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(ALMS_SESSION_RESTORED, () => {
@@ -294,7 +307,9 @@ export default function UmsFormScreen() {
               }}
               onLoadEnd={(event) => {
                 setLoading(false);
-                webViewRef.current?.injectJavaScript(getSessionWatcherJS(authData?.username, authData?.password));
+                const username = authData?.username || savedCreds?.u || '';
+                const password = authData?.password || savedCreds?.p || '';
+                webViewRef.current?.injectJavaScript(getSessionWatcherJS(username, password));
                 if (title === 'Profile Update' || (event.nativeEvent.url && event.nativeEvent.url.includes('user-profile'))) {
                   webViewRef.current?.injectJavaScript(profileScraperScript);
                 }
@@ -362,7 +377,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',

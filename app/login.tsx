@@ -29,6 +29,13 @@ export default function LoginScreen() {
   const [savedCreds, setSavedCreds] = useState<any>(null);
   const credsRef = useRef<any>(null);
   const hasNavigatedAway = useRef(false);
+  const [canGoBack, setCanGoBack] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      setCanGoBack(router.canGoBack());
+    } catch (e) {}
+  }, []);
 
   const navigateAfterLogin = () => {
     if (hasNavigatedAway.current) return;
@@ -86,7 +93,7 @@ export default function LoginScreen() {
             p.parentElement.style.visibility = 'visible';
           }
         }
-        var overlays = document.querySelectorAll('.loading-portal, #loadingPortal, #divLoading, .overlay');
+        var overlays = document.querySelectorAll('.loading-portal, #loadingPortal, #divLoading');
         for (var i = 0; i < overlays.length; i++) {
           overlays[i].style.display = 'none';
         }
@@ -309,7 +316,7 @@ export default function LoginScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {(returnTo || router.canGoBack()) && (
+          {(returnTo || canGoBack) && (
             <TouchableOpacity 
               onPress={() => {
                 if (returnTo) router.replace(returnTo as any);
@@ -346,6 +353,12 @@ export default function LoginScreen() {
             headers: TURNSTILE_WEBVIEW_HEADERS,
           }}
           style={styles.webview}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          )}
           userAgent={SPOOFED_USER_AGENT}
           injectedJavaScriptBeforeContentLoaded={TURNSTILE_BEFORE_CONTENT_JS}
           injectedJavaScript={injectedJavaScript}
@@ -396,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',

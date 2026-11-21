@@ -7,12 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "alms",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#4C0099"
-    },
     "ios": {
       "bundleIdentifier": "com.ashish.alms",
       "buildNumber": "1",
@@ -28,7 +22,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4C0099"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -56,6 +49,14 @@
       }
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#4C0099"
+        }
+      ],
       "expo-router",
       [
         "expo-notifications",

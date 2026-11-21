@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   webViewContainer: { flex: 1 },
   webView: { flex: 1 },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 28,

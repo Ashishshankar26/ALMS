@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: '#000' },
   webview: { flex: 1 },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: 100,
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: '#fff', zIndex: 1,

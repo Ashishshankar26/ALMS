@@ -63,7 +63,7 @@ export default function ResultsScreen() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const swipeLock = useRef(false);
-  const modalScrollRef = useRef<ScrollView>(null);
+  const modalScrollRef = useRef<any>(null);
 
   const displayData = activeTab === 'REGULAR' ? regularResults : backlogResults;
   const openedSemester = openedIndex !== null ? displayData[Math.min(openedIndex, Math.max(displayData.length - 1, 0))] : null;

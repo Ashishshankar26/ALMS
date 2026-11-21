@@ -28,7 +28,7 @@ export const COMMON_TURNSTILE_WEBVIEW_PROPS = {
   allowFileAccess: true,
   allowUniversalAccessFromFileURLs: true,
   mixedContentMode: 'always' as const,
-  androidLayerType: 'hardware' as const,
+  androidLayerType: 'none' as const,
   javaScriptEnabled: true,
   domStorageEnabled: true,
   sharedCookiesEnabled: true,
@@ -59,7 +59,8 @@ export function isLoginOrSessionUrl(url: string = ''): boolean {
     lower.includes('index.aspx') ||
     lower.includes('frmsessionexpired') ||
     lower.includes('default.aspx?msg=') ||
-    lower.includes('happenings.lpu.in')
+    lower.includes('happenings.lpu.in') ||
+    (lower.includes('/placements/default.aspx') && !lower.includes('homeplacementstudent'))
   );
 }
 
@@ -95,10 +96,17 @@ export function isAuthenticatedUrl(url: string = ''): boolean {
 export const TURNSTILE_BEFORE_CONTENT_JS = `
   (function() {
     try {
-      // 1. Hide the React Native WebView bridge from Cloudflare Turnstile
+      // 1. Save bridge reference — only hide it on login pages to avoid breaking scraper scripts
       if (window.ReactNativeWebView) {
         window.__RN_WV_REF__ = window.ReactNativeWebView;
+      }
+      var href = (window.location.href || '').toLowerCase();
+      var isLoginPage = href.indexOf('loginnew.aspx') !== -1 || href.indexOf('login.aspx') !== -1 || href.indexOf('index.aspx') !== -1 || (href.indexOf('/placements/default.aspx') !== -1);
+      if (isLoginPage && window.ReactNativeWebView) {
         delete window.ReactNativeWebView;
+      } else if (!isLoginPage && !window.ReactNativeWebView && window.__RN_WV_REF__) {
+        // Restore bridge on authenticated pages so scraper postMessage works
+        window.ReactNativeWebView = window.__RN_WV_REF__;
       }
 
       // 2. Spoof navigator.webdriver
@@ -216,7 +224,7 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
 
           // If inputs are in DOM, hide any overlay like "Loading Portal..."
           if (uField || pField) {
-            var overlays = document.querySelectorAll('.loading-portal, #loadingPortal, #divLoading, .overlay');
+            var overlays = document.querySelectorAll('.loading-portal, #loadingPortal, #divLoading');
             for (var i = 0; i < overlays.length; i++) {
               overlays[i].style.display = 'none';
             }
@@ -225,7 +233,7 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
 
         // ── Auto-fill credentials ──
         function autofillCredentials() {
-          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"], #txtRegno, #txtRegistrationNo, #txtUser, #txtLogin, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"]');
           var pField = document.querySelector('input[type="password"]');
 
           if (uField && userVal && !uField.value) {
@@ -296,7 +304,7 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
           var responseEl = document.querySelector('[name="cf-turnstile-response"], [name="g-recaptcha-response"]');
 
           if (responseEl && responseEl.value && uField && uField.value && pField && pField.value) {
-            var btn = document.querySelector('#btnLogin, input[type="submit"], button[type="submit"]');
+            var btn = document.querySelector('#btnLogin, #btnSubmit, input[type="submit"], button[type="submit"]');
             if (btn && !window.__almsAutoSubmitted) {
               window.__almsAutoSubmitted = true;
               btn.click();
@@ -306,8 +314,8 @@ export function getSessionWatcherJS(username?: string, password?: string): strin
 
         function evaluateSession() {
           var href = (window.location.href || '').toLowerCase();
-          var isLoginUrl = href.indexOf('loginnew.aspx') !== -1 || href.indexOf('login.aspx') !== -1 || href.indexOf('index.aspx') !== -1;
-          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"]');
+          var isLoginUrl = href.indexOf('loginnew.aspx') !== -1 || href.indexOf('login.aspx') !== -1 || href.indexOf('index.aspx') !== -1 || (href.indexOf('/placements/default.aspx') !== -1 && href.indexOf('homeplacementstudent') === -1);
+          var uField = document.querySelector('#txtU, #txtUserName, input[name="txtU"], input[name="txtUserName"], #txtRegno, #txtRegistrationNo, #txtUser, #txtLogin, input[name*="Reg"], input[name*="reg"], input[name*="User"], input[name*="Login"]');
           var pField = document.querySelector('input[type="password"]');
           var bodyText = document.body ? (document.body.innerText || '') : '';
           var isSessionExpiredText = bodyText.indexOf('Session Expired') !== -1 || bodyText.indexOf('Object moved') !== -1;
